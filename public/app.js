@@ -534,6 +534,21 @@ function renderMobileScreener(rows) {
     if ((combined.tier ?? 0) >= 4 || isStrictBuyReady(row)) return { tone: "green", label: "후보" };
     return { tone: "yellow", label: "관찰" };
   };
+  const orderMarketRows = (marketRows) => {
+    const [sortField, direction] = state.screenerSort.split("-");
+    if (sortField !== "rank") return marketRows;
+    const signalPriority = { green: 0, yellow: 1, red: 2 };
+    return [...marketRows].sort((a, b) => {
+      const toneDiff = signalPriority[signalFor(a).tone] - signalPriority[signalFor(b).tone];
+      if (toneDiff !== 0) return toneDiff;
+      const aRank = a.combined?.rank;
+      const bRank = b.combined?.rank;
+      if (aRank && !bRank) return -1;
+      if (!aRank && bRank) return 1;
+      if (aRank && bRank && aRank !== bRank) return direction === "desc" ? aRank - bRank : bRank - aRank;
+      return (b.combined?.score ?? 0) - (a.combined?.score ?? 0);
+    });
+  };
   const renderRows = (marketRows) => marketRows.map((row) => {
     const combined = row.combined ?? {};
     const leader = row.leader ?? {};
@@ -562,7 +577,7 @@ function renderMobileScreener(rows) {
 
   const sections = (state.screenerMarket === "ALL" ? ["KOSPI", "KOSDAQ"] : [state.screenerMarket])
     .map((market) => {
-      const marketRows = rows.filter((row) => row.market === market);
+      const marketRows = orderMarketRows(rows.filter((row) => row.market === market));
       if (!marketRows.length) return "";
       const marketClass = market === "KOSDAQ" ? "kosdaq" : "kospi";
       return `
