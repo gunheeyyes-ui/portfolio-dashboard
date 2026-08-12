@@ -1648,11 +1648,11 @@ td {
 
   .mobile-stock-row {
     display: grid;
-    grid-template-columns: 22px minmax(55px, 1fr) 67px 40px 37px 43px 39px;
-    gap: 2px;
+    grid-template-columns: 18px minmax(50px, 1fr) 63px 34px 32px 39px 41px 36px;
+    gap: 1px;
     align-items: center;
     min-height: 50px;
-    padding: 6px 7px;
+    padding: 6px 4px;
     border-bottom: 1px solid var(--line);
     border-left: 3px solid #346aa0;
     background: var(--panel);
@@ -1675,7 +1675,7 @@ td {
   }
 
   .mobile-stock-rank b {
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1;
   }
 
@@ -1687,7 +1687,7 @@ td {
 
   .mobile-stock-name b {
     overflow: hidden;
-    font-size: 12px;
+    font-size: 11px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1697,7 +1697,7 @@ td {
   }
 
   .mobile-stock-price b {
-    font-size: 12px;
+    font-size: 11px;
     white-space: nowrap;
   }
 
@@ -1727,22 +1727,25 @@ td {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 1px;
     height: 28px;
-    padding: 0 3px;
+    padding: 0 1px;
     border-radius: 4px;
     background: #11161c;
   }
 
   .mobile-inline-score span {
     color: var(--muted);
-    font-size: 9px;
+    flex: 0 0 auto;
+    font-size: 8px;
     font-weight: 750;
+    white-space: nowrap;
   }
 
   .mobile-inline-score b {
     color: var(--text);
-    font-size: 11px;
+    flex: 0 0 auto;
+    font-size: 10px;
     font-weight: 850;
     white-space: nowrap;
   }
@@ -1763,6 +1766,15 @@ td {
   .mobile-inline-score b.muted,
   .mobile-inline-score b.missing {
     color: var(--muted);
+  }
+
+  .mobile-supply b.combo,
+  .mobile-supply b.strong {
+    color: #78e0b1;
+  }
+
+  .mobile-supply b.watch {
+    color: #f7d38a;
   }
 
   .mobile-signal {

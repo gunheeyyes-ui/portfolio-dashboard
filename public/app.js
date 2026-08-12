@@ -570,6 +570,7 @@ function renderMobileScreener(rows) {
         <div class="mobile-inline-score"><span>거래</span><b class="${liquidity.tone}">${liquidity.missing ? "-" : liquidity.value}</b></div>
         <div class="mobile-inline-score"><span>주도</span><b class="${leaderTone(leader.grade)}">${leader.grade ?? "-"}</b></div>
         <div class="mobile-inline-score"><span>정찰</span><b class="${scout.rank ? "watch" : "muted"}">${scout.rank ? `${scout.rank}위` : "-"}</b></div>
+        <div class="mobile-inline-score mobile-supply"><span>외기</span><b class="${streakClass(row)}">${row.supply?.foreignStreak ?? 0}/${row.supply?.instStreak ?? 0}</b></div>
         <div class="mobile-signal ${signal.tone}"><i></i><b>${signal.label}</b></div>
       </article>
     `;
