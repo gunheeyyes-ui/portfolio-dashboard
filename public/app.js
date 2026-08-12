@@ -535,27 +535,20 @@ function renderMobileScreener(rows) {
     const scout = row.scout ?? {};
     const liquidity = liquidityDisplay(row);
     return `
-      <article class="mobile-stock-row">
+      <article class="mobile-stock-row ${row.market === "KOSDAQ" ? "kosdaq" : "kospi"}" title="${combined.label ?? "관망"} · 전일 ${pct(row.changeRate)} · 3일 ${pct(row.changeRate3d)}">
         <div class="mobile-stock-rank">
           <b>${displayCombinedRank(row, rankMap) ?? "–"}</b>
-          <span>${displayCombinedRank(row, rankMap) ? `${combined.score ?? 0}점` : "순위 밖"}</span>
         </div>
         <a class="mobile-stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">
+          <i class="market-mark ${row.market === "KOSDAQ" ? "kosdaq" : "kospi"}">${row.market === "KOSDAQ" ? "Q" : "P"}</i>
           <b>${row.name}</b>
-          <span class="mobile-stock-meta">
-            <i class="market-badge ${row.market === "KOSDAQ" ? "kosdaq" : "kospi"}">${row.market}</i>
-            <i class="decision-badge ${combined.tone === "buy" ? "buy" : combined.tone === "danger" ? "danger" : "hold"}">${combined.label ?? "관망"}</i>
-          </span>
         </a>
         <div class="mobile-stock-price">
           <b>${price(row.price)}</b>
-          <span><i class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</i> · <i class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</i></span>
         </div>
-        <dl class="mobile-stock-scores">
-          <div><dt>거래</dt><dd class="${liquidity.tone}">${liquidity.missing ? "없음" : liquidity.value}</dd></div>
-          <div><dt>주도</dt><dd class="${leaderTone(leader.grade)}">${Number.isFinite(leader.score) ? `${leader.score} ${leader.grade}` : "-"}</dd></div>
-          <div><dt>정찰</dt><dd class="${scout.rank ? "watch" : "muted"}">${scout.rank ? `${scout.rank}위` : "-"}</dd></div>
-        </dl>
+        <div class="mobile-inline-score"><span>거래</span><b class="${liquidity.tone}">${liquidity.missing ? "-" : liquidity.value}</b></div>
+        <div class="mobile-inline-score"><span>주도</span><b class="${leaderTone(leader.grade)}">${Number.isFinite(leader.score) ? `${leader.score}${leader.grade}` : "-"}</b></div>
+        <div class="mobile-inline-score"><span>정찰</span><b class="${scout.rank ? "watch" : "muted"}">${scout.rank ? `${scout.rank}위` : "-"}</b></div>
       </article>
     `;
   }).join("") || `<div class="loading">조건에 맞는 시장 후보가 없습니다.</div>`;

@@ -1577,12 +1577,18 @@ td {
 
   .mobile-stock-row {
     display: grid;
-    grid-template-columns: 34px minmax(96px, 1fr) auto;
-    gap: 4px 8px;
+    grid-template-columns: 25px minmax(74px, 1fr) 72px 44px 49px 49px;
+    gap: 3px;
     align-items: center;
-    padding: 8px 9px;
+    min-height: 46px;
+    padding: 6px 7px;
     border-bottom: 1px solid var(--line);
+    border-left: 3px solid #346aa0;
     background: var(--panel);
+  }
+
+  .mobile-stock-row.kosdaq {
+    border-left-color: #26785a;
   }
 
   .mobile-stock-row:last-child {
@@ -1591,80 +1597,50 @@ td {
 
   .mobile-stock-rank,
   .mobile-stock-name,
-  .mobile-stock-price {
+  .mobile-stock-price,
+  .mobile-inline-score {
     min-width: 0;
   }
 
   .mobile-stock-rank b {
-    display: block;
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1;
   }
 
-  .mobile-stock-rank span,
-  .mobile-stock-price span {
-    display: block;
-    margin-top: 3px;
-    color: var(--muted);
-    font-size: 9px;
-    white-space: nowrap;
+  .mobile-stock-name {
+    display: flex;
+    align-items: center;
+    gap: 3px;
   }
 
   .mobile-stock-name b {
-    display: block;
     overflow: hidden;
-    font-size: 13px;
+    font-size: 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .mobile-stock-meta {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 4px;
-  }
-
-  .market-badge,
-  .decision-badge {
+  .market-mark {
     display: inline-flex;
     align-items: center;
-    min-height: 17px;
-    padding: 1px 4px;
-    border: 1px solid #394452;
+    justify-content: center;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
     border-radius: 3px;
     font-size: 9px;
     font-style: normal;
     font-weight: 850;
-    line-height: 1;
-    white-space: nowrap;
   }
 
-  .market-badge.kospi {
-    border-color: #346aa0;
+  .market-mark.kospi {
     background: #172a3e;
     color: #8cc8ff;
   }
 
-  .market-badge.kosdaq {
-    border-color: #26785a;
+  .market-mark.kosdaq {
     background: #142d25;
     color: #78e0b1;
-  }
-
-  .decision-badge.buy {
-    border-color: #26785a;
-    color: #78e0b1;
-  }
-
-  .decision-badge.hold {
-    border-color: #66572f;
-    color: #f7d38a;
-  }
-
-  .decision-badge.danger {
-    border-color: #743843;
-    color: #ff9ba6;
   }
 
   .mobile-stock-price {
@@ -1672,77 +1648,49 @@ td {
   }
 
   .mobile-stock-price b {
-    font-size: 13px;
+    font-size: 12px;
     white-space: nowrap;
   }
 
-  .mobile-stock-price span.positive {
-    color: var(--red);
-  }
-
-  .mobile-stock-price span.negative {
-    color: var(--blue);
-  }
-
-  .mobile-stock-price span i {
-    font-style: normal;
-  }
-
-  .mobile-stock-price span i.positive {
-    color: var(--red);
-  }
-
-  .mobile-stock-price span i.negative {
-    color: var(--blue);
-  }
-
-  .mobile-stock-scores {
-    display: grid;
-    grid-column: 2 / 4;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 5px;
-    margin: 0;
-  }
-
-  .mobile-stock-scores div {
+  .mobile-inline-score {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    min-width: 0;
-    padding: 4px 6px;
+    justify-content: center;
+    gap: 2px;
+    height: 28px;
+    padding: 0 3px;
     border-radius: 4px;
     background: #11161c;
   }
 
-  .mobile-stock-scores dt {
+  .mobile-inline-score span {
     color: var(--muted);
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 750;
   }
 
-  .mobile-stock-scores dd {
-    margin: 0;
+  .mobile-inline-score b {
     color: var(--text);
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 850;
     white-space: nowrap;
   }
 
-  .mobile-stock-scores dd.buy {
+  .mobile-inline-score b.buy {
     color: #6fe2b2;
   }
 
-  .mobile-stock-scores dd.watch,
-  .mobile-stock-scores dd.hold {
+  .mobile-inline-score b.watch,
+  .mobile-inline-score b.hold {
     color: #f7d38a;
   }
 
-  .mobile-stock-scores dd.danger {
+  .mobile-inline-score b.danger {
     color: #ff8c99;
   }
 
-  .mobile-stock-scores dd.muted,
-  .mobile-stock-scores dd.missing {
+  .mobile-inline-score b.muted,
+  .mobile-inline-score b.missing {
     color: var(--muted);
   }
 }
