@@ -1580,7 +1580,7 @@ td {
     grid-template-columns: 25px minmax(74px, 1fr) 72px 44px 49px 49px;
     gap: 3px;
     align-items: center;
-    min-height: 46px;
+    min-height: 50px;
     padding: 6px 7px;
     border-bottom: 1px solid var(--line);
     border-left: 3px solid #346aa0;
@@ -1650,6 +1650,28 @@ td {
   .mobile-stock-price b {
     font-size: 12px;
     white-space: nowrap;
+  }
+
+  .mobile-stock-price small {
+    display: flex;
+    justify-content: flex-end;
+    gap: 3px;
+    margin-top: 3px;
+    font-size: 8px;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+
+  .mobile-stock-price small i {
+    font-style: normal;
+  }
+
+  .mobile-stock-price small .positive {
+    color: var(--red);
+  }
+
+  .mobile-stock-price small .negative {
+    color: var(--blue);
   }
 
   .mobile-inline-score {

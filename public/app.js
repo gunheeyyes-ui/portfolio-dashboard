@@ -545,6 +545,7 @@ function renderMobileScreener(rows) {
         </a>
         <div class="mobile-stock-price">
           <b>${price(row.price)}</b>
+          <small><i class="${toneClass(row.changeRate ?? 0)}">1일 ${pct(row.changeRate)}</i><i class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</i></small>
         </div>
         <div class="mobile-inline-score"><span>거래</span><b class="${liquidity.tone}">${liquidity.missing ? "-" : liquidity.value}</b></div>
         <div class="mobile-inline-score"><span>주도</span><b class="${leaderTone(leader.grade)}">${Number.isFinite(leader.score) ? `${leader.score}${leader.grade}` : "-"}</b></div>
