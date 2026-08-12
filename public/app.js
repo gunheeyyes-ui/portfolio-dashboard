@@ -528,19 +528,24 @@ function renderScreenerLoading() {
 }
 
 function renderMobileScreener(rows) {
-  const rankMap = combinedRankMap();
-  document.querySelector("#mobileScreenerRows").innerHTML = rows.map((row) => {
+  const signalFor = (row) => {
+    const combined = row.combined ?? {};
+    if (combined.blocked || combined.tone === "danger") return { tone: "red", label: "보류" };
+    if ((combined.tier ?? 0) >= 4 || isStrictBuyReady(row)) return { tone: "green", label: "후보" };
+    return { tone: "yellow", label: "관찰" };
+  };
+  const renderRows = (marketRows) => marketRows.map((row) => {
     const combined = row.combined ?? {};
     const leader = row.leader ?? {};
     const scout = row.scout ?? {};
     const liquidity = liquidityDisplay(row);
+    const signal = signalFor(row);
     return `
       <article class="mobile-stock-row ${row.market === "KOSDAQ" ? "kosdaq" : "kospi"}" title="${combined.label ?? "관망"} · 전일 ${pct(row.changeRate)} · 3일 ${pct(row.changeRate3d)}">
         <div class="mobile-stock-rank">
-          <b>${displayCombinedRank(row, rankMap) ?? "–"}</b>
+          <b>${combined.rank ?? "–"}</b>
         </div>
         <a class="mobile-stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">
-          <i class="market-mark ${row.market === "KOSDAQ" ? "kosdaq" : "kospi"}">${row.market === "KOSDAQ" ? "Q" : "P"}</i>
           <b>${row.name}</b>
         </a>
         <div class="mobile-stock-price">
@@ -548,11 +553,30 @@ function renderMobileScreener(rows) {
           <small><i class="${toneClass(row.changeRate ?? 0)}">1일 ${pct(row.changeRate)}</i><i class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</i></small>
         </div>
         <div class="mobile-inline-score"><span>거래</span><b class="${liquidity.tone}">${liquidity.missing ? "-" : liquidity.value}</b></div>
-        <div class="mobile-inline-score"><span>주도</span><b class="${leaderTone(leader.grade)}">${Number.isFinite(leader.score) ? `${leader.score}${leader.grade}` : "-"}</b></div>
+        <div class="mobile-inline-score"><span>주도</span><b class="${leaderTone(leader.grade)}">${leader.grade ?? "-"}</b></div>
         <div class="mobile-inline-score"><span>정찰</span><b class="${scout.rank ? "watch" : "muted"}">${scout.rank ? `${scout.rank}위` : "-"}</b></div>
+        <div class="mobile-signal ${signal.tone}"><i></i><b>${signal.label}</b></div>
       </article>
     `;
-  }).join("") || `<div class="loading">조건에 맞는 시장 후보가 없습니다.</div>`;
+  }).join("");
+
+  const sections = (state.screenerMarket === "ALL" ? ["KOSPI", "KOSDAQ"] : [state.screenerMarket])
+    .map((market) => {
+      const marketRows = rows.filter((row) => row.market === market);
+      if (!marketRows.length) return "";
+      const marketClass = market === "KOSDAQ" ? "kosdaq" : "kospi";
+      return `
+        <section class="mobile-market-section ${marketClass}">
+          <header class="mobile-market-heading">
+            <strong>${market}</strong>
+            <span>시장별 독립 순위 · ${marketRows.length}종목</span>
+            <small><i class="green"></i>후보 <i class="yellow"></i>관찰 <i class="red"></i>보류</small>
+          </header>
+          ${renderRows(marketRows)}
+        </section>
+      `;
+    }).join("");
+  document.querySelector("#mobileScreenerRows").innerHTML = sections || `<div class="loading">조건에 맞는 시장 후보가 없습니다.</div>`;
 }
 
 function renderScreenerSummary() {

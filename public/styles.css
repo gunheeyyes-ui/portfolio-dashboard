@@ -1575,10 +1575,81 @@ td {
     overflow-y: auto;
   }
 
+  .mobile-market-section + .mobile-market-section {
+    border-top: 5px solid #0c1014;
+  }
+
+  .mobile-market-heading {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 35px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+    background: #172536;
+  }
+
+  .mobile-market-section.kosdaq .mobile-market-heading {
+    background: #142a23;
+  }
+
+  .mobile-market-heading strong {
+    color: #8cc8ff;
+    font-size: 13px;
+  }
+
+  .mobile-market-section.kosdaq .mobile-market-heading strong {
+    color: #78e0b1;
+  }
+
+  .mobile-market-heading span {
+    flex: 1;
+    color: var(--muted);
+    font-size: 9px;
+  }
+
+  .mobile-market-heading small {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    color: var(--muted);
+    font-size: 8px;
+    white-space: nowrap;
+  }
+
+  .mobile-market-heading small i,
+  .mobile-signal i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #f3b340;
+  }
+
+  .mobile-market-heading small i.green,
+  .mobile-signal.green i {
+    background: #23c483;
+    box-shadow: 0 0 6px rgba(35, 196, 131, 0.7);
+  }
+
+  .mobile-market-heading small i.yellow,
+  .mobile-signal.yellow i {
+    background: #f3b340;
+    box-shadow: 0 0 6px rgba(243, 179, 64, 0.65);
+  }
+
+  .mobile-market-heading small i.red,
+  .mobile-signal.red i {
+    background: #ff4b5c;
+    box-shadow: 0 0 6px rgba(255, 75, 92, 0.65);
+  }
+
   .mobile-stock-row {
     display: grid;
-    grid-template-columns: 25px minmax(74px, 1fr) 72px 44px 49px 49px;
-    gap: 3px;
+    grid-template-columns: 22px minmax(55px, 1fr) 67px 40px 37px 43px 39px;
+    gap: 2px;
     align-items: center;
     min-height: 50px;
     padding: 6px 7px;
@@ -1598,7 +1669,8 @@ td {
   .mobile-stock-rank,
   .mobile-stock-name,
   .mobile-stock-price,
-  .mobile-inline-score {
+  .mobile-inline-score,
+  .mobile-signal {
     min-width: 0;
   }
 
@@ -1618,29 +1690,6 @@ td {
     font-size: 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .market-mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 16px;
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
-    font-size: 9px;
-    font-style: normal;
-    font-weight: 850;
-  }
-
-  .market-mark.kospi {
-    background: #172a3e;
-    color: #8cc8ff;
-  }
-
-  .market-mark.kosdaq {
-    background: #142d25;
-    color: #78e0b1;
   }
 
   .mobile-stock-price {
@@ -1714,5 +1763,33 @@ td {
   .mobile-inline-score b.muted,
   .mobile-inline-score b.missing {
     color: var(--muted);
+  }
+
+  .mobile-signal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 28px;
+    border-radius: 4px;
+    background: #11161c;
+  }
+
+  .mobile-signal b {
+    color: var(--muted);
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  .mobile-signal.green b {
+    color: #78e0b1;
+  }
+
+  .mobile-signal.yellow b {
+    color: #f7d38a;
+  }
+
+  .mobile-signal.red b {
+    color: #ff9ba6;
   }
 }
