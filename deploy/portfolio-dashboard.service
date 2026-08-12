@@ -1,0 +1,18 @@
+[Unit]
+Description=Gunhee Portfolio Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/portfolio-dashboard
+EnvironmentFile=/etc/portfolio-dashboard.env
+ExecStart=/usr/bin/node /opt/portfolio-dashboard/server.mjs
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

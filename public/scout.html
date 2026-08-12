@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Falling Stock Scout Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">One Share Scout</p>
+          <h1>낙주 정찰병 대시보드</h1>
+        </div>
+        <nav class="top-actions" aria-label="대시보드 메뉴">
+          <a class="ghost-btn nav-btn" href="/">메인</a>
+          <a class="ghost-btn nav-btn" href="/leader.html">주도주</a>
+          <a class="ghost-btn nav-btn active-nav" href="/scout.html">정찰병</a>
+          <a class="ghost-btn nav-btn" href="/simulator.html">시뮬레이터</a>
+          <button id="refreshBtn" class="icon-btn" title="새로고침" aria-label="새로고침">↻</button>
+        </nav>
+      </header>
+
+      <section class="notice">
+        <strong>원칙</strong>
+        <span>정찰병은 추가매수 예약이 아니라 관찰권입니다. 싸진 종목과 살아나는 종목을 분리해서 봅니다.</span>
+      </section>
+
+      <details class="scout-help">
+        <summary>
+          <strong>기준 쉽게 보기</strong>
+          <span>싸진 정도는 높게, 하락 멈춤 신호는 높게, 위험은 낮게 봅니다.</span>
+        </summary>
+        <div class="scout-help-grid">
+          <div><b>싸진 정도</b><span>2년 고점에서 많이 빠지고 2년 저점에 가까울수록 높습니다. 70점 이상이면 충분히 싸진 구간이지만, 이것만으로 매수 신호는 아닙니다.</span></div>
+          <div><b>하락 멈춤 신호</b><span>최근 신저가를 멈췄는지, 단기 평균선이 돌아서는지, 시장보다 덜 빠지는지를 합칩니다. 65점 이상이면 회복 단서가 강한 편입니다.</span></div>
+          <div><b>위험</b><span>시장보다 심한 약세, 큰 변동성, 계속되는 신저가, 데이터 부족을 봅니다. 35점 이하는 낮음, 65점 이상은 추가매수 금지입니다.</span></div>
+          <div><b>2년 위치</b><span>0%는 2년 저점 부근, 100%는 2년 고점 부근입니다. 낮을수록 많이 내려온 가격입니다.</span></div>
+          <div><b>고점 대비 하락</b><span>예: 35% 하락은 현재가가 최근 2년 고점보다 35% 낮다는 뜻입니다.</span></div>
+          <div><b>시장보다 강약</b><span>20일 +5%p면 같은 시장보다 5%p 더 강했고, -5%p면 그만큼 더 약했다는 뜻입니다.</span></div>
+        </div>
+        <div class="status-guide">
+          <span><b>관찰 목록</b> 아직 조건 부족</span>
+          <span><b>정찰병 1주</b> 싸졌지만 하락 정지는 덜 확인됨</span>
+          <span><b>하락 정지 확인</b> 하락이 둔해지는 단계</span>
+          <span><b>1차 매수 검토</b> 싸진 정도와 멈춤 신호가 함께 충족</span>
+          <span><b>추가매수 금지</b> 위험부터 확인</span>
+        </div>
+        <p>가격·거래 데이터로 만든 보조지표입니다. 실적 악화, 유상증자·CB, 감사·상장폐지 위험 같은 하락 원인은 네이버증권 공시와 뉴스에서 별도로 확인해야 합니다.</p>
+      </details>
+
+      <section class="metrics" id="scoutMetrics"></section>
+
+      <section class="screener-strip">
+        <div class="section-title screener-title">
+          <div>
+            <h2>정찰병 후보</h2>
+            <p id="scoutStatus">시총 상위 100의 2년 가격 위치를 계산합니다.</p>
+          </div>
+          <div class="tabs" id="marketTabs">
+            <button class="active" data-market="KOSPI">KOSPI</button>
+            <button data-market="KOSDAQ">KOSDAQ</button>
+          </div>
+        </div>
+
+        <div class="screener-summary" id="scoutSummary"></div>
+        <div class="table-wrap screener-wrap scout-wrap">
+          <table class="scout-table">
+            <thead>
+              <tr>
+                <th><button class="sort-btn scout-sort-btn" data-scout-sort="stage" type="button">상태 <span data-scout-sort-icon="stage">↓</span><small>좋은 단계 먼저</small></button></th>
+                <th><button class="sort-btn scout-sort-btn" data-scout-sort="name" type="button">종목 <span data-scout-sort-icon="name">↕</span><small>이름순</small></button></th>
+                <th><button class="sort-btn scout-sort-btn" data-scout-sort="leaderScore" type="button">주도주 <span data-scout-sort-icon="leaderScore">↕</span><small>가격·추세 등급</small></button></th>
+                <th><button class="sort-btn scout-sort-btn" data-scout-sort="cheapScore" type="button">싸진 정도 <span data-scout-sort-icon="cheapScore">↕</span><small>높을수록 많이 빠짐</small></button></th>
+                <th><button class="sort-btn scout-sort-btn" data-scout-sort="stabilizeScore" type="button">하락 멈춤 <span data-scout-sort-icon="stabilizeScore">↕</span><small>높을수록 회복 단서</small></button></th>
+                <th><button class="sort-btn scout-sort-btn" data-scout-sort="riskScore" type="button">위험 <span data-scout-sort-icon="riskScore">↕</span><small>낮을수록 좋음</small></button></th>
+                <th><button class="sort-btn scout-sort-btn" data-scout-sort="pricePositionPct" type="button">2년 위치 <span data-scout-sort-icon="pricePositionPct">↕</span><small>0%면 저점 부근</small></button></th>
+                <th><button class="sort-btn scout-sort-btn" data-scout-sort="drawdownFromHighPct" type="button">고점 대비 하락 <span data-scout-sort-icon="drawdownFromHighPct">↕</span><small>최근 2년 고점 기준</small></button></th>
+                <th><button class="sort-btn scout-sort-btn" data-scout-sort="dist120" type="button">120일선 <span data-scout-sort-icon="dist120">↕</span><small>장기 평균과 거리</small></button></th>
+                <th><button class="sort-btn scout-sort-btn" data-scout-sort="relative20" type="button">시장보다 강약 <span data-scout-sort-icon="relative20">↕</span><small>20일 시장 대비</small></button></th>
+                <th>근거</th>
+              </tr>
+            </thead>
+            <tbody id="scoutRows">
+              <tr><td colspan="11" class="loading">낙주 정찰 후보 계산 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/scout.js"></script>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: gunhee-stock-dashboard
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.19.0
+      - key: DASHBOARD_USERNAME
+        value: gunhee
+      - key: DASHBOARD_PASSWORD
+        sync: false
+      - key: KIS_APP_KEY
+        sync: false
+      - key: KIS_APP_SECRET
+        sync: false
+      - key: KIS_ACCOUNT_NO
+        sync: false
+      - key: KIS_BASE_URL
+        value: https://openapi.koreainvestment.com:9443
+      - key: KIS_CUSTTYPE
+        value: P
+      - key: KIS_QUOTE_MARKET
+        value: UN
+      - key: KIS_REQUEST_GAP_MS
+        value: 300
+      - key: SCREENER_CONCURRENCY
+        value: 2

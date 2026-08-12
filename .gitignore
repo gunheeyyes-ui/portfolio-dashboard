@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+backtest-cache/
+backtest-cache-v2/
+backtest-results/
+backtest-results-v2/
+logs/
+*.log
+*.zip
+free-float.json
+simulation-ledger.json
+node_modules/
+.DS_Store
+Thumbs.db

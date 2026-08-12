@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Daily Signal Simulator</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Daily Paper Trading</p>
+          <h1>우리 기준 시뮬레이션 대시보드</h1>
+        </div>
+        <nav class="top-actions" aria-label="대시보드 메뉴">
+          <a class="ghost-btn nav-btn" href="/">메인 대시보드</a>
+          <a class="ghost-btn nav-btn" href="/leader.html">주도주</a>
+          <a class="ghost-btn nav-btn" href="/scout.html">정찰병</a>
+          <a class="ghost-btn nav-btn active-nav" href="/simulator.html">시뮬레이터</a>
+          <button id="recordBtn" class="ghost-btn">오늘 시뮬 기록</button>
+          <button id="refreshBtn" class="icon-btn" title="새로고침" aria-label="새로고침">↻</button>
+        </nav>
+      </header>
+
+      <section class="notice">
+        <strong>시뮬 규칙</strong>
+        <span>실제 매수 없이 후보당 100만원을 가상 진입합니다. 분할 후보는 10일, 우선 검토는 5일, 단기 특수는 3일 뒤 자동 종료합니다.</span>
+      </section>
+
+      <section class="score-guide">
+        <strong>해석</strong>
+        <span><b>메인</b> 분할 후보</span>
+        <span><b>검토</b> 우선 검토</span>
+        <span><b>단기</b> 강수급 낙주</span>
+        <span><b>보유</b> 내 보유종목도 후보에 포함</span>
+        <small>하루에 한 번만 신규 기록됩니다. 새로고침은 수익률만 갱신합니다.</small>
+      </section>
+
+      <section class="metrics" id="simMetrics"></section>
+
+      <section class="sim-panel">
+        <div class="section-title">
+          <div>
+            <h2>오늘 기록 후보</h2>
+            <p id="simStatus">시뮬레이션 데이터 확인 중</p>
+          </div>
+        </div>
+        <div id="todayCandidates" class="sim-card-grid"></div>
+      </section>
+
+      <section class="sim-panel">
+        <div class="section-title">
+          <div>
+            <h2>진행 중 가상 포지션</h2>
+            <p>목표 관찰일 전까지 매일 현재가로 손익을 갱신합니다.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="sim-table">
+            <thead>
+              <tr>
+                <th>종목</th>
+                <th>구분</th>
+                <th>진입가</th>
+                <th>현재가</th>
+                <th>손익</th>
+                <th>경과</th>
+                <th>신호</th>
+              </tr>
+            </thead>
+            <tbody id="openPositions"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="sim-panel">
+        <div class="section-title">
+          <div>
+            <h2>종료된 결과</h2>
+            <p>우리 기준이 실제로 먹혔는지 누적 확인합니다.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="sim-table">
+            <thead>
+              <tr>
+                <th>종목</th>
+                <th>구분</th>
+                <th>진입/종료</th>
+                <th>진입가</th>
+                <th>종료가</th>
+                <th>손익</th>
+                <th>결과</th>
+              </tr>
+            </thead>
+            <tbody id="closedPositions"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/simulator.js"></script>
+  </body>
+</html>

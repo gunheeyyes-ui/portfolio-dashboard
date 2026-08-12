@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Portfolio Signal Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Daily Portfolio Signal</p>
+          <h1>눌림목 중심 매수 후보 대시보드</h1>
+        </div>
+        <nav class="top-actions" aria-label="대시보드 메뉴">
+          <a class="ghost-btn nav-btn active-nav" href="/">메인 대시보드</a>
+          <a class="ghost-btn nav-btn" href="/leader.html">주도주</a>
+          <a class="ghost-btn nav-btn" href="/scout.html">정찰병</a>
+          <a class="ghost-btn nav-btn" href="/simulator.html">시뮬레이터</a>
+          <button id="refreshBtn" class="icon-btn" title="새로고침" aria-label="새로고침">↻</button>
+          <button id="fallbackBtn" class="ghost-btn">스크린샷 기준</button>
+        </nav>
+      </header>
+
+      <section class="notice">
+        <strong>주의</strong>
+        <span>메인은 눌림목입니다. 낙주는 외국인·기관 강수급이 붙은 경우만 단기 특수 후보로 봅니다.</span>
+      </section>
+
+      <section class="score-guide" aria-label="전략 기준">
+        <strong>종합 매수순위</strong>
+        <span><b>메인 70점</b> 눌림·거래강도·외/기 연속수급·기술회복</span>
+        <span><b>정찰병 30점</b> 하락 멈춤·낮은 위험·가격 매력</span>
+        <span><b>선 제외</b> 매수보류·추격과열·위험65+·데이터 부족</span>
+        <small>종합 40점 이상만 순위를 받습니다. 1위라도 판정이 관찰이면 매수조건 미충족이며, 실제 후보는 ‘종합 최우선·종합 분할후보’입니다.</small>
+      </section>
+
+      <section class="metrics" id="metrics"></section>
+
+      <section class="action-strip">
+        <div class="section-title">
+          <h2>전략 후보</h2>
+          <p id="sourceLabel">데이터 확인 중</p>
+        </div>
+        <div class="action-grid" id="actionGrid"></div>
+      </section>
+
+      <section class="trade-strip">
+        <div class="section-title">
+          <h2>오늘 후보 체크</h2>
+          <p>눌림목 우선 · 강수급 낙주는 1~3일 단기만</p>
+        </div>
+        <div id="todayTrades" class="trade-list"></div>
+      </section>
+
+      <section class="theme-strip">
+        <div class="section-title compact-title">
+          <h2>테마 노출</h2>
+          <p>상위 테마 집중도</p>
+        </div>
+        <div id="themeList" class="theme-list"></div>
+      </section>
+
+      <section class="screener-strip">
+        <div class="section-title screener-title">
+          <div>
+            <h2>시장 매수 포인트</h2>
+            <p id="screenerStatus">코스피·코스닥 시총 상위 100과 거래대금 급증 후보에 조건을 붙입니다.</p>
+          </div>
+          <button id="screenerRefresh" class="ghost-btn">시장 후보 새로고침</button>
+        </div>
+        <div class="screener-tools">
+          <div class="tabs" id="screenerTabs">
+            <button class="active" data-market="ALL">전체</button>
+            <button data-market="KOSPI">KOSPI</button>
+            <button data-market="KOSDAQ">KOSDAQ</button>
+          </div>
+          <input id="screenerSearch" type="search" placeholder="시장 후보 검색">
+        </div>
+        <div class="screener-summary" id="screenerSummary"></div>
+        <div class="screener-picks" id="screenerPicks"></div>
+        <div class="mobile-screener" aria-label="모바일 시장 매수순위">
+          <div class="mobile-sort-bar" aria-label="모바일 정렬">
+            <button class="mobile-sort-btn" data-screener-sort-field="rank" type="button">종합순위 <span data-screener-sort-icon="rank"></span></button>
+            <button class="mobile-sort-btn" data-screener-sort-field="price" type="button">현재가 <span data-screener-sort-icon="price"></span></button>
+            <button class="mobile-sort-btn" data-screener-sort-field="liquidity" type="button">거래강도 <span data-screener-sort-icon="liquidity"></span></button>
+            <button class="mobile-sort-btn" data-screener-sort-field="leader" type="button">주도주 <span data-screener-sort-icon="leader"></span></button>
+            <button class="mobile-sort-btn" data-screener-sort-field="scout" type="button">정찰병 <span data-screener-sort-icon="scout"></span></button>
+          </div>
+          <div id="mobileScreenerRows" class="mobile-screener-rows">
+            <div class="loading">종합 매수순위 불러오는 중...</div>
+          </div>
+        </div>
+        <div class="table-wrap screener-wrap">
+          <table class="screener-table">
+            <thead>
+              <tr>
+                <th><button class="sort-btn" data-screener-sort-field="rank" type="button">종합순위 <span data-screener-sort-icon="rank"></span></button></th>
+                <th>종목</th>
+                <th><button class="sort-btn" data-screener-sort-field="price" type="button">현재가 <span data-screener-sort-icon="price"></span></button></th>
+                <th><button class="sort-btn" data-screener-sort-field="liquidity" type="button">거래강도 <span data-screener-sort-icon="liquidity"></span></button></th>
+                <th><button class="sort-btn" data-screener-sort-field="turnover" type="button">회전/폭증 <span data-screener-sort-icon="turnover"></span></button></th>
+                <th><button class="sort-btn" data-screener-sort-field="smart" type="button">외+기관 <span data-screener-sort-icon="smart"></span></button></th>
+                <th><button class="sort-btn" data-screener-sort-field="leader" type="button">주도주 <span data-screener-sort-icon="leader"></span></button></th>
+                <th><button class="sort-btn" data-screener-sort-field="combined" type="button">종합판정 <span data-screener-sort-icon="combined"></span></button></th>
+                <th><button class="sort-btn" data-screener-sort-field="scout" type="button">정찰병 <span data-screener-sort-icon="scout"></span></button></th>
+                <th>체크포인트</th>
+              </tr>
+            </thead>
+            <tbody id="screenerRows">
+              <tr><td colspan="10" class="loading">종합 매수순위 불러오는 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="layout">
+        <section class="table-panel">
+          <div class="table-tools">
+            <div class="tabs" id="tabs">
+              <button class="active" data-filter="all">전체</button>
+              <button data-filter="buy">매수</button>
+              <button data-filter="danger">위험</button>
+              <button data-filter="sell">축소</button>
+              <button data-filter="hold">관망</button>
+              <button data-filter="h3">낙주</button>
+            </div>
+            <input id="search" type="search" placeholder="종목명/코드 검색">
+          </div>
+          <div class="table-wrap">
+            <table class="holdings-table">
+              <thead>
+                <tr>
+                  <th>신호</th>
+                  <th>종목</th>
+                  <th><button class="sort-btn" data-sort-field="value" type="button">평가금액 <span data-sort-icon="value"></span></button></th>
+                  <th><button class="sort-btn" data-sort-field="price" type="button">현재가 <span data-sort-icon="price"></span></button></th>
+                  <th><button class="sort-btn" data-sort-field="pnl" type="button">손익률 <span data-sort-icon="pnl"></span></button></th>
+                  <th><button class="sort-btn" data-sort-field="liquidity" type="button">거래강도 <span data-sort-icon="liquidity"></span></button></th>
+                  <th>외/기/프</th>
+                  <th>기술</th>
+                  <th>근거</th>
+                </tr>
+              </thead>
+              <tbody id="holdings"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
