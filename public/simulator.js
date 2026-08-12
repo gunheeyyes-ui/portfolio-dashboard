@@ -95,6 +95,11 @@ function renderTodayCandidates() {
         <span>외/기 <b>${row.foreignStreak}/${row.instStreak}일</b></span>
         <span>주도주 <b>${Number.isFinite(row.leaderScore) ? `${row.leaderScore} ${row.leaderGrade}` : "계산불가"}</b></span>
       </div>
+      <div class="strategy-badges">
+        ${row.leaderReboundPass ? '<span class="strategy-badge buy">Leader반등</span>' : ""}
+        ${row.cafePass ? '<span class="strategy-badge buy">CAFE</span>' : ""}
+        ${row.minerviniPass ? '<span class="strategy-badge buy">MTT</span>' : ""}
+      </div>
       <p>${row.judgement || row.reasons?.slice(0, 3).join(" · ") || "기준 통과 후보"}</p>
     </article>
   `).join("") : `
@@ -124,6 +129,8 @@ function renderOpenPositions() {
       <td>
         <div>거래강도 ${row.liquidityScore} · 외/기 ${row.foreignStreak}/${row.instStreak}일</div>
         <div class="cell-sub">주도주 ${Number.isFinite(row.leaderScore) ? `${row.leaderScore} ${row.leaderGrade}` : "기록 없음"}</div>
+        <div class="cell-sub">반등 ${row.scoutStatus ?? "기록 없음"} · 정지 ${row.scoutStabilizeScore ?? "-"} · Risk ${row.scoutRiskScore ?? "-"}</div>
+        <div class="strategy-badges">${row.cafePass ? '<span class="strategy-badge buy">CAFE</span>' : ""}${row.minerviniPass ? '<span class="strategy-badge buy">MTT</span>' : ""}${row.leaderReboundPass ? '<span class="strategy-badge buy">Leader반등</span>' : ""}</div>
         <div class="cell-sub">${row.judgement || row.reasons?.slice(0, 3).join(" · ") || "-"}</div>
       </td>
     </tr>

@@ -14,9 +14,10 @@
           <h1>우리 기준 시뮬레이션 대시보드</h1>
         </div>
         <nav class="top-actions" aria-label="대시보드 메뉴">
-          <a class="ghost-btn nav-btn" href="/">메인 대시보드</a>
+          <a class="ghost-btn nav-btn" href="/">종합순위</a>
           <a class="ghost-btn nav-btn" href="/leader.html">주도주</a>
-          <a class="ghost-btn nav-btn" href="/scout.html">정찰병</a>
+          <a class="ghost-btn nav-btn" href="/scout.html">반등후보</a>
+          <a class="ghost-btn nav-btn" href="/strategies.html">전략후보</a>
           <a class="ghost-btn nav-btn active-nav" href="/simulator.html">시뮬레이터</a>
           <button id="recordBtn" class="ghost-btn">오늘 시뮬 기록</button>
           <button id="refreshBtn" class="icon-btn" title="새로고침" aria-label="새로고침">↻</button>
@@ -35,6 +36,11 @@
         <span><b>단기</b> 강수급 낙주</span>
         <span><b>보유</b> 내 보유종목도 후보에 포함</span>
         <small>하루에 한 번만 신규 기록됩니다. 새로고침은 수익률만 갱신합니다.</small>
+      </section>
+      <section class="score-guide">
+        <strong>기록 메타데이터</strong>
+        <span>Leader A</span><span>반등후보</span><span>Leader반등</span><span>CAFE</span><span>MTT</span><span>CAFE+MTT</span>
+        <small>신규 기록부터 전략별 성과를 나눠 볼 수 있게 진입 시점 값을 함께 저장합니다.</small>
       </section>
 
       <section class="metrics" id="simMetrics"></section>

@@ -29,6 +29,14 @@ function gradeClass(grade) {
   return "muted";
 }
 
+function strategyBadges(row) {
+  return (row.confirmation?.badges ?? []).map((label) => `<span class="strategy-badge ${label === "실험: 낙주" ? "hold" : "buy"}">${label}</span>`).join("");
+}
+
+function reboundLabel(row) {
+  return row.confirmation?.reboundState?.label ?? row.scout?.status ?? "계산불가";
+}
+
 function marketRows() {
   const query = state.query.trim().toLowerCase();
   const rows = [...(state.data?.rows?.[state.market] ?? [])].filter((row) => !query || row.name.toLowerCase().includes(query) || row.code.includes(query));
@@ -86,6 +94,13 @@ function renderSortState() {
 
 function renderRows() {
   const rows = marketRows();
+  document.querySelector("#leaderCards").innerHTML = rows.map((row) => `
+    <article class="leader-card">
+      <div class="leader-card-head"><span class="leader-badge ${gradeClass(row.leader?.grade)}">${row.leader?.grade ?? "-"}</span><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><b>${row.leader?.score ?? "-"}</b></div>
+      <div class="leader-card-values"><span>현재가 <b>${price(row.price)}</b></span><span>낙폭 <b>${pct(row.leader?.drawdown52wPct)}</b></span><span>반등 <b>${reboundLabel(row)}</b></span><span>Risk <b>${row.scout?.riskScore ?? "-"}</b></span><span>거래 <b>${row.supply?.liquidityScore ?? 0}</b></span><span>종합 <b>${row.combined?.score ?? "-"}</b></span></div>
+      <div class="strategy-badges">${strategyBadges(row)}</div>
+    </article>
+  `).join("") || `<div class="loading">표시할 종목이 없습니다.</div>`;
   document.querySelector("#leaderRows").innerHTML = rows.length ? rows.map((row) => {
     const leader = row.leader ?? {};
     const scout = row.scout ?? {};
@@ -103,8 +118,8 @@ function renderRows() {
         <td><b>${pct(leader.drawdown52wPct)}</b></td>
         <td><b>${pct(leader.ret60)}</b><div class="cell-sub">120일 ${pct(leader.ret120)}</div></td>
         <td><span class="badge ${combined.tone === "buy" ? "buy" : combined.tone === "danger" ? "danger" : "hold"}">${combined.label ?? "관망"}</span><div class="cell-sub">${combined.rank ? `종합 ${combined.rank}위 · ${combined.score}점` : "종합 순위권 밖"}</div></td>
-        <td><span class="badge ${scout.status === "1차 매수 검토" ? "buy" : scout.status === "추가매수 금지" ? "danger" : "hold"}">${scout.status ?? "순위권 밖"}</span><div class="cell-sub">싸짐 ${scout.cheapScore ?? "-"} · 멈춤 ${scout.stabilizeScore ?? "-"} · 위험 ${scout.riskScore ?? "-"}</div></td>
-        <td><div class="judgement-line">${leader.decision ?? "가격 이력 확인 필요"}</div></td>
+        <td><span class="badge ${row.confirmation?.reboundState?.tone ?? "hold"}">${reboundLabel(row)}</span><div class="cell-sub">멈춤 ${scout.stabilizeScore ?? "-"} · 위험 ${scout.riskScore ?? "-"}</div></td>
+        <td><div class="judgement-line">거래강도 ${row.supply?.liquidityScore ?? 0}</div><div class="strategy-badges">${strategyBadges(row)}</div><div class="cell-sub">${leader.decision ?? "가격 이력 확인 필요"}</div></td>
       </tr>
     `;
   }).join("") : `<tr><td colspan="12" class="loading">표시할 종목이 없습니다.</td></tr>`;

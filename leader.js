@@ -61,8 +61,12 @@ export function calcLeaderBase(candidate, history = [], quote = {}) {
   const quotedPrice = Number(quote?.price);
   const latest = quotedPrice > 0 ? quotedPrice : (closes.at(-1) ?? null);
   const ma20 = maAt(closes, 20);
+  const ma50 = maAt(closes, 50);
   const ma60 = maAt(closes, 60);
   const ma120 = maAt(closes, 120);
+  const ma150 = maAt(closes, 150);
+  const ma200 = maAt(closes, 200);
+  const ma200Prev20 = maAt(closes, 200, closes.length - 20);
   const slope60 = slopePct(closes, 60);
   const slope120 = slopePct(closes, 120);
   const ret20 = returnPct(closes, 20, latest);
@@ -71,6 +75,9 @@ export function calcLeaderBase(candidate, history = [], quote = {}) {
   const recent52w = rows.slice(-252);
   const high52w = recent52w.length
     ? Math.max(...recent52w.map((row) => Number.isFinite(Number(row.high)) ? Number(row.high) : row.close))
+    : null;
+  const low52w = recent52w.length
+    ? Math.min(...recent52w.map((row) => Number.isFinite(Number(row.low)) ? Number(row.low) : row.close))
     : null;
   const drawdown52wPct = high52w && latest ? ((latest / high52w) - 1) * 100 : null;
   const drawdownMagnitude = Math.abs(Math.min(drawdown52wPct ?? -100, 0));
@@ -112,14 +119,19 @@ export function calcLeaderBase(candidate, history = [], quote = {}) {
     enoughData,
     latest,
     ma20,
+    ma50,
     ma60,
     ma120,
+    ma150,
+    ma200,
+    ma200Prev20,
     slope60,
     slope120,
     ret20,
     ret60,
     ret120,
     high52w,
+    low52w,
     drawdown52wPct,
     monthMa5,
     previousMonthMa5,

@@ -340,7 +340,7 @@ function renderScreenerPicks(rows) {
           <div class="pick-metrics">
             <span>거래강도 <b>${row.supply?.liquidityScore ?? "-"}</b></span>
             <span>외/기 <b>${row.supply?.foreignStreak ?? 0}/${row.supply?.instStreak ?? 0}일</b></span>
-            <span>정찰병 <b>${row.scout?.rank ? `${row.scout.rank}/${row.scout.total}` : "순위권 밖"}</b></span>
+            <span>반등 <b>${row.scout?.reboundRank ? `${row.scout.reboundRank}/${row.scout.reboundTotal}` : "순위권 밖"}</b></span>
           </div>
           <p>${row.combined?.reason ?? shortJudgement(row)}</p>
         </article>
@@ -367,7 +367,7 @@ function combinedRankMap() {
 }
 
 function displayCombinedRank(row, rankMap = combinedRankMap()) {
-  return state.screenerMarket === "ALL" ? (rankMap.get(row.code) ?? null) : (row.combined?.rank ?? null);
+  return row.combined?.rank ?? null;
 }
 
 function screenerRows() {
@@ -426,7 +426,7 @@ function sortScreenerRows(rows) {
     if (field === "smart") return Math.max(supply.smartMoneyBodyPct ?? 0, supply.smartMoneyTradingSharePct ?? 0) + Math.max(supply.foreignStreak ?? 0, supply.instStreak ?? 0);
     if (field === "leader") return Number.isFinite(row.leader?.score) ? row.leader.score : -1;
     if (field === "combined") return row.combined?.rankable ? 1000 - (row.combined?.rank ?? 999) : -(row.combined?.score ?? 0);
-    if (field === "scout") return row.scout?.rank ? 1000 - row.scout.rank : -1;
+    if (field === "scout") return row.scout?.reboundRank ? 1000 - row.scout.reboundRank : -1;
     if (field === "strategy") return row.strategy?.score ?? 0;
     return row.rank ? -row.rank : 0;
   };
@@ -471,8 +471,14 @@ function screenerTags(row) {
   const nakju = row.nakju ?? {};
   const strategy = row.strategy ?? {};
   const flags = strategy.flags ?? {};
+  const confirmation = row.confirmation ?? {};
 
   const push = (tone, text) => tags.push({ tone, text });
+
+  if (confirmation.leaderReboundPass) push("good", "전략: 좋은종목 반등");
+  if (confirmation.cafePass) push("good", "전략: CAFE");
+  if (confirmation.minerviniPass) push("good", "전략: MTT");
+  if (confirmation.experimentalNakjuPass) push("watch", "실험: 낙주");
 
   if (flags.H3) push("good", "특수: 강수급 낙주");
   else if (isStrictBuyReady(row)) push("good", "우선검토: 엄격 기준 통과");
@@ -522,9 +528,9 @@ function renderTag(tag) {
 }
 
 function renderScreenerLoading() {
-  document.querySelector("#screenerRows").innerHTML = `<tr><td colspan="10" class="loading">KOSPI·KOSDAQ 통합 종합순위 계산 중... 첫 실행은 시간이 걸릴 수 있습니다.</td></tr>`;
-  document.querySelector("#mobileScreenerRows").innerHTML = `<div class="loading">KOSPI·KOSDAQ 통합 순위 계산 중...</div>`;
-  document.querySelector("#screenerStatus").textContent = "두 시장을 한 번에 불러와 통합 매수순위를 계산 중입니다.";
+  document.querySelector("#screenerRows").innerHTML = `<tr><td colspan="10" class="loading">KOSPI·KOSDAQ 시장별 타이밍 순위 계산 중... 첫 실행은 시간이 걸릴 수 있습니다.</td></tr>`;
+  document.querySelector("#mobileScreenerRows").innerHTML = `<div class="loading">KOSPI·KOSDAQ 시장별 순위 계산 중...</div>`;
+  document.querySelector("#screenerStatus").textContent = "두 시장을 한 번에 불러오되 순위는 시장별로 따로 계산합니다.";
 }
 
 function renderMobileScreener(rows) {
@@ -569,7 +575,7 @@ function renderMobileScreener(rows) {
         </div>
         <div class="mobile-inline-score"><span>거래</span><b class="${liquidity.tone}">${liquidity.missing ? "-" : liquidity.value}</b></div>
         <div class="mobile-inline-score"><span>주도</span><b class="${leaderTone(leader.grade)}">${leader.grade ?? "-"}</b></div>
-        <div class="mobile-inline-score"><span>정찰</span><b class="${scout.rank ? "watch" : "muted"}">${scout.rank ? `${scout.rank}위` : "-"}</b></div>
+        <div class="mobile-inline-score"><span>반등</span><b class="${scout.reboundRank ? "watch" : "muted"}">${scout.reboundRank ? `${scout.reboundRank}위` : "-"}</b></div>
         <div class="mobile-inline-score mobile-supply"><span>외기</span><b class="${streakClass(row)}">${row.supply?.foreignStreak ?? 0}/${row.supply?.instStreak ?? 0}</b></div>
         <div class="mobile-signal ${signal.tone}"><i></i><b>${signal.label}</b></div>
       </article>
@@ -604,7 +610,7 @@ function renderScreenerSummary() {
   const count = (filter) => rows.filter((row) => matchesScreenerFilter(row, filter)).length;
   const cards = [
     ["all", "전체", `${summary.count}개`, "시총 상위+거래량 후보"],
-    ["combined-buy", "종합 매수후보", `${summary.combinedBuy ?? 0}개`, "메인+정찰병 함께 통과"],
+    ["combined-buy", "종합 매수후보", `${summary.combinedBuy ?? 0}개`, "메인+반등 조건 함께 통과"],
     ["buy-ready", "우선 검토", `${count("buy-ready")}개`, "거래강도60·VWAP·좁은 눌림"],
     ["buy-candidate", "분할 후보", `${count("buy-candidate")}개`, "5~10일 관점, 소액 분할"],
     ["special", "단기 특수", `${count("special")}개`, "강수급 낙주, 짧게만"],
@@ -630,7 +636,7 @@ function renderScreener() {
   renderMobileScreener(rows);
   const errorText = state.screener?.errors?.length ? ` · 일부 실패 ${state.screener.errors.length}건` : "";
   const asOf = state.screener?.asOf ? new Date(state.screener.asOf).toLocaleString("ko-KR") : "-";
-  const marketLabel = state.screenerMarket === "ALL" ? "KOSPI·KOSDAQ 통합" : state.screenerMarket;
+  const marketLabel = state.screenerMarket === "ALL" ? "KOSPI·KOSDAQ 각각" : state.screenerMarket;
   if (!rows.length && state.screener?.errors?.length && !state.screener?.asOf) {
     document.querySelector("#screenerStatus").textContent = state.screener.errors[0].message;
   } else {
@@ -644,7 +650,9 @@ function renderScreener() {
     const combined = row.combined ?? {};
     const scout = row.scout ?? {};
     const leader = row.leader ?? {};
-    const scoutTone = scout.status === "1차 매수 검토" ? "buy" : scout.status === "추가매수 금지" ? "danger" : "hold";
+    const rebound = row.confirmation?.reboundState ?? {};
+    const scoutTone = rebound.tone ?? (scout.status === "추가매수 금지" ? "danger" : "hold");
+    const strategyBadges = (row.confirmation?.badges ?? []).map((label) => `<span class="strategy-badge ${label === "실험: 낙주" ? "hold" : "buy"}">${label}</span>`).join("");
     return `
       <tr>
         <td>
@@ -685,15 +693,16 @@ function renderScreener() {
         </td>
         <td>
           <div class="badge ${combined.tone === "buy" ? "buy" : combined.tone === "danger" ? "danger" : "hold"}">${combined.label ?? "관망"}</div>
-          <div class="combined-score"><b>${combined.score ?? 0}점</b><span>메인 ${combined.mainScore ?? 0} + 정찰 ${combined.scoutScore ?? 0}</span></div>
+          <div class="combined-score"><b>${combined.score ?? 0}점</b><span>메인 ${combined.mainScore ?? 0} + 반등 ${combined.scoutScore ?? 0}</span></div>
           <div class="cell-sub">눌림 ${combined.strategyPoints ?? 0} · 거래 ${combined.liquidityPoints ?? 0} · 수급 ${combined.supplyPoints ?? 0} · 기술 ${combined.technicalPoints ?? 0}</div>
           <div class="cell-sub">${combined.reason ?? "종합 조건 확인"}</div>
         </td>
         <td>
-          <div class="badge ${scoutTone}">${scout.status ?? "순위권 밖"}</div>
-          <div class="scout-rank">${scout.rank ? `${scout.rank}/${scout.total}위` : "정찰 순위 없음"}</div>
+          <div class="badge ${scoutTone}">${rebound.label ?? scout.status ?? "순위권 밖"}</div>
+          <div class="scout-rank">${scout.reboundRank ? `${scout.reboundRank}/${scout.reboundTotal}위` : "반등 순위 없음"}</div>
           <div class="cell-sub">싸짐 ${scout.cheapScore ?? "-"} · 멈춤 ${scout.stabilizeScore ?? "-"} · 위험 ${scout.riskScore ?? "-"}</div>
           <div class="cell-sub">2년 위치 ${scout.pricePositionPct === null || scout.pricePositionPct === undefined ? "-" : plainPct(scout.pricePositionPct)} · 고점대비 ${pct(scout.drawdownFromHighPct)}</div>
+          <div class="strategy-badges">${strategyBadges}</div>
         </td>
         <td>
           <div class="judgement-line">${shortJudgement(row)}</div>

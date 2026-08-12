@@ -883,6 +883,64 @@ td {
   vertical-align: middle;
 }
 
+.strategy-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.strategy-badge,
+.market-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #19212a;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.strategy-badge.buy {
+  border-color: rgba(35, 196, 131, 0.45);
+  color: #6fe2b2;
+}
+
+.strategy-badge.watch,
+.strategy-badge.hold {
+  border-color: rgba(243, 179, 64, 0.42);
+  color: #f7d38a;
+}
+
+.market-chip.kospi {
+  border-color: #346aa0;
+  color: #8ec9ff;
+}
+
+.market-chip.kosdaq {
+  border-color: #26785a;
+  color: #78e0b1;
+}
+
+.rebound-card-list,
+.strategy-card-list,
+.leader-card-list {
+  display: none;
+}
+
+.strategy-tools {
+  flex-wrap: wrap;
+}
+
+.strategy-table th,
+.strategy-table td {
+  white-space: nowrap;
+}
+
 th {
   position: sticky;
   top: 0;
@@ -1399,6 +1457,25 @@ td {
     grid-template-columns: 1fr;
   }
 
+  #strategyMetrics,
+  #leaderMetrics,
+  #scoutMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #strategyMetrics .metric,
+  #leaderMetrics .metric,
+  #scoutMetrics .metric {
+    min-height: 92px;
+    padding: 12px;
+  }
+
+  #strategyMetrics .value,
+  #leaderMetrics .value,
+  #scoutMetrics .value {
+    font-size: 22px;
+  }
+
   .theme-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1804,5 +1881,78 @@ td {
 
   .mobile-signal.red b {
     color: #ff9ba6;
+  }
+
+  .rebound-card-list,
+  .strategy-card-list,
+  .leader-card-list {
+    display: grid;
+    gap: 1px;
+    margin-top: 8px;
+  }
+
+  .scout-wrap,
+  .strategy-table-wrap,
+  .leader-wrap {
+    display: none;
+  }
+
+  .rebound-card,
+  .strategy-card,
+  .leader-card {
+    min-width: 0;
+    padding: 9px;
+    border-left: 3px solid #346aa0;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+
+  .rebound-card.danger {
+    border-left-color: #a43d49;
+  }
+
+  .rebound-card.buy {
+    border-left-color: #26785a;
+  }
+
+  .rebound-card-head,
+  .strategy-card > div:first-child,
+  .leader-card-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .rebound-card-head .stock-link,
+  .strategy-card .stock-link,
+  .leader-card .stock-link {
+    overflow: hidden;
+    flex: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rebound-card-values,
+  .strategy-card-values,
+  .leader-card-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 10px;
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .rebound-card-values b,
+  .strategy-card-values b,
+  .leader-card-values b {
+    color: var(--text);
+  }
+
+  .strategy-tools .tabs {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
   }
 }

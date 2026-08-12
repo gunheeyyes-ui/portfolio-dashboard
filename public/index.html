@@ -11,12 +11,13 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Daily Portfolio Signal</p>
-          <h1>눌림목 중심 매수 후보 대시보드</h1>
+          <h1>현재 타이밍 종합순위</h1>
         </div>
         <nav class="top-actions" aria-label="대시보드 메뉴">
-          <a class="ghost-btn nav-btn active-nav" href="/">메인 대시보드</a>
+          <a class="ghost-btn nav-btn active-nav" href="/">종합순위</a>
           <a class="ghost-btn nav-btn" href="/leader.html">주도주</a>
-          <a class="ghost-btn nav-btn" href="/scout.html">정찰병</a>
+          <a class="ghost-btn nav-btn" href="/scout.html">반등후보</a>
+          <a class="ghost-btn nav-btn" href="/strategies.html">전략후보</a>
           <a class="ghost-btn nav-btn" href="/simulator.html">시뮬레이터</a>
           <button id="refreshBtn" class="icon-btn" title="새로고침" aria-label="새로고침">↻</button>
           <button id="fallbackBtn" class="ghost-btn">스크린샷 기준</button>
@@ -25,13 +26,13 @@
 
       <section class="notice">
         <strong>주의</strong>
-        <span>메인은 눌림목입니다. 낙주는 외국인·기관 강수급이 붙은 경우만 단기 특수 후보로 봅니다.</span>
+        <span>종합순위는 현재 진입 타이밍 비교입니다. 장기 종목의 질은 주도주, 반등 여부는 반등후보를 함께 확인하세요.</span>
       </section>
 
       <section class="score-guide" aria-label="전략 기준">
-        <strong>종합 매수순위</strong>
+        <strong>현재 타이밍 종합순위</strong>
         <span><b>메인 70점</b> 눌림·거래강도·외/기 연속수급·기술회복</span>
-        <span><b>정찰병 30점</b> 하락 멈춤·낮은 위험·가격 매력</span>
+        <span><b>반등 30점</b> 하락 멈춤·낮은 위험·가격 매력</span>
         <span><b>선 제외</b> 매수보류·추격과열·위험65+·데이터 부족</span>
         <small>종합 40점 이상만 순위를 받습니다. 1위라도 판정이 관찰이면 매수조건 미충족이며, 실제 후보는 ‘종합 최우선·종합 분할후보’입니다.</small>
       </section>
@@ -65,7 +66,7 @@
       <section class="screener-strip">
         <div class="section-title screener-title">
           <div>
-            <h2>시장 매수 포인트</h2>
+            <h2>현재 타이밍 종합순위</h2>
             <p id="screenerStatus">코스피·코스닥 시총 상위 100과 거래대금 급증 후보에 조건을 붙입니다.</p>
           </div>
           <button id="screenerRefresh" class="ghost-btn">시장 후보 새로고침</button>
@@ -86,7 +87,7 @@
             <button class="mobile-sort-btn" data-screener-sort-field="price" type="button">현재가 <span data-screener-sort-icon="price"></span></button>
             <button class="mobile-sort-btn" data-screener-sort-field="liquidity" type="button">거래강도 <span data-screener-sort-icon="liquidity"></span></button>
             <button class="mobile-sort-btn" data-screener-sort-field="leader" type="button">주도주 <span data-screener-sort-icon="leader"></span></button>
-            <button class="mobile-sort-btn" data-screener-sort-field="scout" type="button">정찰병 <span data-screener-sort-icon="scout"></span></button>
+            <button class="mobile-sort-btn" data-screener-sort-field="scout" type="button">반등 <span data-screener-sort-icon="scout"></span></button>
           </div>
           <div id="mobileScreenerRows" class="mobile-screener-rows">
             <div class="loading">종합 매수순위 불러오는 중...</div>
@@ -104,7 +105,7 @@
                 <th><button class="sort-btn" data-screener-sort-field="smart" type="button">외+기관 <span data-screener-sort-icon="smart"></span></button></th>
                 <th><button class="sort-btn" data-screener-sort-field="leader" type="button">주도주 <span data-screener-sort-icon="leader"></span></button></th>
                 <th><button class="sort-btn" data-screener-sort-field="combined" type="button">종합판정 <span data-screener-sort-icon="combined"></span></button></th>
-                <th><button class="sort-btn" data-screener-sort-field="scout" type="button">정찰병 <span data-screener-sort-icon="scout"></span></button></th>
+                <th><button class="sort-btn" data-screener-sort-field="scout" type="button">반등상태 <span data-screener-sort-icon="scout"></span></button></th>
                 <th>체크포인트</th>
               </tr>
             </thead>

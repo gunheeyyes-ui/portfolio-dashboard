@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>전략후보 대시보드</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div><p class="eyebrow">Strategy Confirmation</p><h1>전략후보</h1></div>
+        <nav class="top-actions" aria-label="대시보드 메뉴">
+          <a class="ghost-btn nav-btn" href="/">종합순위</a>
+          <a class="ghost-btn nav-btn" href="/leader.html">주도주</a>
+          <a class="ghost-btn nav-btn" href="/scout.html">반등후보</a>
+          <a class="ghost-btn nav-btn active-nav" href="/strategies.html">전략후보</a>
+          <a class="ghost-btn nav-btn" href="/simulator.html">시뮬레이터</a>
+          <button id="refreshBtn" class="icon-btn" title="새로고침" aria-label="새로고침">↻</button>
+        </nav>
+      </header>
+
+      <section class="notice">
+        <strong>독립 확인</strong>
+        <span>CAFE·MTT·Leader반등은 종합점수에 가산하지 않습니다. 각각의 전략 조건을 통과했는지만 보여줍니다.</span>
+      </section>
+      <section class="score-guide">
+        <strong>전략 의미</strong>
+        <span><b>CAFE</b> Leader A의 기술+수급 눌림 프록시</span>
+        <span><b>MTT</b> Minervini 장기 추세 템플릿</span>
+        <span><b>Leader반등</b> Leader A + 하락정지 + 저위험</span>
+        <span><b>실험: 낙주</b> 당일 급락 후 반등·수급 실험 신호</span>
+      </section>
+
+      <section class="metrics" id="strategyMetrics"></section>
+      <section class="screener-strip">
+        <div class="section-title screener-title">
+          <div><h2>전략 통과 종목</h2><p id="strategyStatus">KOSPI·KOSDAQ 후보를 불러오는 중입니다.</p></div>
+        </div>
+        <div class="screener-tools strategy-tools">
+          <div class="tabs" id="strategyFilters">
+            <button class="active" data-strategy-filter="all">전체</button>
+            <button data-strategy-filter="cafe">카페 눌림</button>
+            <button data-strategy-filter="mtt">Minervini MTT</button>
+            <button data-strategy-filter="leader-rebound">Leader A + 하락정지</button>
+            <button data-strategy-filter="cafe-mtt">CAFE + MTT</button>
+            <button data-strategy-filter="nakju">실험: 낙주</button>
+          </div>
+          <div class="tabs" id="strategyMarkets">
+            <button class="active" data-strategy-market="ALL">전체 시장</button>
+            <button data-strategy-market="KOSPI">KOSPI</button>
+            <button data-strategy-market="KOSDAQ">KOSDAQ</button>
+          </div>
+          <input id="strategySearch" type="search" placeholder="종목명/종목코드">
+        </div>
+        <div id="strategyCards" class="strategy-card-list"></div>
+        <div class="table-wrap strategy-table-wrap">
+          <table class="strategy-table">
+            <thead><tr>
+              <th>종목</th><th>시장</th><th>현재가/등락</th><th>종합</th><th>Leader</th><th>낙폭</th><th>하락정지</th><th>Risk</th><th>거래강도</th><th>전략</th><th>판정</th>
+            </tr></thead>
+            <tbody id="strategyRows"><tr><td colspan="11" class="loading">전략후보 계산 중...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/strategies.js"></script>
+  </body>
+</html>

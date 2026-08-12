@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { portfolio } from "./portfolio.js";
 import { buildIndicators, buildPortfolioSummary, classifyHolding, toNumber } from "./signals.js";
 import { buildLeaderDecision, calcLeaderBase, enrichLeaderScores } from "./leader.js";
+import { buildStrategyConfirmation } from "./strategy-confirmation.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cache = new Map();
@@ -968,6 +969,27 @@ function scoutSortPriority(status) {
   }[status] ?? 0;
 }
 
+function reboundRiskBand(riskScore) {
+  const risk = Number(riskScore ?? 100);
+  if (risk <= 35) return 0;
+  if (risk <= 50) return 1;
+  if (risk < 65) return 2;
+  return 3;
+}
+
+function compareReboundCandidate(a, b) {
+  const aScout = a.scout ?? a;
+  const bScout = b.scout ?? b;
+  const leaderPower = { A: 4, B: 3, C: 2, D: 1, "계산불가": 0 };
+  const boundedDrawdown = (value) => Math.min(Math.max(Math.abs(Math.min(Number(value ?? 0), 0)), 0), 40);
+  return reboundRiskBand(aScout.riskScore) - reboundRiskBand(bScout.riskScore)
+    || Number(bScout.stabilizeScore ?? 0) - Number(aScout.stabilizeScore ?? 0)
+    || (leaderPower[b.leader?.grade] ?? 0) - (leaderPower[a.leader?.grade] ?? 0)
+    || boundedDrawdown(bScout.drawdownFromHighPct) - boundedDrawdown(aScout.drawdownFromHighPct)
+    || Number(b.supply?.liquidityScore ?? 0) - Number(a.supply?.liquidityScore ?? 0)
+    || Number(aScout.riskScore ?? 100) - Number(bScout.riskScore ?? 100);
+}
+
 function buildCombinedDecision(row, scout) {
   const flags = row.strategy?.flags ?? {};
   const supply = row.supply ?? {};
@@ -1112,17 +1134,37 @@ async function attachScoutAndCombined(rows, limit, force, errors, historyByCode)
     const scout = scoutByCode.get(row.code) ?? null;
     const leaderBase = leaderByCode.get(row.code) ?? null;
     const combinedDecision = buildCombinedDecision(row, scout);
-    return {
+    const enrichedRow = {
       ...row,
       scout: scout ? {
         rank: scout.scoutRank ?? null,
         total: scout.scoutTotal ?? null,
         status: scout.status,
+        stage: scout.stage,
+        tone: scout.tone,
         cheapScore: scout.cheapScore,
         stabilizeScore: scout.stabilizeScore,
         riskScore: scout.riskScore,
+        riskReasons: scout.riskReasons,
         pricePositionPct: scout.pricePositionPct,
-        drawdownFromHighPct: scout.drawdownFromHighPct
+        drawdownFromHighPct: scout.drawdownFromHighPct,
+        reboundFromLowPct: scout.reboundFromLowPct,
+        high2y: scout.high2y,
+        low2y: scout.low2y,
+        dataDays: scout.dataDays,
+        enoughData: scout.enoughData,
+        daysSinceLow: scout.daysSinceLow,
+        noNewLow5: scout.noNewLow5,
+        slope5: scout.slope5,
+        slope20: scout.slope20,
+        ret5: scout.ret5,
+        ret20: scout.ret20,
+        relative5: scout.relative5,
+        relative20: scout.relative20,
+        dist120: scout.dist120,
+        ma120Stage: scout.ma120Stage,
+        volumeImproving: scout.volumeImproving,
+        reason: scout.reason
       } : null,
       combined: combinedDecision,
       leader: leaderBase ? {
@@ -1130,9 +1172,20 @@ async function attachScoutAndCombined(rows, limit, force, errors, historyByCode)
         decision: buildLeaderDecision(leaderBase, combinedDecision, scout ?? {})
       } : null
     };
+    return {
+      ...enrichedRow,
+      confirmation: buildStrategyConfirmation(enrichedRow)
+    };
   });
 
   for (const market of ["KOSPI", "KOSDAQ"]) {
+    const reboundRanked = combined
+      .filter((row) => row.market === market && row.scout)
+      .sort(compareReboundCandidate);
+    reboundRanked.forEach((row, index) => {
+      row.scout.reboundRank = index + 1;
+      row.scout.reboundTotal = reboundRanked.length;
+    });
     const ranked = combined
       .filter((row) => row.market === market && row.combined.rankable)
       .sort((a, b) => b.combined.tier - a.combined.tier
@@ -1179,11 +1232,54 @@ async function buildLeaderDashboard(limit = 100, force = false, marketFilter = "
   };
 }
 
+function summarizeStrategyRows(rows) {
+  return {
+    count: rows.length,
+    cafe: rows.filter((row) => row.confirmation?.cafePass).length,
+    mtt: rows.filter((row) => row.confirmation?.minerviniPass).length,
+    leaderRebound: rows.filter((row) => row.confirmation?.leaderReboundPass).length,
+    cafeMtt: rows.filter((row) => row.confirmation?.cafeAndMtt).length,
+    experimentalNakju: rows.filter((row) => row.confirmation?.experimentalNakjuPass).length
+  };
+}
+
+async function buildStrategyDashboard(limit = 100, force = false, marketFilter = "ALL") {
+  const screener = await buildMarketScreener(limit, force, marketFilter);
+  const kospi = screener.rows?.KOSPI ?? [];
+  const kosdaq = screener.rows?.KOSDAQ ?? [];
+  return {
+    ...screener,
+    strategySummary: {
+      all: summarizeStrategyRows([...kospi, ...kosdaq]),
+      kospi: summarizeStrategyRows(kospi),
+      kosdaq: summarizeStrategyRows(kosdaq)
+    }
+  };
+}
+
 async function buildMarketScreener(limit = 100, force = false, marketFilter = "ALL") {
   const normalizedMarket = ["KOSPI", "KOSDAQ"].includes(marketFilter) ? marketFilter : "ALL";
   const cacheKey = `market-screener:${normalizedMarket}:${limit}`;
   const cached = force ? null : cacheGet(cacheKey, 1000 * 60 * 30);
   if (cached) return cached;
+  if (!force && normalizedMarket !== "ALL") {
+    const allCached = cacheGet(`market-screener:ALL:${limit}`, 1000 * 60 * 30);
+    if (allCached) {
+      const marketRows = allCached.rows?.[normalizedMarket] ?? [];
+      return cacheSet(cacheKey, {
+        ...allCached,
+        market: normalizedMarket,
+        rows: {
+          KOSPI: normalizedMarket === "KOSPI" ? marketRows : [],
+          KOSDAQ: normalizedMarket === "KOSDAQ" ? marketRows : []
+        },
+        summary: {
+          kospi: summarizeMarketRows(normalizedMarket === "KOSPI" ? marketRows : []),
+          kosdaq: summarizeMarketRows(normalizedMarket === "KOSDAQ" ? marketRows : [])
+        }
+      });
+    }
+  }
   const errors = [];
   const judal = await fetchJudalStreaks();
   const markets = normalizedMarket === "ALL" ? ["KOSPI", "KOSDAQ"] : [normalizedMarket];
@@ -1609,67 +1705,24 @@ async function buildScoutDashboard(limit = 100, force = false, marketFilter = "A
   const cacheKey = `scout-dashboard:${normalizedMarket}:${limit}`;
   const cached = force ? null : cacheGet(cacheKey, 1000 * 60 * 30);
   if (cached) return cached;
-  const errors = [];
-  const markets = normalizedMarket === "ALL" ? ["KOSPI", "KOSDAQ"] : [normalizedMarket];
-  const candidateGroups = await Promise.all(markets.map((market) => fetchMarketCapCandidates(market, limit)));
-  const candidates = candidateGroups.flat();
-  const rowsBase = await mapLimit(candidates, 2, async (candidate) => {
-    try {
-      const quote = await withRetry(() => fetchQuoteWithKrxFallback(candidate.code, force), 4);
-      const history = await withRetry(() => fetchTwoYearHistory(candidate.code, force), 4);
-      return {
-        scout: calcScoutBase(candidate, history, quote),
-        leader: calcLeaderBase(candidate, history, quote)
-      };
-    } catch (error) {
-      errors.push({ code: candidate.code, name: candidate.name, market: candidate.market, message: error.message });
-      return null;
-    }
+  const screener = await buildMarketScreener(limit, force, normalizedMarket);
+  const toReboundRow = (row) => ({
+    ...row,
+    ...(row.scout ?? {}),
+    rank: row.scout?.reboundRank ?? row.scout?.rank ?? null,
+    total: row.scout?.reboundTotal ?? row.scout?.total ?? null,
+    scout: row.scout,
+    liquidityScore: row.supply?.liquidityScore ?? 0
   });
-  const validBundles = rowsBase.filter(Boolean);
-  const valid = validBundles.map((item) => item.scout);
-  const leaderByCode = new Map(enrichLeaderScores(validBundles.map((item) => item.leader)).map((leader) => [leader.code, leader]));
-  const byMarketBase = {
-    KOSPI: valid.filter((row) => row.market === "KOSPI"),
-    KOSDAQ: valid.filter((row) => row.market === "KOSDAQ")
-  };
-  const marketStats = Object.fromEntries(Object.entries(byMarketBase).map(([market, rows]) => [market, {
-    avgRet5: avgNumber(rows.map((row) => row.ret5)),
-    avgRet20: avgNumber(rows.map((row) => row.ret20)),
-    avgDist120: avgNumber(rows.map((row) => row.dist120))
-  }]));
-  const enriched = valid.map((row) => {
-    const scout = enrichScoutScores(row, marketStats[row.market] ?? {});
-    const leaderBase = leaderByCode.get(row.code) ?? null;
-    return {
-      ...scout,
-      leader: leaderBase ? {
-        ...leaderBase,
-        decision: buildLeaderDecision(leaderBase, {}, scout)
-      } : null
-    };
-  });
-  for (const market of ["KOSPI", "KOSDAQ"]) {
-    const leaderRanked = enriched
-      .filter((row) => row.market === market && Number.isFinite(row.leader?.score))
-      .sort((a, b) => b.leader.score - a.leader.score
-        || b.leader.relativeStrengthScore - a.leader.relativeStrengthScore
-        || b.leader.trendScore - a.leader.trendScore);
-    leaderRanked.forEach((row, index) => {
-      row.leader.rank = index + 1;
-      row.leader.total = leaderRanked.length;
-    });
-  }
-  const sortRows = (rows) => rows.sort((a, b) => b.stage - a.stage || b.cheapScore - a.cheapScore || b.stabilizeScore - a.stabilizeScore || a.riskScore - b.riskScore);
   const byMarket = {
-    KOSPI: sortRows(enriched.filter((row) => row.market === "KOSPI")),
-    KOSDAQ: sortRows(enriched.filter((row) => row.market === "KOSDAQ"))
+    KOSPI: (screener.rows?.KOSPI ?? []).map(toReboundRow).sort(compareReboundCandidate),
+    KOSDAQ: (screener.rows?.KOSDAQ ?? []).map(toReboundRow).sort(compareReboundCandidate)
   };
   const payload = {
-    asOf: new Date().toISOString(),
+    asOf: screener.asOf,
     market: normalizedMarket,
     limit,
-    errors,
+    errors: screener.errors,
     rows: byMarket,
     summary: {
       kospi: summarizeScoutRows(byMarket.KOSPI),
@@ -1758,6 +1811,8 @@ function normalizeSimulationCandidate(row, source, leaderOverride = null) {
   const category = simulationCategory(row);
   const supply = row.supply ?? {};
   const leader = leaderOverride ?? row.leader ?? null;
+  const scout = row.scout ?? null;
+  const confirmation = row.confirmation ?? null;
   const price = row.price ?? row.quote?.price ?? 0;
   return {
     code: row.code,
@@ -1789,7 +1844,15 @@ function normalizeSimulationCandidate(row, source, leaderOverride = null) {
     trendScore: Number.isFinite(leader?.trendScore) ? leader.trendScore : null,
     relativeStrengthScore: Number.isFinite(leader?.relativeStrengthScore) ? leader.relativeStrengthScore : null,
     highRetentionScore: Number.isFinite(leader?.highRetentionScore) ? leader.highRetentionScore : null,
-    persistenceScore: Number.isFinite(leader?.persistenceScore) ? leader.persistenceScore : null
+    persistenceScore: Number.isFinite(leader?.persistenceScore) ? leader.persistenceScore : null,
+    combinedScore: Number.isFinite(row.combined?.score) ? row.combined.score : null,
+    scoutStatus: scout?.status ?? null,
+    scoutStabilizeScore: Number.isFinite(scout?.stabilizeScore) ? scout.stabilizeScore : null,
+    scoutRiskScore: Number.isFinite(scout?.riskScore) ? scout.riskScore : null,
+    drawdownFromHighPct: Number.isFinite(scout?.drawdownFromHighPct) ? scout.drawdownFromHighPct : null,
+    cafePass: Boolean(confirmation?.cafePass),
+    minerviniPass: Boolean(confirmation?.minerviniPass),
+    leaderReboundPass: Boolean(confirmation?.leaderReboundPass)
   };
 }
 
@@ -1868,7 +1931,15 @@ function makeSimulationPosition(candidate, runDate) {
     trendScore: candidate.trendScore,
     relativeStrengthScore: candidate.relativeStrengthScore,
     highRetentionScore: candidate.highRetentionScore,
-    persistenceScore: candidate.persistenceScore
+    persistenceScore: candidate.persistenceScore,
+    combinedScore: candidate.combinedScore,
+    scoutStatus: candidate.scoutStatus,
+    scoutStabilizeScore: candidate.scoutStabilizeScore,
+    scoutRiskScore: candidate.scoutRiskScore,
+    drawdownFromHighPct: candidate.drawdownFromHighPct,
+    cafePass: candidate.cafePass,
+    minerviniPass: candidate.minerviniPass,
+    leaderReboundPass: candidate.leaderReboundPass
   };
 }
 
@@ -2334,6 +2405,17 @@ const server = http.createServer(async (req, res) => {
       const force = url.searchParams.has("t") || url.searchParams.get("force") === "1";
       const market = String(url.searchParams.get("market") || "ALL").toUpperCase();
       json(res, 200, await buildScoutDashboard(limit, force, market));
+      return;
+    }
+    if (url.pathname === "/api/strategies") {
+      if (!process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET) {
+        json(res, 400, { error: "KIS keys are required" });
+        return;
+      }
+      const limit = Math.min(100, Math.max(20, Number(url.searchParams.get("limit") || 100)));
+      const force = url.searchParams.has("t") || url.searchParams.get("force") === "1";
+      const market = String(url.searchParams.get("market") || "ALL").toUpperCase();
+      json(res, 200, await buildStrategyDashboard(limit, force, market));
       return;
     }
     if (url.pathname === "/api/simulation") {
