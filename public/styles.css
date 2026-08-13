@@ -1919,10 +1919,18 @@ td {
   body:has(.screener-table) .theme-strip,
   body:has(.screener-table) .screener-summary,
   body:has(.screener-table) .screener-picks,
-  body:has(.screener-table) .screener-wrap,
   body:has(.screener-table) .layout,
   body:has(.screener-table) #screenerRefresh {
     display: none;
+  }
+
+  .screener-wrap:has(.explorer-table) {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .explorer-table {
+    min-width: 1040px;
   }
 
   body:has(.screener-table) h1 {
@@ -1966,10 +1974,6 @@ td {
 
   body:has(.screener-table) .tabs button {
     height: 32px;
-  }
-
-  .mobile-screener {
-    display: block;
   }
 
   .mobile-sort-bar {
