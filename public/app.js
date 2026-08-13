@@ -4,9 +4,10 @@ const state = {
   filter: "all",
   query: "",
   holdingSort: "priority-desc",
-  screenerSort: "rank-desc",
-  screenerFilter: "all",
-  screenerMarket: "ALL",
+  screenerSort: null,
+  screenerFetchCount: 0,
+  explorerMode: "rebound",
+  screenerMarket: "KOSPI",
   screenerQuery: "",
   screenerLoading: false,
   live: true
@@ -202,6 +203,7 @@ async function loadSnapshot(force = false) {
 }
 
 async function loadMarketScreener(force = false) {
+  state.screenerFetchCount += 1;
   state.screenerLoading = true;
   renderScreenerLoading();
   try {
@@ -232,7 +234,7 @@ async function loadMarketScreener(force = false) {
     };
   } finally {
     state.screenerLoading = false;
-    renderScreener();
+    renderUnifiedExplorer();
   }
 }
 
@@ -528,9 +530,10 @@ function renderTag(tag) {
 }
 
 function renderScreenerLoading() {
-  document.querySelector("#screenerRows").innerHTML = `<tr><td colspan="10" class="loading">KOSPI·KOSDAQ 시장별 타이밍 순위 계산 중... 첫 실행은 시간이 걸릴 수 있습니다.</td></tr>`;
-  document.querySelector("#mobileScreenerRows").innerHTML = `<div class="loading">KOSPI·KOSDAQ 시장별 순위 계산 중...</div>`;
+  document.querySelector("#screenerRows").innerHTML = `<tr><td colspan="9" class="loading">KOSPI·KOSDAQ 종목 탐색 데이터 계산 중... 첫 실행은 시간이 걸릴 수 있습니다.</td></tr>`;
+  document.querySelector("#mobileScreenerRows").innerHTML = `<div class="loading">KOSPI·KOSDAQ 종목 탐색 데이터 계산 중...</div>`;
   document.querySelector("#screenerStatus").textContent = "두 시장을 한 번에 불러오되 순위는 시장별로 따로 계산합니다.";
+  document.querySelector("#screenerStatus").dataset.fetchCount = String(state.screenerFetchCount);
 }
 
 function renderMobileScreener(rows) {
@@ -713,6 +716,160 @@ function renderScreener() {
   }).join("") || `<tr><td colspan="10" class="loading">조건에 맞는 시장 후보가 없습니다.</td></tr>`;
 }
 
+// Unified explorer: one cached dataset, separate market tabs, independent view modes.
+function explorerMarketRows(market = state.screenerMarket) {
+  return state.screener?.rows?.[market] ?? [];
+}
+
+function signedEok(value) {
+  if (!Number.isFinite(Number(value))) return "-";
+  const amount = Number(value) / 100000000;
+  return `${amount > 0 ? "+" : ""}${fmtNum.format(amount)}억`;
+}
+
+function explorerBadges(row) {
+  const confirmation = row.confirmation ?? {};
+  return [confirmation.cafePass ? "CAFE" : null, confirmation.minerviniPass ? "MTT" : null]
+    .filter(Boolean)
+    .map((label) => `<span class="strategy-badge buy">${label}</span>`)
+    .join("");
+}
+
+function reboundGroup(row) {
+  const stateKey = row.confirmation?.reboundState?.key;
+  const risk = Number(row.scout?.riskScore ?? 100);
+  if (row.combined?.blocked || risk >= 65 || ["risk", "falling"].includes(stateKey)) return 3;
+  if (stateKey === "ready" || stateKey === "stopped") return 0;
+  if (stateKey === "early") return 1;
+  return 2;
+}
+
+function leaderPriority(grade) {
+  return { A: 0, B: 1, C: 2, D: 3, "계산불가": 4 }[grade] ?? 4;
+}
+
+function adjustmentPriority(drawdown) {
+  const value = Number(drawdown ?? 0);
+  if (value <= -20) return 0;
+  if (value <= -15) return 1;
+  if (value <= -10) return 2;
+  return 3;
+}
+
+function compareReboundReview(a, b) {
+  const aScout = a.scout ?? {};
+  const bScout = b.scout ?? {};
+  const aSupply = a.supply ?? {};
+  const bSupply = b.supply ?? {};
+  return reboundGroup(a) - reboundGroup(b)
+    || leaderPriority(a.leader?.grade) - leaderPriority(b.leader?.grade)
+    || adjustmentPriority(aScout.drawdownFromHighPct) - adjustmentPriority(bScout.drawdownFromHighPct)
+    || Number(bScout.stabilizeScore ?? 0) - Number(aScout.stabilizeScore ?? 0)
+    || Number(aScout.riskScore ?? 100) - Number(bScout.riskScore ?? 100)
+    || Number(bSupply.liquidityScore ?? 0) - Number(aSupply.liquidityScore ?? 0)
+    || Number(bSupply.totalNetAmount ?? 0) - Number(aSupply.totalNetAmount ?? 0)
+    || Number(b.combined?.score ?? 0) - Number(a.combined?.score ?? 0);
+}
+
+function explorerModeRows() {
+  const query = state.screenerQuery.trim().toLowerCase();
+  let rows = explorerMarketRows().filter((row) => !query || row.name.toLowerCase().includes(query) || row.code.includes(query));
+  if (state.explorerMode === "cafe") rows = rows.filter((row) => row.confirmation?.cafePass);
+  if (state.explorerMode === "mtt") rows = rows.filter((row) => row.confirmation?.minerviniPass);
+  return rows;
+}
+
+function explorerDefaultSort(rows) {
+  if (state.explorerMode === "rebound") return [...rows].sort(compareReboundReview);
+  if (state.explorerMode === "leader") return [...rows].sort((a, b) => Number(b.leader?.score ?? -1) - Number(a.leader?.score ?? -1)
+    || Number(b.combined?.score ?? 0) - Number(a.combined?.score ?? 0));
+  return [...rows].sort((a, b) => Number(b.combined?.tier ?? 0) - Number(a.combined?.tier ?? 0)
+    || Number(b.combined?.score ?? 0) - Number(a.combined?.score ?? 0)
+    || Number(b.combined?.mainScore ?? 0) - Number(a.combined?.mainScore ?? 0));
+}
+
+function explorerSortValue(row, field) {
+  if (field === "leader") return Number(row.leader?.score ?? -1);
+  if (field === "drawdown") return Number(row.scout?.drawdownFromHighPct ?? 0);
+  if (field === "risk") return Number(row.scout?.riskScore ?? 100);
+  if (field === "stabilize") return Number(row.scout?.stabilizeScore ?? 0);
+  if (field === "liquidity") return Number(row.supply?.liquidityScore ?? 0);
+  if (field === "timing") return Number(row.combined?.score ?? 0);
+  return 0;
+}
+
+function explorerRows() {
+  const rows = explorerModeRows();
+  if (!state.screenerSort) return explorerDefaultSort(rows);
+  const [field, direction] = state.screenerSort.split("-");
+  const multiplier = direction === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => (explorerSortValue(a, field) - explorerSortValue(b, field)) * multiplier || compareReboundReview(a, b));
+}
+
+function setExplorerSort(field) {
+  const firstDirection = field === "risk" || field === "drawdown" ? "asc" : "desc";
+  if (!state.screenerSort || !state.screenerSort.startsWith(`${field}-`)) state.screenerSort = `${field}-${firstDirection}`;
+  else state.screenerSort = `${field}-${state.screenerSort.endsWith("-asc") ? "desc" : "asc"}`;
+  renderUnifiedExplorer();
+}
+
+function renderExplorerSortState() {
+  const [field = "", direction = ""] = (state.screenerSort ?? "").split("-");
+  document.querySelectorAll("[data-screener-sort-field]").forEach((button) => button.classList.toggle("active", button.dataset.screenerSortField === field));
+  document.querySelectorAll("[data-screener-sort-icon]").forEach((icon) => {
+    icon.textContent = icon.dataset.screenerSortIcon === field ? (direction === "desc" ? "↓" : "↑") : "↕";
+  });
+}
+
+function explorerJudgement(row) {
+  const rebound = row.confirmation?.reboundState?.label ?? "반등 계산불가";
+  const timing = row.combined?.label ?? "관망";
+  return state.explorerMode === "timing" ? timing : `${rebound} · ${timing}`;
+}
+
+function renderExplorerMobile(rows) {
+  document.querySelector("#mobileScreenerRows").innerHTML = rows.map((row, index) => {
+    const scout = row.scout ?? {};
+    const leader = row.leader ?? {};
+    const supply = row.supply ?? {};
+    const combined = row.combined ?? {};
+    return `<article class="explorer-mobile-card ${state.screenerMarket.toLowerCase()}">
+      <div class="explorer-card-head"><b>${index + 1}</b><div><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><div class="strategy-badges">${explorerBadges(row)}</div></div><span class="badge ${combined.tone === "danger" ? "danger" : combined.tone === "buy" ? "buy" : "hold"}">${combined.label ?? "관망"}</span></div>
+      <div class="explorer-card-price"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div>
+      <div class="explorer-card-grid"><span>Leader <b>${leader.grade ?? "-"}${Number.isFinite(leader.score) ? ` ${leader.score}` : ""}</b></span><span>낙폭 <b>${pct(scout.drawdownFromHighPct)}</b></span><span>Risk <b>${scout.riskScore ?? "-"}</b></span><span>Stabilize <b>${scout.stabilizeScore ?? "-"}</b></span><span>거래강도 <b>${supply.liquidityScore ?? 0}</b><small>외 ${signedEok(supply.foreignNetAmount)} · 기 ${signedEok(supply.instNetAmount)}</small></span><span>타이밍 <b>${combined.score ?? 0}</b><small>${row.confirmation?.reboundState?.label ?? "-"}</small></span></div>
+    </article>`;
+  }).join("") || `<div class="loading">${state.explorerMode.toUpperCase()} 조건에 맞는 종목이 없습니다.</div>`;
+}
+
+function renderUnifiedExplorer() {
+  if (state.screenerLoading) return;
+  const rows = explorerRows();
+  renderExplorerSortState();
+  renderExplorerMobile(rows);
+  const asOf = state.screener?.asOf ? new Date(state.screener.asOf).toLocaleString("ko-KR") : "-";
+  const allCount = (state.screener?.rows?.KOSPI?.length ?? 0) + (state.screener?.rows?.KOSDAQ?.length ?? 0);
+  const errorText = state.screener?.errors?.length ? ` · 일부 실패 ${state.screener.errors.length}건` : "";
+  document.querySelector("#screenerStatus").textContent = `${state.screenerMarket} ${rows.length}종목 표시 · 두 시장 ${allCount}종목 준비됨 · ${asOf}${errorText}`;
+  document.querySelector("#screenerStatus").dataset.fetchCount = String(state.screenerFetchCount);
+  document.querySelector("#screenerRows").innerHTML = rows.map((row, index) => {
+    const scout = row.scout ?? {};
+    const leader = row.leader ?? {};
+    const supply = row.supply ?? {};
+    const combined = row.combined ?? {};
+    return `<tr>
+      <td><div class="rank-main">${index + 1}</div><div class="cell-sub">${state.explorerMode === "rebound" ? `그룹 ${reboundGroup(row) + 1}` : state.explorerMode.toUpperCase()}</div></td>
+      <td><a class="stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><div class="strategy-badges">${explorerBadges(row)}</div><div class="explorer-price-line"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div></td>
+      <td><span class="leader-badge ${leaderTone(leader.grade)}">${Number.isFinite(leader.score) ? `${leader.grade} ${leader.score}` : "계산불가"}</span></td>
+      <td><b>${pct(scout.drawdownFromHighPct)}</b><div class="cell-sub">2년 고점 기준</div></td>
+      <td><b class="${Number(scout.riskScore ?? 100) <= 35 ? "positive" : Number(scout.riskScore ?? 100) >= 65 ? "negative" : ""}">${scout.riskScore ?? "-"}</b><div class="cell-sub">낮을수록 좋음</div></td>
+      <td><b class="${Number(scout.stabilizeScore ?? 0) >= 65 ? "positive" : ""}">${scout.stabilizeScore ?? "-"}</b><div class="cell-sub">높을수록 좋음</div></td>
+      <td><div class="score-pill ${scoreTone(supply.liquidityScore ?? 0)}">${supply.liquidityScore ?? 0}</div><div class="cell-sub supply-compact">외 ${signedEok(supply.foreignNetAmount)} · 기 ${signedEok(supply.instNetAmount)}</div></td>
+      <td><b>${combined.score ?? 0}</b><div class="cell-sub">${combined.label ?? "관망"}</div></td>
+      <td><div class="judgement-line">${explorerJudgement(row)}</div><div class="cell-sub">${combined.reason ?? shortJudgement(row)}</div></td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="9" class="loading">조건에 맞는 종목이 없습니다.</td></tr>`;
+}
+
 function filteredRows() {
   const query = state.query.trim().toLowerCase();
   const rows = state.snapshot.rows.filter((row) => {
@@ -846,7 +1003,10 @@ function render() {
   document.querySelector("#sourceLabel").textContent = `${sourceText}${judalText} · ${new Date(asOf).toLocaleString("ko-KR")}${errText}`;
 }
 
-document.querySelector("#refreshBtn").addEventListener("click", () => loadSnapshot(true));
+document.querySelector("#refreshBtn").addEventListener("click", async () => {
+  await loadMarketScreener(true);
+  await loadSnapshot(true);
+});
 document.querySelector("#fallbackBtn").addEventListener("click", () => {
   state.live = !state.live;
   document.querySelector("#fallbackBtn").textContent = state.live ? "스크린샷 기준" : "실시간 시도";
@@ -860,33 +1020,32 @@ document.querySelectorAll("[data-sort-field]").forEach((button) => {
   button.addEventListener("click", () => setHoldingSort(button.dataset.sortField));
 });
 document.querySelectorAll("[data-screener-sort-field]").forEach((button) => {
-  button.addEventListener("click", () => setScreenerSort(button.dataset.screenerSortField));
+  button.addEventListener("click", () => setExplorerSort(button.dataset.screenerSortField));
 });
 document.querySelector("#tabs").addEventListener("click", (event) => {
   const button = event.target.closest("button");
   if (!button) return;
   setHoldingFilter(button.dataset.filter);
 });
-document.querySelector("#screenerSummary").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-screener-filter]");
-  if (!button) return;
-  setScreenerFilter(button.dataset.screenerFilter);
-});
 document.querySelector("#screenerTabs").addEventListener("click", (event) => {
   const button = event.target.closest("button");
   if (!button) return;
   state.screenerMarket = button.dataset.market;
-  state.screenerFilter = "all";
   document.querySelectorAll("#screenerTabs button").forEach((item) => item.classList.toggle("active", item === button));
-  const hasRows = marketRows(state.screenerMarket).length > 0;
-  if (hasRows) renderScreener();
-  else loadMarketScreener();
+  renderUnifiedExplorer();
+});
+document.querySelector("#explorerModes").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-explorer-mode]");
+  if (!button) return;
+  state.explorerMode = button.dataset.explorerMode;
+  state.screenerSort = null;
+  document.querySelectorAll("#explorerModes button").forEach((item) => item.classList.toggle("active", item === button));
+  renderUnifiedExplorer();
 });
 document.querySelector("#screenerSearch").addEventListener("input", (event) => {
   state.screenerQuery = event.target.value;
-  renderScreener();
+  renderUnifiedExplorer();
 });
 document.querySelector("#screenerRefresh").addEventListener("click", () => loadMarketScreener(true));
 
-loadSnapshot();
-setTimeout(() => loadMarketScreener(), 500);
+loadMarketScreener().finally(() => loadSnapshot());

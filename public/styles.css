@@ -941,6 +941,163 @@ td {
   white-space: nowrap;
 }
 
+.explorer-mode-bar {
+  display: flex;
+  gap: 6px;
+  padding: 0 16px 12px;
+  overflow-x: auto;
+}
+
+.explorer-mode-bar button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #171c23;
+  color: var(--muted);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.explorer-mode-bar button.active {
+  border-color: #26785a;
+  background: #152a23;
+  color: #78e0b1;
+}
+
+.explorer-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 0 16px 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.explorer-table th,
+.explorer-table td {
+  width: auto !important;
+}
+
+.explorer-table th:nth-child(1) { width: 58px !important; }
+.explorer-table th:nth-child(2) { width: 210px !important; }
+.explorer-table th:nth-child(3) { width: 90px !important; }
+.explorer-table th:nth-child(4) { width: 105px !important; }
+.explorer-table th:nth-child(5),
+.explorer-table th:nth-child(6) { width: 82px !important; }
+.explorer-table th:nth-child(7) { width: 145px !important; }
+.explorer-table th:nth-child(8) { width: 110px !important; }
+
+.explorer-price-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 9px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.supply-compact {
+  margin-top: 5px;
+  white-space: nowrap;
+}
+
+.explorer-mobile-list {
+  display: grid;
+  gap: 1px;
+}
+
+.explorer-mobile-card {
+  padding: 9px;
+  border-left: 3px solid #346aa0;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.explorer-mobile-card.kosdaq {
+  border-left-color: #26785a;
+}
+
+.explorer-card-head {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: start;
+}
+
+.explorer-card-head > b {
+  padding-top: 3px;
+  font-size: 14px;
+}
+
+.explorer-card-head .stock-link {
+  display: block;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer-card-head .badge {
+  height: 24px;
+  padding: 0 7px;
+  font-size: 10px;
+}
+
+.explorer-card-head .strategy-badges {
+  margin-top: 3px;
+}
+
+.explorer-card-price {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 7px 0;
+  padding-left: 28px;
+  font-size: 10px;
+}
+
+.explorer-card-price b {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.explorer-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.explorer-card-grid > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 5px 6px;
+  border-radius: 4px;
+  background: #11161c;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.explorer-card-grid b {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer-card-grid small {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 th {
   position: sticky;
   top: 0;

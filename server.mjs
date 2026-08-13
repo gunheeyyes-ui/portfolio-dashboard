@@ -895,7 +895,9 @@ function mergeHistoryRows(...groups) {
 
 async function fetchTwoYearHistory(code, force = false, recentRows = null) {
   const cacheKey = `history-2y:${code}`;
-  const cached = force ? null : cacheGet(cacheKey, 1000 * 60 * 60 * 6);
+  // A manual refresh must update current market data, but it should not download
+  // two years of immutable daily candles again for every candidate.
+  const cached = cacheGet(cacheKey, 1000 * 60 * 60 * 6);
   if (cached) return cached;
   const end = new Date();
   const start = new Date();
@@ -911,7 +913,9 @@ async function fetchTwoYearHistory(code, force = false, recentRows = null) {
   const rows = [];
   const seen = new Set();
 
-  for (let page = 0; page < 12; page += 1) {
+  // One response contains roughly 100 sessions. Six pages cover two trading years;
+  // the previous 12-page ceiling doubled cold-start KIS calls without adding signal data.
+  for (let page = 0; page < 6; page += 1) {
     const data = await kisGet(
       "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
       {
@@ -940,6 +944,7 @@ async function fetchTwoYearHistory(code, force = false, recentRows = null) {
         tradingValue: toNumber(row.acml_tr_pbmn)
       });
     }
+    if (rows.length >= 420) break;
     const oldest = chunk.at(-1)?.stck_bsop_date;
     if (!oldest || oldest <= startDate) break;
     const parsedOldest = parseYmd(oldest);
@@ -1294,7 +1299,7 @@ async function buildMarketScreener(limit = 100, force = false, marketFilter = "A
   const candidates = candidateGroups.flat();
   const historyByCode = new Map();
 
-  const screenerConcurrency = Math.min(5, Math.max(1, Number(process.env.SCREENER_CONCURRENCY || 2)));
+  const screenerConcurrency = Math.min(5, Math.max(1, Number(process.env.SCREENER_CONCURRENCY || 5)));
   const rows = await mapLimit(candidates, screenerConcurrency, async (candidate) => {
     let quote = null;
     let history = null;
