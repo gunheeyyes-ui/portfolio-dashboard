@@ -982,6 +982,14 @@ input[type="search"] {
   max-height: calc(100vh - 360px);
 }
 
+.table-wrap:has(.holdings-table) {
+  overflow-x: auto;
+}
+
+.holdings-table {
+  min-width: 1180px;
+}
+
 table {
   width: 100%;
   min-width: 0;
