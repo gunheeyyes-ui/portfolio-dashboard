@@ -135,6 +135,7 @@ function scoreTone(score) {
 }
 
 const RS20_TOOLTIP = "RS(20D)\n최근 20거래일 수익률을 같은 시장(KOSPI/KOSDAQ) 종목끼리 비교한 상대강도.\n0~99이며 높을수록 최근 시장 대비 강함.\n매수신호 또는 Ranking 점수가 아님.";
+const TIER_TOOLTIP = "Ranking V2 Tier (순위를 가르는 등급)\nT1 최우선 · T2 하락정지 · T3 저위험\nT4~T6 후순위 · T6 제외";
 
 function rs20Tone(rs20) {
   if (!Number.isFinite(rs20)) return "muted";
@@ -871,6 +872,19 @@ function scoutStatusLabel(status) {
   }[status] ?? "계산불가";
 }
 
+// Mobile shows a 2-character version of the same judgement so the badge
+// never gets clipped at the right screen edge. Same source status, no
+// change to the judgement itself.
+function scoutStatusShort(status) {
+  return {
+    "정찰병 1주": "정찰",
+    "하락 정지 확인": "정지",
+    "1차 매수 검토": "반등",
+    "추가매수 금지": "위험",
+    "관찰 목록": "관찰"
+  }[status] ?? "–";
+}
+
 function scoutStatusTone(row) {
   if (row.scout?.status === "추가매수 금지" || reboundRankingTier(row) === 6) return "danger";
   if (["1차 매수 검토", "하락 정지 확인"].includes(row.scout?.status)) return "buy";
@@ -898,7 +912,7 @@ function renderExplorerRows(rows) {
     const supply = row.supply ?? {};
     const combined = row.combined ?? {};
     return `<tr>
-      <td><div class="rank-main">${index + 1}</div><div class="cell-sub">${state.explorerMode === "rebound" ? `T${reboundRankingTier(row)}` : state.explorerMode.toUpperCase()}</div></td>
+      <td><div class="rank-main">${index + 1}</div><div class="cell-sub rank-tier" title="${TIER_TOOLTIP}">${state.explorerMode === "rebound" ? `T${reboundRankingTier(row)}` : state.explorerMode.toUpperCase()}</div></td>
       <td><div class="stock-title-line"><a class="stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><span class="strategy-badges">${explorerBadges(row)}</span></div><div class="explorer-price-line"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div></td>
       <td><b class="rs20-value ${rs20Tone(scout.rs20)}" title="${RS20_TOOLTIP}">${Number.isFinite(scout.rs20) ? scout.rs20 : "-"}</b></td>
       <td><span class="leader-badge ${leaderTone(leader.grade)}">${Number.isFinite(leader.score) ? `${leader.grade} ${leader.score}` : "계산불가"}</span></td>
@@ -907,14 +921,14 @@ function renderExplorerRows(rows) {
       <td><b class="${Number(scout.stabilizeScore ?? 0) >= 65 ? "good-score" : ""}">${scout.stabilizeScore ?? "-"}</b></td>
       <td><div class="score-pill ${scoreTone(supply.liquidityScore ?? 0)}">${supply.liquidityScore ?? 0}</div><div class="cell-sub supply-compact">외 ${signedEok(supply.foreignNetAmount)} · 기 ${signedEok(supply.instNetAmount)}</div></td>
       <td><b>${combined.score ?? 0}</b><div class="cell-sub">${combined.label ?? "관망"}</div></td>
-      <td><span class="badge ${scoutStatusTone(row)}">${scoutStatusLabel(scout.status)}</span><div class="cell-sub">현재 타이밍 ${combined.label ?? "관망"}</div></td>
+      <td><span class="badge judge-badge ${scoutStatusTone(row)}" title="${scoutStatusLabel(scout.status)}"><i class="judge-full">${scoutStatusLabel(scout.status)}</i><i class="judge-short">${scoutStatusShort(scout.status)}</i></span><div class="cell-sub">현재 타이밍 ${combined.label ?? "관망"}</div></td>
     </tr>`;
   }).join("") || `<tr><td colspan="10" class="loading">조건에 맞는 종목이 없습니다.</td></tr>`;
 }
 
 function explorerTableHeader() {
   return `<thead><tr>
-    <th><button class="sort-btn" data-screener-sort-field="rank" type="button">순위 <span data-screener-sort-icon="rank">↕</span></button></th><th>종목</th>
+    <th><button class="sort-btn" data-screener-sort-field="rank" type="button" title="${TIER_TOOLTIP}">순위 <span data-screener-sort-icon="rank">↕</span></button></th><th>종목</th>
     <th><button class="sort-btn" data-screener-sort-field="rs20" type="button" title="${RS20_TOOLTIP}">RS <span data-screener-sort-icon="rs20">↕</span></button></th>
     <th><button class="sort-btn" data-screener-sort-field="leader" type="button">주도 <span data-screener-sort-icon="leader">↕</span></button></th>
     <th><button class="sort-btn" data-screener-sort-field="drawdown" type="button">낙폭 <span data-screener-sort-icon="drawdown">↕</span></button></th>
