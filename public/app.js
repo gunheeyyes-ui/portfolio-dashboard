@@ -134,6 +134,17 @@ function scoreTone(score) {
   return "muted";
 }
 
+const RS20_TOOLTIP = "RS(20D)\n최근 20거래일 수익률을 같은 시장(KOSPI/KOSDAQ) 종목끼리 비교한 상대강도.\n0~99이며 높을수록 최근 시장 대비 강함.\n매수신호 또는 Ranking 점수가 아님.";
+
+function rs20Tone(rs20) {
+  if (!Number.isFinite(rs20)) return "muted";
+  if (rs20 >= 90) return "rs-strong";
+  if (rs20 >= 80) return "rs-good";
+  if (rs20 >= 70) return "rs-mild";
+  if (rs20 >= 40) return "rs-neutral";
+  return "rs-weak";
+}
+
 function liquidityDisplay(row) {
   const supply = row.supply ?? {};
   const hasMarketData = Number.isFinite(Number(supply.tradingValue)) && Number(supply.tradingValue) > 0
@@ -767,11 +778,28 @@ function signedEok(value) {
   return `${amount > 0 ? "+" : ""}${fmtNum.format(amount)}억`;
 }
 
+const SE_BADGE_TOOLTIP = {
+  "SE-MOM": "SE-MOM\nStockEasy 모멘텀 Easy 현재 편입",
+  "SE-PEAK": "SE-PEAK\nStockEasy 피크 Easy 현재 편입",
+  "SE-VALUE": "SE-VALUE\nStockEasy 밸류 Easy 현재 편입"
+};
+
 function explorerBadges(row) {
   const confirmation = row.confirmation ?? {};
-  return [confirmation.cafePass ? "CAFE" : null, confirmation.minerviniPass ? "MTT" : null]
-    .filter(Boolean)
-    .map((label) => `<span class="strategy-badge buy">${label}</span>`)
+  const stockEasy = row.stockEasy ?? {};
+  const labels = [
+    confirmation.minerviniPass ? "MTT" : null,
+    confirmation.cafePass ? "CAFE" : null,
+    stockEasy.seMomentum ? "SE-MOM" : null,
+    stockEasy.sePeak ? "SE-PEAK" : null,
+    stockEasy.seValue ? "SE-VALUE" : null
+  ].filter(Boolean);
+  return labels
+    .map((label) => {
+      const tone = label.startsWith("SE-") ? "se" : "buy";
+      const title = SE_BADGE_TOOLTIP[label] ? ` title="${SE_BADGE_TOOLTIP[label]}"` : "";
+      return `<span class="strategy-badge ${tone}"${title}>${label}</span>`;
+    })
     .join("");
 }
 
@@ -793,6 +821,7 @@ function explorerDefaultSort(rows) {
 }
 
 function explorerSortValue(row, field) {
+  if (field === "rs20") return Number.isFinite(row.scout?.rs20) ? Number(row.scout.rs20) : -1;
   if (field === "leader") return Number(row.leader?.score ?? -1);
   if (field === "drawdown") return Number(row.scout?.drawdownFromHighPct ?? 0);
   if (field === "risk") return Number(row.scout?.riskScore ?? 100);
@@ -811,6 +840,11 @@ function explorerRows(market) {
 }
 
 function setExplorerSort(field) {
+  if (field === "rank") {
+    state.screenerSort = null;
+    renderUnifiedExplorer();
+    return;
+  }
   const firstDirection = field === "risk" || field === "drawdown" ? "asc" : "desc";
   if (!state.screenerSort || !state.screenerSort.startsWith(`${field}-`)) state.screenerSort = `${field}-${firstDirection}`;
   else state.screenerSort = `${field}-${state.screenerSort.endsWith("-asc") ? "desc" : "asc"}`;
@@ -818,9 +852,11 @@ function setExplorerSort(field) {
 }
 
 function renderExplorerSortState() {
-  const [field = "", direction = ""] = (state.screenerSort ?? "").split("-");
+  const [rawField = "", direction = ""] = (state.screenerSort ?? "").split("-");
+  const field = rawField || "rank";
   document.querySelectorAll("[data-screener-sort-field]").forEach((button) => button.classList.toggle("active", button.dataset.screenerSortField === field));
   document.querySelectorAll("[data-screener-sort-icon]").forEach((icon) => {
+    if (icon.dataset.screenerSortIcon === "rank") { icon.textContent = field === "rank" ? "●" : "↕"; return; }
     icon.textContent = icon.dataset.screenerSortIcon === field ? (direction === "desc" ? "↓" : "↑") : "↕";
   });
 }
@@ -850,7 +886,7 @@ function renderExplorerMobile(rows, market) {
     return `<article class="explorer-mobile-card ${market.toLowerCase()}">
       <div class="explorer-card-head"><b>${index + 1}</b><div class="stock-title-line"><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><span class="strategy-badges">${explorerBadges(row)}</span></div><span class="badge ${scoutStatusTone(row)}">${scoutStatusLabel(scout.status)}</span></div>
       <div class="explorer-card-price"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div>
-      <div class="explorer-card-grid"><span>Leader <b>${leader.grade ?? "-"}${Number.isFinite(leader.score) ? ` ${leader.score}` : ""}</b></span><span>낙폭 <b>${pct(scout.drawdownFromHighPct)}</b></span><span>Risk <b>${scout.riskScore ?? "-"}</b></span><span>Stab <b>${scout.stabilizeScore ?? "-"}</b></span><span>거래강도 <b>${supply.liquidityScore ?? 0}</b><small>외 ${signedEok(supply.foreignNetAmount)} · 기 ${signedEok(supply.instNetAmount)}</small></span><span>타이밍 <b>${combined.score ?? 0}</b><small>${combined.label ?? "관망"}</small></span></div>
+      <div class="explorer-card-grid"><span>RS <b class="${rs20Tone(scout.rs20)}" title="${RS20_TOOLTIP}">${Number.isFinite(scout.rs20) ? scout.rs20 : "-"}</b></span><span>Leader <b>${leader.grade ?? "-"}${Number.isFinite(leader.score) ? ` ${leader.score}` : ""}</b></span><span>낙폭 <b>${pct(scout.drawdownFromHighPct)}</b></span><span>Risk <b>${scout.riskScore ?? "-"}</b></span><span>Stab <b>${scout.stabilizeScore ?? "-"}</b></span><span>거래강도 <b>${supply.liquidityScore ?? 0}</b><small>외 ${signedEok(supply.foreignNetAmount)} · 기 ${signedEok(supply.instNetAmount)}</small></span><span>타이밍 <b>${combined.score ?? 0}</b><small>${combined.label ?? "관망"}</small></span></div>
     </article>`;
   }).join("") || `<div class="loading">${state.explorerMode.toUpperCase()} 조건에 맞는 종목이 없습니다.</div>`;
 }
@@ -864,6 +900,7 @@ function renderExplorerRows(rows) {
     return `<tr>
       <td><div class="rank-main">${index + 1}</div><div class="cell-sub">${state.explorerMode === "rebound" ? `T${reboundRankingTier(row)}` : state.explorerMode.toUpperCase()}</div></td>
       <td><div class="stock-title-line"><a class="stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><span class="strategy-badges">${explorerBadges(row)}</span></div><div class="explorer-price-line"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div></td>
+      <td><b class="rs20-value ${rs20Tone(scout.rs20)}" title="${RS20_TOOLTIP}">${Number.isFinite(scout.rs20) ? scout.rs20 : "-"}</b></td>
       <td><span class="leader-badge ${leaderTone(leader.grade)}">${Number.isFinite(leader.score) ? `${leader.grade} ${leader.score}` : "계산불가"}</span></td>
       <td><b>${pct(scout.drawdownFromHighPct)}</b></td>
       <td><b class="${Number(scout.riskScore ?? 100) <= 35 ? "good-score" : Number(scout.riskScore ?? 100) >= 65 ? "bad-score" : ""}">${scout.riskScore ?? "-"}</b></td>
@@ -872,12 +909,13 @@ function renderExplorerRows(rows) {
       <td><b>${combined.score ?? 0}</b><div class="cell-sub">${combined.label ?? "관망"}</div></td>
       <td><span class="badge ${scoutStatusTone(row)}">${scoutStatusLabel(scout.status)}</span><div class="cell-sub">현재 타이밍 ${combined.label ?? "관망"}</div></td>
     </tr>`;
-  }).join("") || `<tr><td colspan="9" class="loading">조건에 맞는 종목이 없습니다.</td></tr>`;
+  }).join("") || `<tr><td colspan="10" class="loading">조건에 맞는 종목이 없습니다.</td></tr>`;
 }
 
 function explorerTableHeader() {
   return `<thead><tr>
-    <th>순위</th><th>종목</th>
+    <th><button class="sort-btn" data-screener-sort-field="rank" type="button">순위 <span data-screener-sort-icon="rank">↕</span></button></th><th>종목</th>
+    <th><button class="sort-btn" data-screener-sort-field="rs20" type="button" title="${RS20_TOOLTIP}">RS <span data-screener-sort-icon="rs20">↕</span></button></th>
     <th><button class="sort-btn" data-screener-sort-field="leader" type="button">주도 <span data-screener-sort-icon="leader">↕</span></button></th>
     <th><button class="sort-btn" data-screener-sort-field="drawdown" type="button">낙폭 <span data-screener-sort-icon="drawdown">↕</span></button></th>
     <th><button class="sort-btn" data-screener-sort-field="risk" type="button">Risk <span data-screener-sort-icon="risk">↕</span></button></th>

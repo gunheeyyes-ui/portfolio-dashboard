@@ -8,6 +8,8 @@ import { buildIndicators, buildPortfolioSummary, classifyHolding, toNumber } fro
 import { buildLeaderDecision, calcLeaderBase, enrichLeaderScores } from "./leader.js";
 import { buildStrategyConfirmation } from "./strategy-confirmation.js";
 import { createRankingLiveTracker, deriveSignalDate, safeTrackerTask } from "./ranking-live-tracker.js";
+import { buildRelativeStrength20 } from "./relative-strength.js";
+import { createStockEasyCache } from "./stockeasy.js";
 import {
   CLOUD_SNAPSHOT_SCHEMA,
   createCloudSnapshotManager,
@@ -42,6 +44,12 @@ const rankingLiveTracker = createRankingLiveTracker({
   historyFile: RANKING_LIVE_HISTORY_FILE,
   summaryFile: RANKING_LIVE_SUMMARY_FILE
 });
+// Supplemental, display-only external-strategy badges. Fail-soft: a
+// StockEasy outage must never affect KIS data, Ranking V2, or page render.
+const stockEasyCache = createStockEasyCache({
+  log: (message) => console.log(JSON.stringify({ time: new Date().toISOString(), event: "STOCKEASY_LOG", message }))
+});
+let lastRsDiagnostics = { kospiCount: 0, kosdaqCount: 0, valid: 0, missing: 0, universeCodes: new Set() };
 let lastKisCallAt = 0;
 let kisTokenPromise = null;
 let backtestPriceFileIndex = null;
@@ -1201,6 +1209,23 @@ async function attachScoutAndCombined(rows, limit, force, errors, historyByCode)
     return [base.code, scout];
   }));
 
+  // RS(20D): supplemental, display-only cross-sectional percentile of ret20
+  // within the same per-market universe used for marketStats above. Never
+  // read by rankMarketRowsV2 / buildCombinedDecision / tier or sort logic.
+  const rs20Universe = ["KOSPI", "KOSDAQ"].flatMap((market) => validBases
+    .filter((row) => row.market === market && row.rankType === "시총" && (row.rank ?? limit + 1) <= limit)
+    .map((row) => ({ code: row.code, market: row.market, ret20: row.ret20 })));
+  const rs20ByCode = buildRelativeStrength20(rs20Universe);
+  lastRsDiagnostics = {
+    kospiCount: rs20Universe.filter((row) => row.market === "KOSPI").length,
+    kosdaqCount: rs20Universe.filter((row) => row.market === "KOSDAQ").length,
+    valid: rs20ByCode.size,
+    missing: rs20Universe.length - rs20ByCode.size,
+    // Full tracked universe (not just the RS top-`limit`-by-market-cap subset)
+    // so StockEasy "unmatched" diagnostics don't flag stocks we do track.
+    universeCodes: new Set(rows.map((row) => row.code))
+  };
+
   for (const market of ["KOSPI", "KOSDAQ"]) {
     const ranked = rows
       .filter((row) => row.market === market && row.rankType === "시총" && (row.rank ?? limit + 1) <= limit)
@@ -1245,6 +1270,7 @@ async function attachScoutAndCombined(rows, limit, force, errors, historyByCode)
         slope20: scout.slope20,
         ret5: scout.ret5,
         ret20: scout.ret20,
+        rs20: rs20ByCode.get(scout.code) ?? null,
         relative5: scout.relative5,
         relative20: scout.relative20,
         dist120: scout.dist120,
@@ -1260,7 +1286,8 @@ async function attachScoutAndCombined(rows, limit, force, errors, historyByCode)
     };
     return {
       ...enrichedRow,
-      confirmation: buildStrategyConfirmation(enrichedRow)
+      confirmation: buildStrategyConfirmation(enrichedRow),
+      stockEasy: stockEasyCache.badgesFor(row.code)
     };
   });
 
@@ -2661,6 +2688,29 @@ const server = http.createServer(async (req, res) => {
       });
       return;
     }
+    if (url.pathname === "/api/diagnostics") {
+      const seDiag = stockEasyCache.diagnostics();
+      const seCodeSets = stockEasyCache.codeSets();
+      const universeCodes = lastRsDiagnostics.universeCodes;
+      const unmatched = (codes) => [...codes].filter((code) => !universeCodes.has(code));
+      json(res, 200, {
+        rs: {
+          universe: { kospi: lastRsDiagnostics.kospiCount, kosdaq: lastRsDiagnostics.kosdaqCount },
+          valid: lastRsDiagnostics.valid,
+          missing: lastRsDiagnostics.missing
+        },
+        stockEasy: {
+          fetchedAt: seDiag.fetchedAt,
+          cacheAgeSeconds: seDiag.cacheAgeSeconds,
+          stale: seDiag.stale,
+          ttlSeconds: Math.round(stockEasyCache.ttlMs / 1000),
+          momentum: { ...seDiag.momentum, unmatchedCodes: unmatched(seCodeSets.momentum) },
+          peak: { ...seDiag.peak, unmatchedCodes: unmatched(seCodeSets.peak) },
+          value: { ...seDiag.value, unmatchedCodes: unmatched(seCodeSets.value) }
+        }
+      });
+      return;
+    }
     if (CLOUD_MODE && url.pathname === "/api/refresh" && req.method === "POST") {
       const task = cloudManager.run("full", "manual");
       json(res, 202, {
@@ -2815,4 +2865,7 @@ server.listen(PORT, HOST, () => {
   console.log(`Portfolio signal dashboard: http://${HOST}:${PORT}`);
   if (CLOUD_MODE) startCloudScheduler();
   if (existsSync(RANKING_LIVE_HISTORY_FILE)) scheduleRankingLiveMaintenance();
+  // Fire-and-forget: never awaited, never blocks server startup or any request.
+  stockEasyCache.ensureFresh();
+  setInterval(() => stockEasyCache.ensureFresh(), 5 * 60 * 1000);
 });
