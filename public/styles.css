@@ -2078,15 +2078,17 @@ td {
     white-space: nowrap;
   }
 
-  .explorer-table .rank-main,
-  .explorer-table .rank-tier {
+  .explorer-table .rank-main {
     display: inline;
   }
 
-  .explorer-table .rank-tier {
+  /* Needs .cell-sub in the selector to outrank the later
+     `.explorer-table .cell-sub { display: none }` hide rule. */
+  .explorer-table .cell-sub.rank-tier {
+    display: inline;
     margin-left: 3px;
     color: var(--muted);
-    font-size: 7px;
+    font-size: 7.5px;
     font-weight: 700;
   }
 
