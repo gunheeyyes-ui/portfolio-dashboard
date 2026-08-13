@@ -878,12 +878,12 @@ function renderExplorerRows(rows) {
 function explorerTableHeader() {
   return `<thead><tr>
     <th>순위</th><th>종목</th>
-    <th><button class="sort-btn" data-screener-sort-field="leader" type="button">Leader <span data-screener-sort-icon="leader">↕</span></button></th>
+    <th><button class="sort-btn" data-screener-sort-field="leader" type="button">주도 <span data-screener-sort-icon="leader">↕</span></button></th>
     <th><button class="sort-btn" data-screener-sort-field="drawdown" type="button">낙폭 <span data-screener-sort-icon="drawdown">↕</span></button></th>
     <th><button class="sort-btn" data-screener-sort-field="risk" type="button">Risk <span data-screener-sort-icon="risk">↕</span></button></th>
     <th><button class="sort-btn" data-screener-sort-field="stabilize" type="button">Stab <span data-screener-sort-icon="stabilize">↕</span></button></th>
     <th><button class="sort-btn" data-screener-sort-field="liquidity" type="button">거래강도 <span data-screener-sort-icon="liquidity">↕</span></button></th>
-    <th><button class="sort-btn" data-screener-sort-field="timing" type="button">현재 타이밍 <span data-screener-sort-icon="timing">↕</span></button></th>
+    <th><button class="sort-btn" data-screener-sort-field="timing" type="button">타이밍 <span data-screener-sort-icon="timing">↕</span></button></th>
     <th>판정</th>
   </tr></thead>`;
 }
