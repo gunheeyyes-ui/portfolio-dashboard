@@ -10,6 +10,8 @@ logs/
 *.zip
 free-float.json
 simulation-ledger.json
+data/ranking-live-history.jsonl
+data/ranking-live-summary.json
 node_modules/
 .DS_Store
 Thumbs.db

@@ -7,6 +7,7 @@ import { portfolio } from "./portfolio.js";
 import { buildIndicators, buildPortfolioSummary, classifyHolding, toNumber } from "./signals.js";
 import { buildLeaderDecision, calcLeaderBase, enrichLeaderScores } from "./leader.js";
 import { buildStrategyConfirmation } from "./strategy-confirmation.js";
+import { createRankingLiveTracker, safeTrackerTask } from "./ranking-live-tracker.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cache = new Map();
@@ -22,9 +23,38 @@ const SIMULATION_FILE = path.join(__dirname, "simulation-ledger.json");
 const SIM_TRADE_AMOUNT = Number(process.env.SIM_TRADE_AMOUNT || 1_000_000);
 const KIS_TOKEN_FILE = path.join(__dirname, "backtest-cache", "kis-token-server.json");
 const BACKTEST_CACHE_DIR = path.join(__dirname, "backtest-cache");
+const RANKING_LIVE_DIR = path.join(__dirname, "data");
+const RANKING_LIVE_HISTORY_FILE = path.join(RANKING_LIVE_DIR, "ranking-live-history.jsonl");
+const RANKING_LIVE_SUMMARY_FILE = path.join(RANKING_LIVE_DIR, "ranking-live-summary.json");
+const rankingLiveTracker = createRankingLiveTracker({
+  historyFile: RANKING_LIVE_HISTORY_FILE,
+  summaryFile: RANKING_LIVE_SUMMARY_FILE
+});
 let lastKisCallAt = 0;
 let kisTokenPromise = null;
 let backtestPriceFileIndex = null;
+let rankingMaintenanceRunning = false;
+
+function trackerError(error) {
+  console.error(`[ranking-live-tracker] ${error?.message ?? error}`);
+}
+
+function scheduleRankingLiveMaintenance({ payload = null, historyByCode = null, record = false } = {}) {
+  if (record && payload) {
+    safeTrackerTask(() => rankingLiveTracker.recordSnapshot(payload, historyByCode), trackerError);
+  }
+  if (rankingMaintenanceRunning || !process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET) return;
+  rankingMaintenanceRunning = true;
+  setTimeout(async () => {
+    try {
+      await rankingLiveTracker.evaluatePending(async (ticker) => historyByCode?.get(ticker) ?? fetchHistory(ticker));
+    } catch (error) {
+      trackerError(error);
+    } finally {
+      rankingMaintenanceRunning = false;
+    }
+  }, 0);
+}
 
 function loadDotEnv() {
   const envPath = path.join(__dirname, ".env");
@@ -1266,7 +1296,10 @@ async function buildMarketScreener(limit = 100, force = false, marketFilter = "A
   const normalizedMarket = ["KOSPI", "KOSDAQ"].includes(marketFilter) ? marketFilter : "ALL";
   const cacheKey = `market-screener:${normalizedMarket}:${limit}`;
   const cached = force ? null : cacheGet(cacheKey, 1000 * 60 * 30);
-  if (cached) return cached;
+  if (cached) {
+    if (normalizedMarket === "ALL") scheduleRankingLiveMaintenance();
+    return cached;
+  }
   if (!force && normalizedMarket !== "ALL") {
     const allCached = cacheGet(`market-screener:ALL:${limit}`, 1000 * 60 * 30);
     if (allCached) {
@@ -1406,7 +1439,9 @@ async function buildMarketScreener(limit = 100, force = false, marketFilter = "A
       kosdaq: summarizeMarketRows(byMarket.KOSDAQ)
     }
   };
-  return cacheSet(cacheKey, payload);
+  const cachedPayload = cacheSet(cacheKey, payload);
+  if (normalizedMarket === "ALL") scheduleRankingLiveMaintenance({ payload, historyByCode, record: true });
+  return cachedPayload;
 }
 
 function sortMarketCandidate(a, b) {
@@ -2390,6 +2425,13 @@ const server = http.createServer(async (req, res) => {
       json(res, 200, await buildMarketScreener(limit, force, market));
       return;
     }
+    if (url.pathname === "/api/ranking-validation") {
+      const market = String(url.searchParams.get("market") || "ALL").toUpperCase();
+      const normalizedMarket = ["KOSPI", "KOSDAQ"].includes(market) ? market : "ALL";
+      const signalDate = url.searchParams.get("date") || null;
+      json(res, 200, rankingLiveTracker.summary({ market: normalizedMarket, signalDate }));
+      return;
+    }
     if (url.pathname === "/api/leader") {
       if (!process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET) {
         json(res, 400, { error: "KIS keys are required" });
@@ -2442,4 +2484,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Portfolio signal dashboard: http://localhost:${PORT}`);
+  if (existsSync(RANKING_LIVE_HISTORY_FILE)) scheduleRankingLiveMaintenance();
 });

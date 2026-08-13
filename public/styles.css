@@ -292,6 +292,112 @@ h2 {
   color: var(--red);
 }
 
+.validation-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.validation-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.validation-toolbar select {
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 28px 0 9px;
+  color: var(--text);
+  background: var(--panel-soft);
+}
+
+.validation-panel {
+  min-width: 0;
+  margin-bottom: 10px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.validation-grid,
+.validation-market-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.validation-grid > *,
+.validation-market-grid > * {
+  min-width: 0;
+}
+
+.validation-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.validation-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.validation-table th,
+.validation-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.validation-table th {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.validation-table th:first-child,
+.validation-table td:first-child,
+.validation-table td:nth-child(2) {
+  text-align: left;
+}
+
+.validation-table small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.recent-validation {
+  min-width: 850px;
+}
+
+.validation-market-title {
+  margin: 0 0 7px;
+  font-size: 15px;
+}
+
+.validation-market-title.kospi {
+  color: var(--blue);
+}
+
+.validation-market-title.kosdaq {
+  color: var(--green);
+}
+
 .action-strip,
 .trade-strip,
 .theme-strip,
@@ -1748,6 +1854,23 @@ td {
   }
 
   .theme-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .validation-grid,
+  .validation-market-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .validation-toolbar {
+    align-items: flex-start;
+  }
+
+  .validation-toolbar .tabs {
+    width: auto;
+  }
+
+  .validation-shell .metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

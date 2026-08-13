@@ -15,12 +15,13 @@ npm start
 
 ## 화면 역할
 
-- `종목 탐색`: KOSPI와 KOSDAQ을 한 번에 계산한 뒤, 같은 표에서 시장만 독립적으로 전환합니다.
+- `종목 탐색`: KOSPI와 KOSDAQ을 한 번에 계산한 뒤, 한 화면에서 시장별 독립 순위를 표시합니다.
 - `반등후보`: 기본 보기입니다. 매수보류·고위험·하락 중 종목을 뒤로 보내고, 하락정지 상태 안에서 Leader, 조정폭, Stabilize, Risk, 거래강도·수급 순으로 정렬합니다.
 - `타이밍`: 기존 Main 70점 + Scout 30점을 유지한 현재 진입 타이밍 비교입니다.
 - `주도주`: 장기 가격·추세 품질을 A/B/C/D로 확인합니다. 타이밍 점수에는 다시 가산하지 않습니다.
 - `CAFE`, `MTT`: 기존 전략 정의를 통과한 종목만 동일한 표에서 필터링합니다.
 - `시뮬레이터`: 신규 가상 진입부터 Leader·반등·CAFE·MTT 메타데이터를 함께 기록합니다.
+- `Ranking V2 실전검증`: 실제 주문 없이 당시 순위 snapshot과 이후 3·5·10거래일 성과를 누적 검증합니다.
 
 새로고침 한 번으로 두 시장을 함께 계산해 30분 공용 캐시에 저장합니다. 시장 탭, 보기 모드, 컬럼 정렬은 메모리의 같은 행을 사용하므로 KIS 전체 계산을 다시 호출하지 않습니다. 첫 전체 계산은 KIS 호출 제한 때문에 수 분 걸릴 수 있습니다.
 
@@ -132,3 +133,30 @@ cd C:\Users\gunhe\Documents\Codex\2026-06-21\d\outputs\portfolio-dashboard
 ```
 
 서버가 이미 켜져 있으면 `open-dashboard-chrome.cmd`만 실행해도 Chrome으로 `http://localhost:5177`을 엽니다.
+
+## Ranking V2 실전 추적
+
+전체 KOSPI·KOSDAQ screener가 정상 완료되면 당시 Ranking V2 결과를 `data/ranking-live-history.jsonl`에 저장합니다. 이 파일과 집계 캐시 `data/ranking-live-summary.json`은 개인 실시간 기록이므로 Git에서 제외됩니다.
+
+- 중복 방지 키: `signalDate + market + ticker`
+- 진입 기준: 신호일 장마감 확인 후 다음 거래일 시가
+- 평가 기준: 진입 후 3·5·10거래일 종가
+- 비용: historical V2.1과 동일한 왕복 0.23%
+- MFE/MAE: 진입일부터 각 평가일까지의 일봉 고가·저가 기준
+- 시장내 초과: 동일 신호일·동일 시장 추적 universe의 평균 순수익 대비
+
+기록 당시 순위와 Tier, Leader, Scout, Risk, Stabilize, CAFE/MTT 값은 미래 결과를 채울 때 변경하지 않습니다. 대시보드가 실행되지 않았던 거래일의 Ranking을 현재 데이터로 사후 생성하지도 않습니다.
+
+실전검증 화면은 `http://localhost:5177/ranking-validation.html`에서 확인합니다.
+
+### 선택사항: 장마감 후 자동 기록
+
+Windows 작업 스케줄러를 직접 설정하려면 평일 `15:45~16:10` 사이에 아래 PowerShell 명령을 실행하도록 등록할 수 있습니다. 서버 실행 후 브라우저 또는 HTTP 요청으로 전체 screener를 한 번 새로고침해야 그날 snapshot이 기록됩니다.
+
+```powershell
+cd C:\Users\gunhe\Documents\Codex\2026-06-21\d\outputs\portfolio-dashboard
+.\start-dashboard-server.ps1
+Start-Process "http://localhost:5177"
+```
+
+이번 프로젝트는 작업 스케줄러를 자동으로 설치하거나 변경하지 않습니다.
