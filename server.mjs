@@ -7,7 +7,14 @@ import { portfolio } from "./portfolio.js";
 import { buildIndicators, buildPortfolioSummary, classifyHolding, toNumber } from "./signals.js";
 import { buildLeaderDecision, calcLeaderBase, enrichLeaderScores } from "./leader.js";
 import { buildStrategyConfirmation } from "./strategy-confirmation.js";
-import { createRankingLiveTracker, safeTrackerTask } from "./ranking-live-tracker.js";
+import { createRankingLiveTracker, deriveSignalDate, safeTrackerTask } from "./ranking-live-tracker.js";
+import {
+  CLOUD_SNAPSHOT_SCHEMA,
+  createCloudSnapshotManager,
+  createSnapshotStore,
+  kstParts,
+  scheduledRefreshKind
+} from "./cloud-dashboard-runtime.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cache = new Map();
@@ -15,15 +22,20 @@ const cache = new Map();
 loadDotEnv();
 
 const PORT = Number(process.env.PORT || 5177);
+const APP_VERSION = "0.2.0-cloud";
+const CLOUD_MODE = process.env.DASHBOARD_RUNTIME_MODE === "cloud" || process.env.CLOUD_DASHBOARD === "1";
+const HOST = process.env.HOST || (CLOUD_MODE ? "127.0.0.1" : "0.0.0.0");
 const KIS_BASE_URL = process.env.KIS_BASE_URL || "https://openapi.koreainvestment.com:9443";
 const KIS_QUOTE_MARKET = process.env.KIS_QUOTE_MARKET || process.env.KIS_MARKET_DIV_CODE || "UN";
 const USER_AGENT = "Mozilla/5.0 PortfolioSignalDashboard/0.2";
 const FREE_FLOAT_RATES = loadFreeFloatRates();
 const SIMULATION_FILE = path.join(__dirname, "simulation-ledger.json");
 const SIM_TRADE_AMOUNT = Number(process.env.SIM_TRADE_AMOUNT || 1_000_000);
-const KIS_TOKEN_FILE = path.join(__dirname, "backtest-cache", "kis-token-server.json");
-const BACKTEST_CACHE_DIR = path.join(__dirname, "backtest-cache");
-const RANKING_LIVE_DIR = path.join(__dirname, "data");
+const DASHBOARD_CACHE_DIR = path.resolve(process.env.DASHBOARD_CACHE_DIR || path.join(__dirname, "backtest-cache"));
+const KIS_TOKEN_FILE = path.join(DASHBOARD_CACHE_DIR, "kis-token-server.json");
+const BACKTEST_CACHE_DIR = DASHBOARD_CACHE_DIR;
+const DASHBOARD_DATA_DIR = path.resolve(process.env.DASHBOARD_DATA_DIR || path.join(__dirname, "data"));
+const RANKING_LIVE_DIR = DASHBOARD_DATA_DIR;
 const RANKING_LIVE_HISTORY_FILE = path.join(RANKING_LIVE_DIR, "ranking-live-history.jsonl");
 const RANKING_LIVE_SUMMARY_FILE = path.join(RANKING_LIVE_DIR, "ranking-live-summary.json");
 const rankingLiveTracker = createRankingLiveTracker({
@@ -34,6 +46,39 @@ let lastKisCallAt = 0;
 let kisTokenPromise = null;
 let backtestPriceFileIndex = null;
 let rankingMaintenanceRunning = false;
+const kisRequestMetrics = { total: 0, byEndpoint: {}, errors: 0, timeLimitErrors: 0 };
+
+function structuredLog(event, fields = {}) {
+  console.log(JSON.stringify({ time: new Date().toISOString(), event, ...fields }));
+}
+
+function recordKisRequest(endpoint) {
+  kisRequestMetrics.total += 1;
+  kisRequestMetrics.byEndpoint[endpoint] = (kisRequestMetrics.byEndpoint[endpoint] ?? 0) + 1;
+}
+
+function recordKisError(error) {
+  kisRequestMetrics.errors += 1;
+  if (/TIME LIMIT|EGW00201/i.test(error?.message ?? "")) kisRequestMetrics.timeLimitErrors += 1;
+}
+
+function kisMetricsSnapshot() {
+  return JSON.parse(JSON.stringify(kisRequestMetrics));
+}
+
+function kisMetricsDelta(before) {
+  const byEndpoint = {};
+  for (const [endpoint, count] of Object.entries(kisRequestMetrics.byEndpoint)) {
+    const delta = count - (before.byEndpoint?.[endpoint] ?? 0);
+    if (delta) byEndpoint[endpoint] = delta;
+  }
+  return {
+    total: kisRequestMetrics.total - before.total,
+    errors: kisRequestMetrics.errors - before.errors,
+    timeLimitErrors: kisRequestMetrics.timeLimitErrors - before.timeLimitErrors,
+    byEndpoint
+  };
+}
 
 function trackerError(error) {
   console.error(`[ranking-live-tracker] ${error?.message ?? error}`);
@@ -57,7 +102,7 @@ function scheduleRankingLiveMaintenance({ payload = null, historyByCode = null, 
 }
 
 function loadDotEnv() {
-  const envPath = path.join(__dirname, ".env");
+  const envPath = process.env.DASHBOARD_ENV_FILE || path.join(__dirname, ".env");
   if (!existsSync(envPath)) return;
   const lines = readFileSync(envPath, "utf8").split(/\r?\n/);
   for (const line of lines) {
@@ -223,6 +268,7 @@ function writeKisTokenFile(data) {
 async function kisGet(endpoint, params, trId) {
   const token = await getKisToken();
   await throttleKis();
+  recordKisRequest(endpoint);
   const url = new URL(endpoint, KIS_BASE_URL);
   Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
   const response = await fetch(url, {
@@ -238,7 +284,9 @@ async function kisGet(endpoint, params, trId) {
   });
   const data = await response.json();
   if (!response.ok || (data.rt_cd && data.rt_cd !== "0")) {
-    throw new Error(data.msg1 || `KIS request failed: ${endpoint}`);
+    const error = new Error(data.msg1 || `KIS request failed: ${endpoint}`);
+    recordKisError(error);
+    throw error;
   }
   return data;
 }
@@ -556,6 +604,7 @@ function firstOutput(data) {
 async function kisGetWithHeaders(endpoint, params, trId, trCont = "") {
   const token = await getKisToken();
   await throttleKis();
+  recordKisRequest(endpoint);
   const url = new URL(endpoint, KIS_BASE_URL);
   Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
   const response = await fetch(url, {
@@ -572,7 +621,9 @@ async function kisGetWithHeaders(endpoint, params, trId, trCont = "") {
   });
   const data = await response.json();
   if (!response.ok || (data.rt_cd && data.rt_cd !== "0")) {
-    throw new Error(data.msg1 || `KIS request failed: ${endpoint}`);
+    const error = new Error(data.msg1 || `KIS request failed: ${endpoint}`);
+    recordKisError(error);
+    throw error;
   }
   return { data, headers: response.headers };
 }
@@ -1430,6 +1481,7 @@ async function buildMarketScreener(limit = 100, force = false, marketFilter = "A
   };
   const payload = {
     asOf: new Date().toISOString(),
+    marketDataAsOf: deriveSignalDate(historyByCode),
     limit,
     market: normalizedMarket,
     errors,
@@ -2350,6 +2402,200 @@ function buildMarketContext(items) {
   };
 }
 
+function cloudSnapshotMeta(snapshot, managerState = {}) {
+  if (!snapshot) return null;
+  return {
+    enabled: true,
+    dataMode: snapshot.dataMode,
+    generatedAt: snapshot.generatedAt,
+    marketDataAsOf: snapshot.marketDataAsOf,
+    refreshStatus: managerState.status ?? snapshot.refresh?.status ?? "idle",
+    lastSuccessAt: managerState.lastSuccessAt ?? snapshot.refresh?.lastSuccessAt ?? null,
+    lastError: managerState.error ?? snapshot.refresh?.lastError ?? null
+  };
+}
+
+function cloudMarketPayload(snapshot, market = "ALL") {
+  const source = snapshot.marketScreener;
+  const normalized = ["KOSPI", "KOSDAQ"].includes(market) ? market : "ALL";
+  const rows = normalized === "ALL"
+    ? source.rows
+    : {
+        KOSPI: normalized === "KOSPI" ? source.rows.KOSPI : [],
+        KOSDAQ: normalized === "KOSDAQ" ? source.rows.KOSDAQ : []
+      };
+  return {
+    ...source,
+    market: normalized,
+    rows,
+    cloud: cloudSnapshotMeta(snapshot, cloudManager?.getState())
+  };
+}
+
+function assertFullRefreshQuality(marketScreener, portfolioSnapshot) {
+  const kospi = marketScreener?.rows?.KOSPI ?? [];
+  const kosdaq = marketScreener?.rows?.KOSDAQ ?? [];
+  const minimum = Math.max(10, Number(process.env.CLOUD_MIN_MARKET_ROWS || 80));
+  if (kospi.length < minimum || kosdaq.length < minimum) {
+    throw new Error(`Incomplete market refresh: KOSPI ${kospi.length}, KOSDAQ ${kosdaq.length}`);
+  }
+  const allRows = [...kospi, ...kosdaq];
+  const liveRows = allRows.filter((row) => row.live && Number(row.price) > 0).length;
+  const minimumLiveRatio = Math.min(1, Math.max(0.5, Number(process.env.CLOUD_MIN_LIVE_RATIO || 0.9)));
+  if (!allRows.length || liveRows / allRows.length < minimumLiveRatio) {
+    throw new Error(`Incomplete quote coverage: ${liveRows}/${allRows.length}`);
+  }
+  if (!Array.isArray(portfolioSnapshot?.rows) || !portfolioSnapshot.rows.length) {
+    throw new Error("Portfolio refresh returned no rows");
+  }
+}
+
+function buildCloudEnvelope({ marketScreener, portfolioSnapshot, dataMode, startedAt, previousSnapshot, metrics }) {
+  const completedAt = new Date();
+  const marketCounts = {
+    KOSPI: marketScreener.rows?.KOSPI?.length ?? 0,
+    KOSDAQ: marketScreener.rows?.KOSDAQ?.length ?? 0
+  };
+  return {
+    schemaVersion: CLOUD_SNAPSHOT_SCHEMA,
+    generatedAt: completedAt.toISOString(),
+    marketDataAsOf: marketScreener.marketDataAsOf ?? previousSnapshot?.marketDataAsOf ?? null,
+    refreshStartedAt: startedAt.toISOString(),
+    refreshCompletedAt: completedAt.toISOString(),
+    refreshDurationMs: completedAt.getTime() - startedAt.getTime(),
+    dataMode,
+    marketCounts,
+    marketScreener,
+    portfolio: portfolioSnapshot,
+    refresh: {
+      status: "SUCCESS",
+      lastSuccessAt: completedAt.toISOString(),
+      lastAttemptAt: startedAt.toISOString(),
+      lastError: null,
+      kis: metrics,
+      rssBytes: process.memoryUsage().rss
+    }
+  };
+}
+
+async function performCloudFullRefresh({ previousSnapshot, startedAt, reason }) {
+  const before = kisMetricsSnapshot();
+  const marketScreener = await buildMarketScreener(100, true, "ALL");
+  const portfolioSnapshot = await buildSnapshot(true, true);
+  assertFullRefreshQuality(marketScreener, portfolioSnapshot);
+  const tradingDate = marketScreener.marketDataAsOf;
+  const today = kstParts().date;
+  if (reason === "schedule" && tradingDate && tradingDate !== today) {
+    throw new Error(`MARKET_CLOSED_OR_NO_EOD_DATA: latest trading date ${tradingDate}`);
+  }
+  return buildCloudEnvelope({
+    marketScreener,
+    portfolioSnapshot,
+    dataMode: "EOD_FULL",
+    startedAt,
+    previousSnapshot,
+    metrics: kisMetricsDelta(before)
+  });
+}
+
+async function performCloudIntradayRefresh({ previousSnapshot, startedAt }) {
+  if (!previousSnapshot) return performCloudFullRefresh({ previousSnapshot, startedAt, reason: "bootstrap" });
+  const before = kisMetricsSnapshot();
+  const failures = [];
+  const rows = {};
+  for (const market of ["KOSPI", "KOSDAQ"]) {
+    rows[market] = await mapLimit(previousSnapshot.marketScreener.rows[market], 3, async (row) => {
+      try {
+        const quote = await withRetry(() => fetchQuoteWithKrxFallback(row.code, true), 2);
+        return {
+          ...row,
+          price: quote.price ?? row.price,
+          quote: { ...(row.quote ?? {}), ...quote },
+          live: Boolean(quote.price),
+          changeRate: quote.changeRate ?? row.changeRate,
+          tradingValue: quote.tradingValue ?? row.tradingValue
+        };
+      } catch (error) {
+        failures.push({ code: row.code, market, message: error.message });
+        return row;
+      }
+    });
+  }
+  const totalRows = rows.KOSPI.length + rows.KOSDAQ.length;
+  if (failures.length > Math.max(10, totalRows * 0.1)) {
+    throw new Error(`Intraday quote coverage failed: ${failures.length}/${totalRows}`);
+  }
+  let portfolioSnapshot = previousSnapshot.portfolio;
+  try {
+    portfolioSnapshot = await buildSnapshot(true, false);
+  } catch (error) {
+    failures.push({ type: "portfolio", message: error.message });
+  }
+  const now = new Date().toISOString();
+  const marketScreener = {
+    ...previousSnapshot.marketScreener,
+    asOf: now,
+    rows,
+    intradayErrors: failures
+  };
+  return buildCloudEnvelope({
+    marketScreener,
+    portfolioSnapshot,
+    dataMode: "INTRADAY_PARTIAL",
+    startedAt,
+    previousSnapshot,
+    metrics: kisMetricsDelta(before)
+  });
+}
+
+const cloudStore = CLOUD_MODE ? createSnapshotStore({
+  snapshotFile: path.join(DASHBOARD_DATA_DIR, "latest-snapshot.json"),
+  stateFile: path.join(DASHBOARD_DATA_DIR, "refresh-state.json")
+}) : null;
+const cloudManager = CLOUD_MODE ? createCloudSnapshotManager({
+  store: cloudStore,
+  logger: structuredLog,
+  performRefresh: ({ kind, ...context }) => kind === "intraday"
+    ? performCloudIntradayRefresh(context)
+    : performCloudFullRefresh(context)
+}) : null;
+const cloudSchedulerState = {
+  lastIntradayAttemptAt: null,
+  lastEodAttemptAt: null,
+  lastEodTradingDate: null,
+  marketClosedDate: null
+};
+
+function startCloudScheduler() {
+  if (!cloudManager) return;
+  const loaded = cloudManager.load();
+  cloudSchedulerState.lastEodTradingDate = loaded?.dataMode === "EOD_FULL" ? loaded.marketDataAsOf : null;
+  const tick = () => {
+    const now = new Date();
+    const kind = scheduledRefreshKind({
+      date: now,
+      state: cloudSchedulerState,
+      intradayIntervalMinutes: Number(process.env.CLOUD_INTRADAY_INTERVAL_MINUTES || 10),
+      eodHour: Number(process.env.CLOUD_EOD_HOUR || 15),
+      eodMinute: Number(process.env.CLOUD_EOD_MINUTE || 50)
+    });
+    if (!kind || cloudManager.getState().isRefreshing) return;
+    if (kind === "intraday") cloudSchedulerState.lastIntradayAttemptAt = now.toISOString();
+    else cloudSchedulerState.lastEodAttemptAt = now.toISOString();
+    const task = cloudManager.run(kind, "schedule");
+    task.promise.then((snapshot) => {
+      if (kind === "full") cloudSchedulerState.lastEodTradingDate = snapshot.marketDataAsOf;
+    }).catch((error) => {
+      if (/MARKET_CLOSED_OR_NO_EOD_DATA/.test(error.message)) cloudSchedulerState.marketClosedDate = kstParts(now).date;
+    });
+  };
+  setInterval(tick, 30_000).unref();
+  setTimeout(() => {
+    if (!cloudManager.getSnapshot()) cloudManager.run("full", "bootstrap");
+    else tick();
+  }, 250).unref();
+}
+
 async function serveStatic(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname === "/" ? "/index.html" : url.pathname;
@@ -2380,7 +2626,20 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (url.pathname === "/api/health") {
-      json(res, 200, { ok: true });
+      const snapshot = cloudManager?.getSnapshot() ?? null;
+      const refreshState = cloudManager?.getState() ?? { status: "local" };
+      json(res, 200, {
+        ok: true,
+        version: APP_VERSION,
+        mode: CLOUD_MODE ? "cloud" : "local",
+        uptimeSeconds: Math.round(process.uptime()),
+        snapshotAvailable: Boolean(snapshot),
+        snapshotGeneratedAt: snapshot?.generatedAt ?? null,
+        snapshotAgeSeconds: snapshot ? Math.max(0, Math.round((Date.now() - new Date(snapshot.generatedAt).getTime()) / 1000)) : null,
+        refreshStatus: refreshState.status,
+        lastRefreshSuccessAt: refreshState.lastSuccessAt ?? null,
+        trackerStatus: existsSync(RANKING_LIVE_HISTORY_FILE) ? "available" : "empty"
+      });
       return;
     }
     if (!isAuthorized(req)) {
@@ -2397,11 +2656,35 @@ const server = http.createServer(async (req, res) => {
         hasKisKeys: Boolean(process.env.KIS_APP_KEY && process.env.KIS_APP_SECRET),
         hasKisAccount: hasKisAccountConfig(),
         quoteMarket: KIS_QUOTE_MARKET,
-        itemCount: portfolio.length
+        itemCount: portfolio.length,
+        cloudMode: CLOUD_MODE
       });
       return;
     }
+    if (CLOUD_MODE && url.pathname === "/api/refresh" && req.method === "POST") {
+      const task = cloudManager.run("full", "manual");
+      json(res, 202, {
+        accepted: task.accepted,
+        joined: task.joined,
+        refreshId: task.refreshId,
+        status: cloudManager.getState().status
+      });
+      return;
+    }
+    if (CLOUD_MODE && url.pathname === "/api/refresh-status") {
+      json(res, 200, cloudManager.getState());
+      return;
+    }
     if (url.pathname === "/api/snapshot") {
+      if (CLOUD_MODE) {
+        const snapshot = cloudManager.getSnapshot();
+        if (!snapshot) {
+          json(res, 503, { error: "SNAPSHOT_NOT_READY", refresh: cloudManager.getState() });
+          return;
+        }
+        json(res, 200, { ...snapshot.portfolio, cloud: cloudSnapshotMeta(snapshot, cloudManager.getState()) });
+        return;
+      }
       const live = url.searchParams.get("live") !== "0" && Boolean(process.env.KIS_APP_KEY && process.env.KIS_APP_SECRET);
       const force = url.searchParams.has("t") || url.searchParams.get("force") === "1";
       if (!live && url.searchParams.get("cached") === "1") {
@@ -2415,6 +2698,15 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     if (url.pathname === "/api/market-screener") {
+      if (CLOUD_MODE) {
+        const snapshot = cloudManager.getSnapshot();
+        if (!snapshot) {
+          json(res, 503, { error: "SNAPSHOT_NOT_READY", refresh: cloudManager.getState() });
+          return;
+        }
+        json(res, 200, cloudMarketPayload(snapshot, String(url.searchParams.get("market") || "ALL").toUpperCase()));
+        return;
+      }
       if (!process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET) {
         json(res, 400, { error: "KIS keys are required" });
         return;
@@ -2433,36 +2725,73 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     if (url.pathname === "/api/leader") {
-      if (!process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET) {
+      if (!CLOUD_MODE && (!process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET)) {
         json(res, 400, { error: "KIS keys are required" });
         return;
       }
       const limit = Math.min(100, Math.max(20, Number(url.searchParams.get("limit") || 100)));
       const force = url.searchParams.has("t") || url.searchParams.get("force") === "1";
       const market = String(url.searchParams.get("market") || "ALL").toUpperCase();
-      json(res, 200, await buildLeaderDashboard(limit, force, market));
+      if (CLOUD_MODE) {
+        const snapshot = cloudManager.getSnapshot();
+        if (!snapshot) return json(res, 503, { error: "SNAPSHOT_NOT_READY" });
+        const payload = cloudMarketPayload(snapshot, market);
+        json(res, 200, {
+          ...payload,
+          summary: {
+            kospi: summarizeLeaderRows(payload.rows.KOSPI),
+            kosdaq: summarizeLeaderRows(payload.rows.KOSDAQ)
+          }
+        });
+      } else json(res, 200, await buildLeaderDashboard(limit, force, market));
       return;
     }
     if (url.pathname === "/api/scout") {
-      if (!process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET) {
+      if (!CLOUD_MODE && (!process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET)) {
         json(res, 400, { error: "KIS keys are required" });
         return;
       }
       const limit = Math.min(100, Math.max(20, Number(url.searchParams.get("limit") || 100)));
       const force = url.searchParams.has("t") || url.searchParams.get("force") === "1";
       const market = String(url.searchParams.get("market") || "ALL").toUpperCase();
-      json(res, 200, await buildScoutDashboard(limit, force, market));
+      if (CLOUD_MODE) {
+        const snapshot = cloudManager.getSnapshot();
+        if (!snapshot) return json(res, 503, { error: "SNAPSHOT_NOT_READY" });
+        const source = cloudMarketPayload(snapshot, market);
+        const toScout = (row) => ({ ...row, ...(row.scout ?? {}), scout: row.scout, liquidityScore: row.supply?.liquidityScore ?? 0 });
+        const rows = {
+          KOSPI: source.rows.KOSPI.map(toScout).sort(compareReboundCandidate),
+          KOSDAQ: source.rows.KOSDAQ.map(toScout).sort(compareReboundCandidate)
+        };
+        json(res, 200, {
+          ...source,
+          rows,
+          summary: { kospi: summarizeScoutRows(rows.KOSPI), kosdaq: summarizeScoutRows(rows.KOSDAQ) }
+        });
+      } else json(res, 200, await buildScoutDashboard(limit, force, market));
       return;
     }
     if (url.pathname === "/api/strategies") {
-      if (!process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET) {
+      if (!CLOUD_MODE && (!process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET)) {
         json(res, 400, { error: "KIS keys are required" });
         return;
       }
       const limit = Math.min(100, Math.max(20, Number(url.searchParams.get("limit") || 100)));
       const force = url.searchParams.has("t") || url.searchParams.get("force") === "1";
       const market = String(url.searchParams.get("market") || "ALL").toUpperCase();
-      json(res, 200, await buildStrategyDashboard(limit, force, market));
+      if (CLOUD_MODE) {
+        const snapshot = cloudManager.getSnapshot();
+        if (!snapshot) return json(res, 503, { error: "SNAPSHOT_NOT_READY" });
+        const payload = cloudMarketPayload(snapshot, market);
+        json(res, 200, {
+          ...payload,
+          strategySummary: {
+            all: summarizeStrategyRows([...payload.rows.KOSPI, ...payload.rows.KOSDAQ]),
+            kospi: summarizeStrategyRows(payload.rows.KOSPI),
+            kosdaq: summarizeStrategyRows(payload.rows.KOSDAQ)
+          }
+        });
+      } else json(res, 200, await buildStrategyDashboard(limit, force, market));
       return;
     }
     if (url.pathname === "/api/simulation") {
@@ -2482,7 +2811,8 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`Portfolio signal dashboard: http://localhost:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`Portfolio signal dashboard: http://${HOST}:${PORT}`);
+  if (CLOUD_MODE) startCloudScheduler();
   if (existsSync(RANKING_LIVE_HISTORY_FILE)) scheduleRankingLiveMaintenance();
 });

@@ -12,6 +12,9 @@ free-float.json
 simulation-ledger.json
 data/ranking-live-history.jsonl
 data/ranking-live-summary.json
+data/latest-snapshot.json
+data/refresh-state.json
+data/*.tmp
 node_modules/
 .DS_Store
 Thumbs.db

@@ -1,5 +1,11 @@
 # Portfolio Signal Dashboard
 
+## Always-on private cloud mode
+
+Set `DASHBOARD_RUNTIME_MODE=cloud` to serve a persistent last-known-good snapshot while refreshes run in the background. The production deployment uses systemd, `/var/lib/portfolio-dashboard` for snapshot/tracker data, `/etc/portfolio-dashboard.env` for secrets, and Tailscale Serve with the app bound to `127.0.0.1`.
+
+Installation, update, backup, rollback, and private phone access are documented in [`deploy/cloud/README.md`](deploy/cloud/README.md).
+
 국내 보유종목 38개를 기준으로 매일 추가매수, 분할매수, 물타기 금지, 익절/축소, 관망 신호를 보여주는 로컬 대시보드입니다.
 
 ## 실행

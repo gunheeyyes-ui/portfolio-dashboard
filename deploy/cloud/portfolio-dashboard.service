@@ -1,0 +1,23 @@
+[Unit]
+Description=Private Portfolio Dashboard
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=portfolio-dashboard
+Group=portfolio-dashboard
+WorkingDirectory=/opt/portfolio-dashboard
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/portfolio-dashboard.env
+ExecStart=/usr/bin/node /opt/portfolio-dashboard/server.mjs
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/portfolio-dashboard /var/cache/portfolio-dashboard
+
+[Install]
+WantedBy=multi-user.target

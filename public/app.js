@@ -11,6 +11,7 @@ const state = {
   explorerMode: "rebound",
   screenerQuery: "",
   screenerLoading: false,
+  backgroundRefresh: null,
   live: true
 };
 
@@ -197,10 +198,48 @@ async function loadSnapshot(force = false) {
       return;
     }
     const fallback = await fetch("/api/snapshot?live=0&cached=1");
+    if (!fallback.ok) {
+      document.querySelector("#holdings").innerHTML = `<tr><td colspan="9" class="loading">저장된 첫 정상 데이터를 준비 중입니다. 잠시 후 다시 확인해 주세요.</td></tr>`;
+      return;
+    }
     state.snapshot = await fallback.json();
     state.snapshot.errors = [...(state.snapshot.errors ?? []), { type: "live-load", message: error.message }];
   }
   render();
+}
+
+async function requestBackgroundRefresh() {
+  try {
+    const response = await fetch("/api/refresh", { method: "POST" });
+    if (response.status !== 202) return false;
+    const payload = await response.json();
+    state.backgroundRefresh = payload;
+    pollBackgroundRefresh(payload.refreshId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function pollBackgroundRefresh(refreshId) {
+  for (let attempt = 0; attempt < 180; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+    try {
+      const response = await fetch("/api/refresh-status");
+      if (!response.ok) return;
+      const status = await response.json();
+      state.backgroundRefresh = status;
+      renderUnifiedExplorer();
+      if (status.status === "success" && (!refreshId || status.refreshId === refreshId)) {
+        await loadMarketScreener(false);
+        await loadSnapshot(false);
+        return;
+      }
+      if (status.status === "error") return;
+    } catch {
+      return;
+    }
+  }
 }
 
 async function loadMarketScreener(force = false) {
@@ -208,7 +247,8 @@ async function loadMarketScreener(force = false) {
   state.screenerLoading = true;
   renderScreenerLoading();
   try {
-    const response = await fetch(`/api/market-screener?limit=100&market=ALL${force ? `&t=${Date.now()}` : ""}`);
+    const backgroundAccepted = force ? await requestBackgroundRefresh() : false;
+    const response = await fetch(`/api/market-screener?limit=100&market=ALL${force && !backgroundAccepted ? `&t=${Date.now()}` : ""}`);
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
       throw new Error(payload.error || "시장 스크리너를 불러오지 못했습니다.");
@@ -865,7 +905,11 @@ function renderUnifiedExplorer() {
   const asOf = state.screener?.asOf ? new Date(state.screener.asOf).toLocaleString("ko-KR") : "-";
   const allCount = (state.screener?.rows?.KOSPI?.length ?? 0) + (state.screener?.rows?.KOSDAQ?.length ?? 0);
   const errorText = state.screener?.errors?.length ? ` · 일부 실패 ${state.screener.errors.length}건` : "";
-  document.querySelector("#screenerStatus").textContent = `KOSPI ${counts.KOSPI} · KOSDAQ ${counts.KOSDAQ} 표시 · 두 시장 ${allCount}종목 준비됨 · ${asOf}${errorText}`;
+  const cloud = state.screener?.cloud;
+  const modeText = cloud?.dataMode === "INTRADAY_PARTIAL" ? " · 장중 시세/확정랭킹 혼합" : (cloud?.dataMode === "EOD_FULL" ? " · 장마감 확정" : "");
+  const refreshText = state.backgroundRefresh?.status === "running" || cloud?.refreshStatus === "running" ? " · 백그라운드 갱신 중" : "";
+  const staleText = cloud?.lastError && cloud?.refreshStatus === "error" ? " · 최근 갱신 실패, 기존 정상 데이터 표시 중" : "";
+  document.querySelector("#screenerStatus").textContent = `KOSPI ${counts.KOSPI} · KOSDAQ ${counts.KOSDAQ} 표시 · 두 시장 ${allCount}종목 준비됨 · ${asOf}${modeText}${refreshText}${staleText}${errorText}`;
   document.querySelector("#screenerStatus").dataset.fetchCount = String(state.screenerFetchCount);
 }
 
@@ -999,7 +1043,11 @@ function render() {
   const sourceText = source === "kis-balance" ? `한국투자 실계좌 잔고${repriceText}` : (source === "kis" ? "한국투자 Open API · 스크린샷 보유 기준" : "스크린샷 기준 기본 데이터");
   const errText = errors?.length ? ` · 일부 실패 ${errors.length}건` : "";
   const judalText = state.snapshot.judal?.source === "judal" ? " · 주달 연속순매수 참고" : "";
-  document.querySelector("#sourceLabel").textContent = `${sourceText}${judalText} · ${new Date(asOf).toLocaleString("ko-KR")}${errText}`;
+  const cloud = state.snapshot.cloud;
+  const modeText = cloud?.dataMode === "INTRADAY_PARTIAL" ? " · 장중 부분갱신" : (cloud?.dataMode === "EOD_FULL" ? " · 장마감 확정" : "");
+  const refreshText = cloud?.refreshStatus === "running" ? " · 백그라운드 갱신 중" : "";
+  const staleText = cloud?.lastError && cloud?.refreshStatus === "error" ? " · 최근 갱신 실패, 기존 정상 데이터 표시 중" : "";
+  document.querySelector("#sourceLabel").textContent = `${sourceText}${judalText} · 데이터 기준 ${new Date(asOf).toLocaleString("ko-KR")}${modeText}${refreshText}${staleText}${errText}`;
 }
 
 document.querySelector("#refreshBtn").addEventListener("click", async () => {
