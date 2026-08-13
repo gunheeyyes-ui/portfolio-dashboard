@@ -33,7 +33,7 @@ input {
   width: min(1540px, calc(100vw - 40px));
   min-width: 0;
   margin: 0 auto;
-  padding: 18px 0 34px;
+  padding: 12px 0 28px;
 }
 
 .topbar,
@@ -48,7 +48,7 @@ input {
 
 .topbar {
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .eyebrow {
@@ -118,13 +118,13 @@ h2 {
 
 .notice {
   gap: 10px;
-  padding: 9px 12px;
+  padding: 6px 10px;
   border: 1px solid #3a3021;
   background: #1b1710;
   color: #f7d38a;
   border-radius: 8px;
-  margin-bottom: 12px;
-  font-size: 14px;
+  margin-bottom: 8px;
+  font-size: 13px;
 }
 
 .score-guide {
@@ -132,8 +132,8 @@ h2 {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin: -4px 0 12px;
-  padding: 8px 12px;
+  margin: 0 0 8px;
+  padding: 6px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #11151b;
@@ -238,8 +238,8 @@ h2 {
 .metrics {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .metric,
@@ -252,7 +252,7 @@ h2 {
 }
 
 .metric {
-  padding: 13px 16px;
+  padding: 7px 12px;
 }
 
 .label {
@@ -261,13 +261,13 @@ h2 {
 }
 
 .value {
-  margin-top: 6px;
-  font-size: 23px;
+  margin-top: 3px;
+  font-size: 20px;
   font-weight: 800;
 }
 
 .sub {
-  margin-top: 5px;
+  margin-top: 2px;
   color: var(--muted);
   font-size: 13px;
 }
@@ -284,16 +284,24 @@ h2 {
   color: var(--green);
 }
 
+.good-score {
+  color: var(--green);
+}
+
+.bad-score {
+  color: var(--red);
+}
+
 .action-strip,
 .trade-strip,
 .theme-strip,
 .screener-strip {
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 
 .section-title {
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .section-title p {
@@ -304,12 +312,12 @@ h2 {
 .action-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .action-card {
-  padding: 12px 14px;
-  min-height: 74px;
+  padding: 7px 11px;
+  min-height: 58px;
 }
 
 .action-card strong {
@@ -320,14 +328,14 @@ h2 {
 
 .action-card span {
   display: block;
-  margin-top: 5px;
-  font-size: 25px;
+  margin-top: 2px;
+  font-size: 20px;
   font-weight: 800;
 }
 
 .action-card small {
   display: block;
-  margin-top: 4px;
+  margin-top: 2px;
   color: var(--muted);
   font-size: 12px;
 }
@@ -632,7 +640,7 @@ h2 {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 7px 10px;
 }
 
 .compact-title {
@@ -652,7 +660,7 @@ h2 {
 
 .screener-title {
   align-items: flex-start;
-  padding: 16px 16px 0;
+  padding: 12px 14px 0;
 }
 
 .screener-tools {
@@ -660,7 +668,7 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 14px 16px;
+  padding: 9px 14px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -944,12 +952,12 @@ td {
 .explorer-mode-bar {
   display: flex;
   gap: 6px;
-  padding: 0 16px 12px;
+  padding: 0 14px 8px;
   overflow-x: auto;
 }
 
 .explorer-mode-bar button {
-  min-height: 36px;
+  min-height: 32px;
   padding: 0 14px;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -969,7 +977,7 @@ td {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 14px;
-  padding: 0 16px 12px;
+  padding: 0 14px 8px;
   color: var(--muted);
   font-size: 11px;
 }
@@ -993,12 +1001,12 @@ td {
   align-items: center;
   flex-wrap: wrap;
   gap: 5px 9px;
-  margin-top: 6px;
+  margin-top: 4px;
   font-size: 11px;
 }
 
 .supply-compact {
-  margin-top: 5px;
+  margin-top: 3px;
   white-space: nowrap;
 }
 
@@ -1031,7 +1039,7 @@ td {
 }
 
 .explorer-card-head .stock-link {
-  display: block;
+  display: inline;
   overflow: hidden;
   font-size: 13px;
   font-weight: 850;
@@ -1045,10 +1053,6 @@ td {
   font-size: 10px;
 }
 
-.explorer-card-head .strategy-badges {
-  margin-top: 3px;
-}
-
 .explorer-card-price {
   display: flex;
   align-items: center;
@@ -1056,6 +1060,67 @@ td {
   margin: 7px 0;
   padding-left: 28px;
   font-size: 10px;
+}
+
+.market-ranking-list {
+  border-top: 1px solid var(--line);
+}
+
+.market-ranking-section + .market-ranking-section {
+  border-top: 8px solid #0c1014;
+}
+
+.market-ranking-header {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  background: #121820;
+}
+
+.market-ranking-header h3 {
+  color: #65aef4;
+  font-size: 16px;
+}
+
+.market-ranking-section.kosdaq .market-ranking-header h3 {
+  color: #66d3a0;
+}
+
+.market-ranking-header span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.stock-title-line {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 5px;
+}
+
+.stock-title-line .stock-link {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stock-title-line .strategy-badges {
+  display: inline-flex;
+  flex: none;
+  gap: 3px;
+}
+
+.stock-title-line .strategy-badge {
+  margin: 0;
+  padding: 2px 5px;
+  font-size: 9px;
+}
+
+.explorer-loading {
+  padding: 28px 14px;
 }
 
 .explorer-card-price b {

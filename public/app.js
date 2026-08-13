@@ -1,3 +1,5 @@
+import { rankMarketRowsV2, reboundRankingTier, compareReboundRankingV2 } from "./rebound-ranking-v2.js";
+
 const state = {
   snapshot: null,
   screener: null,
@@ -7,7 +9,6 @@ const state = {
   screenerSort: null,
   screenerFetchCount: 0,
   explorerMode: "rebound",
-  screenerMarket: "KOSPI",
   screenerQuery: "",
   screenerLoading: false,
   live: true
@@ -530,8 +531,7 @@ function renderTag(tag) {
 }
 
 function renderScreenerLoading() {
-  document.querySelector("#screenerRows").innerHTML = `<tr><td colspan="9" class="loading">KOSPI·KOSDAQ 종목 탐색 데이터 계산 중... 첫 실행은 시간이 걸릴 수 있습니다.</td></tr>`;
-  document.querySelector("#mobileScreenerRows").innerHTML = `<div class="loading">KOSPI·KOSDAQ 종목 탐색 데이터 계산 중...</div>`;
+  document.querySelector("#screenerMarkets").innerHTML = `<div class="loading explorer-loading">KOSPI·KOSDAQ 종목 탐색 데이터 계산 중... 첫 실행은 시간이 걸릴 수 있습니다.</div>`;
   document.querySelector("#screenerStatus").textContent = "두 시장을 한 번에 불러오되 순위는 시장별로 따로 계산합니다.";
   document.querySelector("#screenerStatus").dataset.fetchCount = String(state.screenerFetchCount);
 }
@@ -716,8 +716,8 @@ function renderScreener() {
   }).join("") || `<tr><td colspan="10" class="loading">조건에 맞는 시장 후보가 없습니다.</td></tr>`;
 }
 
-// Unified explorer: one cached dataset, separate market tabs, independent view modes.
-function explorerMarketRows(market = state.screenerMarket) {
+// Unified explorer: one cached dataset, two independently ranked market sections.
+function explorerMarketRows(market) {
   return state.screener?.rows?.[market] ?? [];
 }
 
@@ -735,52 +735,16 @@ function explorerBadges(row) {
     .join("");
 }
 
-function reboundGroup(row) {
-  const stateKey = row.confirmation?.reboundState?.key;
-  const risk = Number(row.scout?.riskScore ?? 100);
-  if (row.combined?.blocked || risk >= 65 || ["risk", "falling"].includes(stateKey)) return 3;
-  if (stateKey === "ready" || stateKey === "stopped") return 0;
-  if (stateKey === "early") return 1;
-  return 2;
-}
-
-function leaderPriority(grade) {
-  return { A: 0, B: 1, C: 2, D: 3, "계산불가": 4 }[grade] ?? 4;
-}
-
-function adjustmentPriority(drawdown) {
-  const value = Number(drawdown ?? 0);
-  if (value <= -20) return 0;
-  if (value <= -15) return 1;
-  if (value <= -10) return 2;
-  return 3;
-}
-
-function compareReboundReview(a, b) {
-  const aScout = a.scout ?? {};
-  const bScout = b.scout ?? {};
-  const aSupply = a.supply ?? {};
-  const bSupply = b.supply ?? {};
-  return reboundGroup(a) - reboundGroup(b)
-    || leaderPriority(a.leader?.grade) - leaderPriority(b.leader?.grade)
-    || adjustmentPriority(aScout.drawdownFromHighPct) - adjustmentPriority(bScout.drawdownFromHighPct)
-    || Number(bScout.stabilizeScore ?? 0) - Number(aScout.stabilizeScore ?? 0)
-    || Number(aScout.riskScore ?? 100) - Number(bScout.riskScore ?? 100)
-    || Number(bSupply.liquidityScore ?? 0) - Number(aSupply.liquidityScore ?? 0)
-    || Number(bSupply.totalNetAmount ?? 0) - Number(aSupply.totalNetAmount ?? 0)
-    || Number(b.combined?.score ?? 0) - Number(a.combined?.score ?? 0);
-}
-
-function explorerModeRows() {
+function explorerModeRows(market) {
   const query = state.screenerQuery.trim().toLowerCase();
-  let rows = explorerMarketRows().filter((row) => !query || row.name.toLowerCase().includes(query) || row.code.includes(query));
+  let rows = explorerMarketRows(market).filter((row) => !query || row.name.toLowerCase().includes(query) || row.code.includes(query));
   if (state.explorerMode === "cafe") rows = rows.filter((row) => row.confirmation?.cafePass);
   if (state.explorerMode === "mtt") rows = rows.filter((row) => row.confirmation?.minerviniPass);
   return rows;
 }
 
 function explorerDefaultSort(rows) {
-  if (state.explorerMode === "rebound") return [...rows].sort(compareReboundReview);
+  if (state.explorerMode === "rebound") return rankMarketRowsV2(rows);
   if (state.explorerMode === "leader") return [...rows].sort((a, b) => Number(b.leader?.score ?? -1) - Number(a.leader?.score ?? -1)
     || Number(b.combined?.score ?? 0) - Number(a.combined?.score ?? 0));
   return [...rows].sort((a, b) => Number(b.combined?.tier ?? 0) - Number(a.combined?.tier ?? 0)
@@ -798,12 +762,12 @@ function explorerSortValue(row, field) {
   return 0;
 }
 
-function explorerRows() {
-  const rows = explorerModeRows();
+function explorerRows(market) {
+  const rows = explorerModeRows(market);
   if (!state.screenerSort) return explorerDefaultSort(rows);
   const [field, direction] = state.screenerSort.split("-");
   const multiplier = direction === "asc" ? 1 : -1;
-  return [...rows].sort((a, b) => (explorerSortValue(a, field) - explorerSortValue(b, field)) * multiplier || compareReboundReview(a, b));
+  return [...rows].sort((a, b) => (explorerSortValue(a, field) - explorerSortValue(b, field)) * multiplier || compareReboundRankingV2(a, b));
 }
 
 function setExplorerSort(field) {
@@ -821,53 +785,88 @@ function renderExplorerSortState() {
   });
 }
 
-function explorerJudgement(row) {
-  const rebound = row.confirmation?.reboundState?.label ?? "반등 계산불가";
-  const timing = row.combined?.label ?? "관망";
-  return state.explorerMode === "timing" ? timing : `${rebound} · ${timing}`;
+function scoutStatusLabel(status) {
+  return {
+    "정찰병 1주": "정찰병",
+    "하락 정지 확인": "하락 정지",
+    "1차 매수 검토": "반등 확인",
+    "추가매수 금지": "고위험",
+    "관찰 목록": "관찰"
+  }[status] ?? "계산불가";
 }
 
-function renderExplorerMobile(rows) {
-  document.querySelector("#mobileScreenerRows").innerHTML = rows.map((row, index) => {
+function scoutStatusTone(row) {
+  if (row.scout?.status === "추가매수 금지" || reboundRankingTier(row) === 6) return "danger";
+  if (["1차 매수 검토", "하락 정지 확인"].includes(row.scout?.status)) return "buy";
+  return "hold";
+}
+
+function renderExplorerMobile(rows, market) {
+  return rows.map((row, index) => {
     const scout = row.scout ?? {};
     const leader = row.leader ?? {};
     const supply = row.supply ?? {};
     const combined = row.combined ?? {};
-    return `<article class="explorer-mobile-card ${state.screenerMarket.toLowerCase()}">
-      <div class="explorer-card-head"><b>${index + 1}</b><div><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><div class="strategy-badges">${explorerBadges(row)}</div></div><span class="badge ${combined.tone === "danger" ? "danger" : combined.tone === "buy" ? "buy" : "hold"}">${combined.label ?? "관망"}</span></div>
+    return `<article class="explorer-mobile-card ${market.toLowerCase()}">
+      <div class="explorer-card-head"><b>${index + 1}</b><div class="stock-title-line"><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><span class="strategy-badges">${explorerBadges(row)}</span></div><span class="badge ${scoutStatusTone(row)}">${scoutStatusLabel(scout.status)}</span></div>
       <div class="explorer-card-price"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div>
-      <div class="explorer-card-grid"><span>Leader <b>${leader.grade ?? "-"}${Number.isFinite(leader.score) ? ` ${leader.score}` : ""}</b></span><span>낙폭 <b>${pct(scout.drawdownFromHighPct)}</b></span><span>Risk <b>${scout.riskScore ?? "-"}</b></span><span>Stabilize <b>${scout.stabilizeScore ?? "-"}</b></span><span>거래강도 <b>${supply.liquidityScore ?? 0}</b><small>외 ${signedEok(supply.foreignNetAmount)} · 기 ${signedEok(supply.instNetAmount)}</small></span><span>타이밍 <b>${combined.score ?? 0}</b><small>${row.confirmation?.reboundState?.label ?? "-"}</small></span></div>
+      <div class="explorer-card-grid"><span>Leader <b>${leader.grade ?? "-"}${Number.isFinite(leader.score) ? ` ${leader.score}` : ""}</b></span><span>낙폭 <b>${pct(scout.drawdownFromHighPct)}</b></span><span>Risk <b>${scout.riskScore ?? "-"}</b></span><span>Stab <b>${scout.stabilizeScore ?? "-"}</b></span><span>거래강도 <b>${supply.liquidityScore ?? 0}</b><small>외 ${signedEok(supply.foreignNetAmount)} · 기 ${signedEok(supply.instNetAmount)}</small></span><span>타이밍 <b>${combined.score ?? 0}</b><small>${combined.label ?? "관망"}</small></span></div>
     </article>`;
   }).join("") || `<div class="loading">${state.explorerMode.toUpperCase()} 조건에 맞는 종목이 없습니다.</div>`;
 }
 
-function renderUnifiedExplorer() {
-  if (state.screenerLoading) return;
-  const rows = explorerRows();
-  renderExplorerSortState();
-  renderExplorerMobile(rows);
-  const asOf = state.screener?.asOf ? new Date(state.screener.asOf).toLocaleString("ko-KR") : "-";
-  const allCount = (state.screener?.rows?.KOSPI?.length ?? 0) + (state.screener?.rows?.KOSDAQ?.length ?? 0);
-  const errorText = state.screener?.errors?.length ? ` · 일부 실패 ${state.screener.errors.length}건` : "";
-  document.querySelector("#screenerStatus").textContent = `${state.screenerMarket} ${rows.length}종목 표시 · 두 시장 ${allCount}종목 준비됨 · ${asOf}${errorText}`;
-  document.querySelector("#screenerStatus").dataset.fetchCount = String(state.screenerFetchCount);
-  document.querySelector("#screenerRows").innerHTML = rows.map((row, index) => {
+function renderExplorerRows(rows) {
+  return rows.map((row, index) => {
     const scout = row.scout ?? {};
     const leader = row.leader ?? {};
     const supply = row.supply ?? {};
     const combined = row.combined ?? {};
     return `<tr>
-      <td><div class="rank-main">${index + 1}</div><div class="cell-sub">${state.explorerMode === "rebound" ? `그룹 ${reboundGroup(row) + 1}` : state.explorerMode.toUpperCase()}</div></td>
-      <td><a class="stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><div class="strategy-badges">${explorerBadges(row)}</div><div class="explorer-price-line"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div></td>
+      <td><div class="rank-main">${index + 1}</div><div class="cell-sub">${state.explorerMode === "rebound" ? `T${reboundRankingTier(row)}` : state.explorerMode.toUpperCase()}</div></td>
+      <td><div class="stock-title-line"><a class="stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><span class="strategy-badges">${explorerBadges(row)}</span></div><div class="explorer-price-line"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div></td>
       <td><span class="leader-badge ${leaderTone(leader.grade)}">${Number.isFinite(leader.score) ? `${leader.grade} ${leader.score}` : "계산불가"}</span></td>
-      <td><b>${pct(scout.drawdownFromHighPct)}</b><div class="cell-sub">2년 고점 기준</div></td>
-      <td><b class="${Number(scout.riskScore ?? 100) <= 35 ? "positive" : Number(scout.riskScore ?? 100) >= 65 ? "negative" : ""}">${scout.riskScore ?? "-"}</b><div class="cell-sub">낮을수록 좋음</div></td>
-      <td><b class="${Number(scout.stabilizeScore ?? 0) >= 65 ? "positive" : ""}">${scout.stabilizeScore ?? "-"}</b><div class="cell-sub">높을수록 좋음</div></td>
+      <td><b>${pct(scout.drawdownFromHighPct)}</b></td>
+      <td><b class="${Number(scout.riskScore ?? 100) <= 35 ? "good-score" : Number(scout.riskScore ?? 100) >= 65 ? "bad-score" : ""}">${scout.riskScore ?? "-"}</b></td>
+      <td><b class="${Number(scout.stabilizeScore ?? 0) >= 65 ? "good-score" : ""}">${scout.stabilizeScore ?? "-"}</b></td>
       <td><div class="score-pill ${scoreTone(supply.liquidityScore ?? 0)}">${supply.liquidityScore ?? 0}</div><div class="cell-sub supply-compact">외 ${signedEok(supply.foreignNetAmount)} · 기 ${signedEok(supply.instNetAmount)}</div></td>
       <td><b>${combined.score ?? 0}</b><div class="cell-sub">${combined.label ?? "관망"}</div></td>
-      <td><div class="judgement-line">${explorerJudgement(row)}</div><div class="cell-sub">${combined.reason ?? shortJudgement(row)}</div></td>
+      <td><span class="badge ${scoutStatusTone(row)}">${scoutStatusLabel(scout.status)}</span><div class="cell-sub">현재 타이밍 ${combined.label ?? "관망"}</div></td>
     </tr>`;
   }).join("") || `<tr><td colspan="9" class="loading">조건에 맞는 종목이 없습니다.</td></tr>`;
+}
+
+function explorerTableHeader() {
+  return `<thead><tr>
+    <th>순위</th><th>종목</th>
+    <th><button class="sort-btn" data-screener-sort-field="leader" type="button">Leader <span data-screener-sort-icon="leader">↕</span></button></th>
+    <th><button class="sort-btn" data-screener-sort-field="drawdown" type="button">낙폭 <span data-screener-sort-icon="drawdown">↕</span></button></th>
+    <th><button class="sort-btn" data-screener-sort-field="risk" type="button">Risk <span data-screener-sort-icon="risk">↕</span></button></th>
+    <th><button class="sort-btn" data-screener-sort-field="stabilize" type="button">Stab <span data-screener-sort-icon="stabilize">↕</span></button></th>
+    <th><button class="sort-btn" data-screener-sort-field="liquidity" type="button">거래강도 <span data-screener-sort-icon="liquidity">↕</span></button></th>
+    <th><button class="sort-btn" data-screener-sort-field="timing" type="button">현재 타이밍 <span data-screener-sort-icon="timing">↕</span></button></th>
+    <th>판정</th>
+  </tr></thead>`;
+}
+
+function renderMarketSection(market) {
+  const rows = explorerRows(market);
+  return `<section class="market-ranking-section ${market.toLowerCase()}" data-market="${market}">
+    <header class="market-ranking-header"><h3>${market}</h3><span>시장 내 독립 순위 · ${rows.length}종목</span></header>
+    <div class="mobile-screener" aria-label="${market} 모바일 종목 순위"><div class="explorer-mobile-list">${renderExplorerMobile(rows, market)}</div></div>
+    <div class="table-wrap screener-wrap"><table class="screener-table explorer-table">${explorerTableHeader()}<tbody>${renderExplorerRows(rows)}</tbody></table></div>
+  </section>`;
+}
+
+function renderUnifiedExplorer() {
+  if (state.screenerLoading) return;
+  const counts = Object.fromEntries(["KOSPI", "KOSDAQ"].map((market) => [market, explorerRows(market).length]));
+  document.querySelector("#screenerMarkets").innerHTML = ["KOSPI", "KOSDAQ"].map(renderMarketSection).join("");
+  renderExplorerSortState();
+  const asOf = state.screener?.asOf ? new Date(state.screener.asOf).toLocaleString("ko-KR") : "-";
+  const allCount = (state.screener?.rows?.KOSPI?.length ?? 0) + (state.screener?.rows?.KOSDAQ?.length ?? 0);
+  const errorText = state.screener?.errors?.length ? ` · 일부 실패 ${state.screener.errors.length}건` : "";
+  document.querySelector("#screenerStatus").textContent = `KOSPI ${counts.KOSPI} · KOSDAQ ${counts.KOSDAQ} 표시 · 두 시장 ${allCount}종목 준비됨 · ${asOf}${errorText}`;
+  document.querySelector("#screenerStatus").dataset.fetchCount = String(state.screenerFetchCount);
 }
 
 function filteredRows() {
@@ -1019,20 +1018,14 @@ document.querySelector("#search").addEventListener("input", (event) => {
 document.querySelectorAll("[data-sort-field]").forEach((button) => {
   button.addEventListener("click", () => setHoldingSort(button.dataset.sortField));
 });
-document.querySelectorAll("[data-screener-sort-field]").forEach((button) => {
-  button.addEventListener("click", () => setExplorerSort(button.dataset.screenerSortField));
+document.querySelector("#screenerMarkets").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-screener-sort-field]");
+  if (button) setExplorerSort(button.dataset.screenerSortField);
 });
 document.querySelector("#tabs").addEventListener("click", (event) => {
   const button = event.target.closest("button");
   if (!button) return;
   setHoldingFilter(button.dataset.filter);
-});
-document.querySelector("#screenerTabs").addEventListener("click", (event) => {
-  const button = event.target.closest("button");
-  if (!button) return;
-  state.screenerMarket = button.dataset.market;
-  document.querySelectorAll("#screenerTabs button").forEach((item) => item.classList.toggle("active", item === button));
-  renderUnifiedExplorer();
 });
 document.querySelector("#explorerModes").addEventListener("click", (event) => {
   const button = event.target.closest("[data-explorer-mode]");

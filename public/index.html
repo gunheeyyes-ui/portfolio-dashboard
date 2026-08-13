@@ -34,6 +34,32 @@
         <small>종합 40점 이상만 순위를 받습니다. 1위라도 판정이 관찰이면 매수조건 미충족이며, 실제 후보는 ‘종합 최우선·종합 분할후보’입니다.</small>
       </section>
 
+      <section class="screener-strip">
+        <div class="section-title screener-title">
+          <div>
+            <h2>시장 종목 탐색</h2>
+            <p id="screenerStatus">KOSPI·KOSDAQ을 한 번에 계산합니다.</p>
+          </div>
+          <button id="screenerRefresh" class="ghost-btn">시장 후보 새로고침</button>
+        </div>
+        <div class="screener-tools">
+          <input id="screenerSearch" type="search" placeholder="시장 후보 검색">
+        </div>
+        <div class="explorer-mode-bar" id="explorerModes" aria-label="보기 모드">
+          <button class="active" data-explorer-mode="rebound" type="button">반등후보</button>
+          <button data-explorer-mode="timing" type="button">타이밍</button>
+          <button data-explorer-mode="leader" type="button">주도주</button>
+          <button data-explorer-mode="cafe" type="button">CAFE</button>
+          <button data-explorer-mode="mtt" type="button">MTT</button>
+        </div>
+        <div class="explorer-legend">
+          <span>낙폭 = 2년 고점 대비</span><span>Risk↓ 낮을수록 좋음</span><span>Stab↑ 높을수록 좋음</span><span>타이밍 = 기존 Main 70 + Scout 30</span>
+        </div>
+        <div id="screenerMarkets" class="market-ranking-list">
+          <div class="loading explorer-loading">시장 후보 불러오는 중...</div>
+        </div>
+      </section>
+
       <section class="metrics" id="metrics"></section>
 
       <section class="action-strip">
@@ -58,58 +84,6 @@
           <p>상위 테마 집중도</p>
         </div>
         <div id="themeList" class="theme-list"></div>
-      </section>
-
-      <section class="screener-strip">
-        <div class="section-title screener-title">
-          <div>
-            <h2>시장 종목 탐색</h2>
-            <p id="screenerStatus">KOSPI·KOSDAQ을 한 번에 계산합니다.</p>
-          </div>
-          <button id="screenerRefresh" class="ghost-btn">시장 후보 새로고침</button>
-        </div>
-        <div class="screener-tools">
-          <div class="tabs" id="screenerTabs">
-            <button class="active" data-market="KOSPI">KOSPI</button>
-            <button data-market="KOSDAQ">KOSDAQ</button>
-          </div>
-          <input id="screenerSearch" type="search" placeholder="시장 후보 검색">
-        </div>
-        <div class="explorer-mode-bar" id="explorerModes" aria-label="보기 모드">
-          <button class="active" data-explorer-mode="rebound" type="button">반등후보</button>
-          <button data-explorer-mode="timing" type="button">타이밍</button>
-          <button data-explorer-mode="leader" type="button">주도주</button>
-          <button data-explorer-mode="cafe" type="button">CAFE</button>
-          <button data-explorer-mode="mtt" type="button">MTT</button>
-        </div>
-        <div class="explorer-legend">
-          <span>Risk는 낮을수록 좋음</span><span>Stabilize는 높을수록 좋음</span><span>타이밍은 기존 Main 70 + Scout 30</span>
-        </div>
-        <div class="mobile-screener" aria-label="모바일 시장 종목 탐색">
-          <div id="mobileScreenerRows" class="explorer-mobile-list">
-            <div class="loading">시장 후보 불러오는 중...</div>
-          </div>
-        </div>
-        <div class="table-wrap screener-wrap">
-          <table class="screener-table explorer-table">
-            <thead>
-              <tr>
-                <th>순위</th>
-                <th>종목</th>
-                <th><button class="sort-btn" data-screener-sort-field="leader" type="button">Leader <span data-screener-sort-icon="leader">↕</span></button></th>
-                <th><button class="sort-btn" data-screener-sort-field="drawdown" type="button">고점대비 <span data-screener-sort-icon="drawdown">↕</span></button></th>
-                <th><button class="sort-btn" data-screener-sort-field="risk" type="button">Risk <span data-screener-sort-icon="risk">↕</span></button></th>
-                <th><button class="sort-btn" data-screener-sort-field="stabilize" type="button">Stabilize <span data-screener-sort-icon="stabilize">↕</span></button></th>
-                <th><button class="sort-btn" data-screener-sort-field="liquidity" type="button">거래강도 <span data-screener-sort-icon="liquidity">↕</span></button></th>
-                <th><button class="sort-btn" data-screener-sort-field="timing" type="button">현재 타이밍 <span data-screener-sort-icon="timing">↕</span></button></th>
-                <th>판정</th>
-              </tr>
-            </thead>
-            <tbody id="screenerRows">
-              <tr><td colspan="9" class="loading">시장 후보 불러오는 중...</td></tr>
-            </tbody>
-          </table>
-        </div>
       </section>
 
       <section class="layout">
