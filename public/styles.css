@@ -1930,7 +1930,68 @@ td {
   }
 
   .explorer-table {
-    min-width: 1040px;
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .explorer-table th,
+  .explorer-table td {
+    padding: 4px 2px;
+    font-size: 9px;
+    line-height: 1.25;
+    overflow: hidden;
+  }
+
+  .explorer-table th:nth-child(1),
+  .explorer-table td:nth-child(1) { width: 18px !important; }
+  .explorer-table th:nth-child(2),
+  .explorer-table td:nth-child(2) { width: 110px !important; }
+  .explorer-table th:nth-child(3),
+  .explorer-table td:nth-child(3) { width: 30px !important; }
+  .explorer-table th:nth-child(4),
+  .explorer-table td:nth-child(4) { width: 32px !important; }
+  .explorer-table th:nth-child(5),
+  .explorer-table td:nth-child(5) { width: 20px !important; }
+  .explorer-table th:nth-child(6),
+  .explorer-table td:nth-child(6) { width: 20px !important; }
+  .explorer-table th:nth-child(7),
+  .explorer-table td:nth-child(7) { width: 38px !important; }
+  .explorer-table th:nth-child(8),
+  .explorer-table td:nth-child(8) { width: 28px !important; }
+  .explorer-table th:nth-child(9),
+  .explorer-table td:nth-child(9) { width: 32px !important; }
+
+  .explorer-table .sort-btn {
+    font-size: 9px;
+    padding: 0;
+    gap: 1px;
+  }
+
+  .explorer-table .stock-name,
+  .explorer-table .stock-link {
+    font-size: 9.5px;
+  }
+
+  .explorer-table .strategy-badges,
+  .explorer-table .cell-sub,
+  .explorer-table .supply-compact,
+  .explorer-table .explorer-price-line small {
+    display: none;
+  }
+
+  .explorer-table .leader-badge {
+    min-width: 0;
+    min-height: 0;
+    padding: 1px 2px;
+    font-size: 8.5px;
+    white-space: nowrap;
+  }
+
+  .explorer-table .score-pill,
+  .explorer-table .badge {
+    padding: 1px 2px;
+    font-size: 8.5px;
+    white-space: nowrap;
   }
 
   body:has(.screener-table) h1 {
