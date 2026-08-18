@@ -137,6 +137,31 @@ function scoreTone(score) {
 const RS20_TOOLTIP = "RS(20D)\n최근 20거래일 수익률을 같은 시장(KOSPI/KOSDAQ) 종목끼리 비교한 상대강도.\n0~99이며 높을수록 최근 시장 대비 강함.\n매수신호 또는 Ranking 점수가 아님.";
 const TIER_TOOLTIP = "Ranking V2 Tier (순위를 가르는 등급)\nT1 최우선 · T2 하락정지 · T3 저위험\nT4~T6 후순위 · T6 제외";
 
+const TIER_LABEL = {
+  1: "T1 최우선",
+  2: "T2 하락정지",
+  3: "T3 저위험",
+  4: "T4 후순위",
+  5: "T5 후순위",
+  6: "T6 제외"
+};
+
+// On a phone the tier is carried by the rank number's colour instead of a
+// "T2" label, which frees the width for a readable rank. The text stays in
+// the DOM for desktop and the tooltip keeps the meaning available either way.
+function rankTierClass(row) {
+  if (state.explorerMode !== "rebound") return "";
+  const tier = reboundRankingTier(row);
+  return Number.isFinite(tier) ? `tier-${tier}` : "";
+}
+
+function rankCellTitle(row) {
+  if (state.explorerMode !== "rebound") return ` title="${TIER_TOOLTIP}"`;
+  const tier = reboundRankingTier(row);
+  const label = TIER_LABEL[tier] ?? `T${tier}`;
+  return ` title="${label}\n\n${TIER_TOOLTIP}"`;
+}
+
 // Day-over-day Ranking V2 move. Only meaningful while the table is in its
 // default Ranking V2 order — comparing a stored Ranking V2 rank against an
 // RS-sorted or 거래강도-sorted position would be two different scales.
@@ -929,10 +954,12 @@ function renderExplorerRows(rows) {
     const supply = row.supply ?? {};
     const combined = row.combined ?? {};
     return `<tr>
-      <td><div class="rank-main">${index + 1}</div><div class="cell-sub rank-tier" title="${TIER_TOOLTIP}">${state.explorerMode === "rebound" ? `T${reboundRankingTier(row)}` : state.explorerMode.toUpperCase()}</div>${rankMoveHtml(row)}</td>
+      <td${rankCellTitle(row)}><div class="rank-main ${rankTierClass(row)}">${index + 1}</div><div class="cell-sub rank-tier">${state.explorerMode === "rebound" ? `T${reboundRankingTier(row)}` : state.explorerMode.toUpperCase()}</div>${rankMoveHtml(row)}</td>
       <td><div class="stock-title-line"><a class="stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><span class="strategy-badges">${explorerBadges(row)}</span></div><div class="explorer-price-line"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div></td>
       <td><b class="rs20-value ${rs20Tone(scout.rs20)}" title="${RS20_TOOLTIP}">${Number.isFinite(scout.rs20) ? scout.rs20 : "-"}</b></td>
-      <td><span class="leader-badge ${leaderTone(leader.grade)}">${Number.isFinite(leader.score) ? `${leader.grade} ${leader.score}` : "계산불가"}</span></td>
+      <td><span class="leader-badge ${leaderTone(leader.grade)}">${Number.isFinite(leader.score)
+        ? `${leader.grade} ${leader.score}`
+        : `<i class="judge-full">계산불가</i><i class="judge-short" title="계산불가">–</i>`}</span></td>
       <td><b>${pct(scout.drawdownFromHighPct)}</b></td>
       <td><b class="${Number(scout.riskScore ?? 100) <= 35 ? "good-score" : Number(scout.riskScore ?? 100) >= 65 ? "bad-score" : ""}">${scout.riskScore ?? "-"}</b></td>
       <td><b class="${Number(scout.stabilizeScore ?? 0) >= 65 ? "good-score" : ""}">${scout.stabilizeScore ?? "-"}</b></td>

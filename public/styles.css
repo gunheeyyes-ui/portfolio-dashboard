@@ -1064,6 +1064,24 @@ td {
   color: #8fc4ff;
 }
 
+/* Tier as colour on the rank number. Deliberately avoids the red/blue used
+   by the ▲/▼ rank-move arrows so the two never read as the same signal. */
+.rank-main.tier-1 { color: #23c483; }
+.rank-main.tier-2 { color: #6fd3a4; }
+.rank-main.tier-3 { color: #f3b340; }
+.rank-main.tier-4 { color: #9aa5b4; }
+.rank-main.tier-5 { color: #7c8797; }
+.rank-main.tier-6 { color: #a2708c; }
+
+.legend-tier-chip {
+  font-weight: 800;
+}
+
+.legend-tier-chip.t1 { color: #23c483; }
+.legend-tier-chip.t2 { color: #6fd3a4; }
+.legend-tier-chip.t3 { color: #f3b340; }
+.legend-tier-chip.t6 { color: #a2708c; }
+
 .rank-move {
   display: inline-block;
   margin-top: 2px;
@@ -2076,25 +2094,25 @@ td {
      순위 for the rank-move indicator and to 종목, whose longest price line
      was previously clipping by ~7px. */
   .explorer-table th:nth-child(1),
-  .explorer-table td:nth-child(1) { width: 47px !important; }
+  .explorer-table td:nth-child(1) { width: 46px !important; }
   .explorer-table th:nth-child(2),
-  .explorer-table td:nth-child(2) { width: 110px !important; }
+  .explorer-table td:nth-child(2) { width: 118px !important; }
   .explorer-table th:nth-child(3),
-  .explorer-table td:nth-child(3) { width: 20px !important; }
+  .explorer-table td:nth-child(3) { width: 21px !important; }
   .explorer-table th:nth-child(4),
   .explorer-table td:nth-child(4) { width: 27px !important; }
   .explorer-table th:nth-child(5),
-  .explorer-table td:nth-child(5) { width: 28px !important; }
+  .explorer-table td:nth-child(5) { width: 33px !important; }
   .explorer-table th:nth-child(6),
-  .explorer-table td:nth-child(6) { width: 20px !important; }
+  .explorer-table td:nth-child(6) { width: 21px !important; }
   .explorer-table th:nth-child(7),
-  .explorer-table td:nth-child(7) { width: 20px !important; }
+  .explorer-table td:nth-child(7) { width: 21px !important; }
   .explorer-table th:nth-child(8),
-  .explorer-table td:nth-child(8) { width: 31px !important; }
+  .explorer-table td:nth-child(8) { width: 29px !important; }
   .explorer-table th:nth-child(9),
-  .explorer-table td:nth-child(9) { width: 22px !important; }
+  .explorer-table td:nth-child(9) { width: 20px !important; }
   .explorer-table th:nth-child(10),
-  .explorer-table td:nth-child(10) { width: 33px !important; }
+  .explorer-table td:nth-child(10) { width: 24px !important; }
 
   /* Keep the 거래강도 pill from touching the 타이밍 number. */
   .explorer-table th:nth-child(8),
@@ -2109,22 +2127,12 @@ td {
     white-space: nowrap;
   }
 
-  /* The 18px desktop rank number dominated the row on a phone; here the
-     rank and its tier read as one small pair instead. */
+  /* The tier is carried by colour here, so the "T2" text is dropped and the
+     reclaimed width goes back into a readable rank number. */
   .explorer-table .rank-main {
     display: inline;
-    font-size: 10px;
-    font-weight: 800;
-  }
-
-  /* Needs .cell-sub in the selector to outrank the later
-     `.explorer-table .cell-sub { display: none }` hide rule. */
-  .explorer-table .cell-sub.rank-tier {
-    display: inline;
-    margin-left: 1px;
-    color: var(--muted);
-    font-size: 8px;
-    font-weight: 700;
+    font-size: 14px;
+    font-weight: 850;
   }
 
   .explorer-table .rank-move {
