@@ -1064,6 +1064,31 @@ td {
   color: #8fc4ff;
 }
 
+.rank-move {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.rank-move.up {
+  color: var(--red);
+}
+
+.rank-move.down {
+  color: var(--blue);
+}
+
+.rank-move.flat,
+.rank-move.new {
+  color: var(--muted);
+}
+
+.rank-move.new {
+  font-size: 9px;
+}
+
 /* Desktop shows the full judgement text; the mobile block swaps these. */
 .judge-full {
   font-style: normal;
@@ -2046,24 +2071,28 @@ td {
     overflow: hidden;
   }
 
+  /* Widths are reclaimed from the numeric columns on the right, which had
+     real slack (거래강도 +8, 타이밍 +6, RS/Risk/Stab +3 each), and given to
+     순위 for the rank-move indicator and to 종목, whose longest price line
+     was previously clipping by ~7px. */
   .explorer-table th:nth-child(1),
-  .explorer-table td:nth-child(1) { width: 34px !important; }
+  .explorer-table td:nth-child(1) { width: 47px !important; }
   .explorer-table th:nth-child(2),
-  .explorer-table td:nth-child(2) { width: 104px !important; }
+  .explorer-table td:nth-child(2) { width: 110px !important; }
   .explorer-table th:nth-child(3),
-  .explorer-table td:nth-child(3) { width: 22px !important; }
+  .explorer-table td:nth-child(3) { width: 20px !important; }
   .explorer-table th:nth-child(4),
-  .explorer-table td:nth-child(4) { width: 28px !important; }
+  .explorer-table td:nth-child(4) { width: 27px !important; }
   .explorer-table th:nth-child(5),
   .explorer-table td:nth-child(5) { width: 28px !important; }
   .explorer-table th:nth-child(6),
-  .explorer-table td:nth-child(6) { width: 22px !important; }
+  .explorer-table td:nth-child(6) { width: 20px !important; }
   .explorer-table th:nth-child(7),
-  .explorer-table td:nth-child(7) { width: 22px !important; }
+  .explorer-table td:nth-child(7) { width: 20px !important; }
   .explorer-table th:nth-child(8),
-  .explorer-table td:nth-child(8) { width: 36px !important; }
+  .explorer-table td:nth-child(8) { width: 31px !important; }
   .explorer-table th:nth-child(9),
-  .explorer-table td:nth-child(9) { width: 26px !important; }
+  .explorer-table td:nth-child(9) { width: 22px !important; }
   .explorer-table th:nth-child(10),
   .explorer-table td:nth-child(10) { width: 33px !important; }
 
@@ -2073,8 +2102,10 @@ td {
   .explorer-table th:nth-child(9),
   .explorer-table td:nth-child(9) { padding-left: 5px; }
 
-  /* Rank cell shows "1 T2": tier stays visible but deliberately tiny. */
+  /* Rank cell packs "103 T6 ▼82" into ~49px, so its own gaps are minimal. */
   .explorer-table td:nth-child(1) {
+    padding-left: 1px;
+    padding-right: 0;
     white-space: nowrap;
   }
 
@@ -2090,10 +2121,19 @@ td {
      `.explorer-table .cell-sub { display: none }` hide rule. */
   .explorer-table .cell-sub.rank-tier {
     display: inline;
-    margin-left: 2px;
+    margin-left: 1px;
     color: var(--muted);
     font-size: 8px;
     font-weight: 700;
+  }
+
+  .explorer-table .rank-move {
+    margin: 0 0 0 2px;
+    font-size: 8.5px;
+  }
+
+  .explorer-table .rank-move.new {
+    font-size: 7px;
   }
 
   /* Short judgement badge so it never clips at the right screen edge. */

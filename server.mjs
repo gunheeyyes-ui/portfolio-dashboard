@@ -8,6 +8,7 @@ import { buildIndicators, buildPortfolioSummary, classifyHolding, toNumber } fro
 import { buildLeaderDecision, calcLeaderBase, enrichLeaderScores } from "./leader.js";
 import { buildStrategyConfirmation } from "./strategy-confirmation.js";
 import { createRankingLiveTracker, deriveSignalDate, safeTrackerTask } from "./ranking-live-tracker.js";
+import { rankMarketRowsV2 } from "./public/rebound-ranking-v2.js";
 import { buildRelativeStrength20 } from "./relative-strength.js";
 import { createStockEasyCache } from "./stockeasy.js";
 import {
@@ -1506,9 +1507,10 @@ async function buildMarketScreener(limit = 100, force = false, marketFilter = "A
     KOSPI: combinedRows.filter((row) => row.market === "KOSPI").sort(sortMarketCandidate),
     KOSDAQ: combinedRows.filter((row) => row.market === "KOSDAQ").sort(sortMarketCandidate)
   };
+  const signalDate = deriveSignalDate(historyByCode);
   const payload = {
     asOf: new Date().toISOString(),
-    marketDataAsOf: deriveSignalDate(historyByCode),
+    marketDataAsOf: signalDate,
     limit,
     market: normalizedMarket,
     errors,
@@ -1521,6 +1523,53 @@ async function buildMarketScreener(limit = 100, force = false, marketFilter = "A
   const cachedPayload = cacheSet(cacheKey, payload);
   if (normalizedMarket === "ALL") scheduleRankingLiveMaintenance({ payload, historyByCode, record: true });
   return cachedPayload;
+}
+
+// Day-over-day Ranking V2 move, for display only. Ranks are computed with
+// the same rankMarketRowsV2 the tracker records, so today's rank and the
+// stored previous rank are always on the same scale. Never feeds scoring.
+//
+// Attached when serving rather than when refreshing, so a move appears as
+// soon as the tracker has the prior day, instead of waiting for the next
+// full refresh. The lookup is memoised per signalDate to avoid re-reading
+// the history file on every request.
+let rankMoveCache = { signalDate: null, previous: null, loadedAt: 0 };
+
+function previousRanksCached(signalDate) {
+  const fresh = rankMoveCache.signalDate === signalDate
+    && rankMoveCache.previous
+    && Date.now() - rankMoveCache.loadedAt < 1000 * 60 * 10;
+  if (fresh) return rankMoveCache.previous;
+  const previous = rankingLiveTracker.previousRanks(signalDate);
+  rankMoveCache = { signalDate, previous, loadedAt: Date.now() };
+  return previous;
+}
+
+function attachRankMoves(byMarket, signalDate) {
+  if (!byMarket) return;
+  let previous;
+  try {
+    previous = previousRanksCached(signalDate);
+  } catch (error) {
+    trackerError(error);
+    return;
+  }
+  if (!previous?.ranks?.size) return;
+  for (const market of ["KOSPI", "KOSDAQ"]) {
+    const ranked = rankMarketRowsV2(byMarket[market] ?? []);
+    ranked.forEach((row, index) => {
+      const todayRank = index + 1;
+      const prevRank = previous.ranks.get(`${market}|${row.code}`);
+      row.rankMove = {
+        rank: todayRank,
+        previousRank: Number.isFinite(prevRank) ? prevRank : null,
+        // Positive = moved up the table (smaller rank number).
+        delta: Number.isFinite(prevRank) ? prevRank - todayRank : null,
+        previousSignalDate: previous.signalDate,
+        isNew: !Number.isFinite(prevRank)
+      };
+    });
+  }
 }
 
 function sortMarketCandidate(a, b) {
@@ -2754,7 +2803,9 @@ const server = http.createServer(async (req, res) => {
           json(res, 503, { error: "SNAPSHOT_NOT_READY", refresh: cloudManager.getState() });
           return;
         }
-        json(res, 200, cloudMarketPayload(snapshot, String(url.searchParams.get("market") || "ALL").toUpperCase()));
+        const payload = cloudMarketPayload(snapshot, String(url.searchParams.get("market") || "ALL").toUpperCase());
+        attachRankMoves(payload.rows, payload.marketDataAsOf);
+        json(res, 200, payload);
         return;
       }
       if (!process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET) {
@@ -2764,7 +2815,9 @@ const server = http.createServer(async (req, res) => {
       const limit = Math.min(100, Math.max(10, Number(url.searchParams.get("limit") || 100)));
       const force = url.searchParams.has("t") || url.searchParams.get("force") === "1";
       const market = String(url.searchParams.get("market") || "ALL").toUpperCase();
-      json(res, 200, await buildMarketScreener(limit, force, market));
+      const screenerPayload = await buildMarketScreener(limit, force, market);
+      attachRankMoves(screenerPayload.rows, screenerPayload.marketDataAsOf);
+      json(res, 200, screenerPayload);
       return;
     }
     if (url.pathname === "/api/ranking-validation") {

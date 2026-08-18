@@ -333,6 +333,28 @@ export function buildRankingLiveSummary(records, { market = "ALL", signalDate = 
   };
 }
 
+/**
+ * Ranks recorded on the most recent trading day strictly before
+ * `currentSignalDate`, keyed as `${market}|${ticker}`. Used to show a
+ * day-over-day rank move; it reads the same reviewRank the tracker stored,
+ * so the delta always refers to the Ranking V2 order, never to whatever
+ * column the user happens to be sorting by.
+ */
+export function previousRanksFrom(records, currentSignalDate) {
+  const dates = [...new Set(records.map((row) => row.signalDate).filter(Boolean))].sort();
+  const previousDate = currentSignalDate
+    ? dates.filter((date) => date < currentSignalDate).at(-1)
+    : dates.at(-1);
+  if (!previousDate) return { signalDate: null, ranks: new Map() };
+  const ranks = new Map();
+  for (const row of records) {
+    if (row.signalDate !== previousDate) continue;
+    if (!finite(row.reviewRank)) continue;
+    ranks.set(`${row.market}|${row.ticker}`, Number(row.reviewRank));
+  }
+  return { signalDate: previousDate, ranks };
+}
+
 export function safeTrackerTask(task, onError = () => {}) {
   try {
     return { ok: true, value: task() };
@@ -397,5 +419,9 @@ export function createRankingLiveTracker({ historyFile, summaryFile, costPct = R
     return buildRankingLiveSummary(loaded.records, { ...options, invalidLines: loaded.invalidLines });
   }
 
-  return { read, recordSnapshot, evaluatePending, summary };
+  function previousRanks(currentSignalDate) {
+    return previousRanksFrom(read().records, currentSignalDate);
+  }
+
+  return { read, recordSnapshot, evaluatePending, summary, previousRanks };
 }

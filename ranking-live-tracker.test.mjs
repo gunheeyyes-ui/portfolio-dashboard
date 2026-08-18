@@ -3,6 +3,7 @@ import { appendFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
+  previousRanksFrom,
   buildRankingLiveObservations,
   createRankingLiveTracker,
   readRankingLiveJsonl,
@@ -79,8 +80,11 @@ try {
   await sameDayTracker.evaluatePending(async () => { sameDayLoads += 1; return series(11); });
   assert.equal(sameDayLoads, 0, "signal day must not trigger future-price API reads");
 
-  const failedPayload = { ...payload, errors: [{ type: "quote" }] };
-  assert.equal(tracker.recordSnapshot(failedPayload, historyByCode).added, 0, "partial screener refresh must not be recorded");
+  // A broadly-failed refresh must still be rejected outright. (A handful of
+  // per-stock errors is tolerated now — that case is covered separately in
+  // the transient-error block below.)
+  const failedPayload = { ...payload, errors: Array.from({ length: 12 }, (_, i) => ({ type: "quote", code: `bad${i}` })) };
+  assert.equal(tracker.recordSnapshot(failedPayload, historyByCode).added, 0, "a broadly failed screener refresh must not be recorded");
 
   const immutableBefore = initial.map(({ entryTradingDate, entryPrice, outcome3, outcome5, outcome10, ...snapshot }) => snapshot);
   await tracker.evaluatePending(async () => series(4));
@@ -153,4 +157,37 @@ try {
   assert.equal(broadlyBroken.length, 0, "a broadly degraded run is still rejected");
 
   console.log("Ranking V2 tracker transient-error tolerance self-test: PASS");
+}
+
+// --- previous-day rank lookup for the rank-move indicator ---
+{
+  const records = [
+    { signalDate: "2026-08-13", market: "KOSPI", ticker: "A", reviewRank: 5 },
+    { signalDate: "2026-08-13", market: "KOSPI", ticker: "B", reviewRank: 1 },
+    { signalDate: "2026-08-14", market: "KOSPI", ticker: "A", reviewRank: 2 },
+    { signalDate: "2026-08-14", market: "KOSPI", ticker: "B", reviewRank: 4 },
+    { signalDate: "2026-08-14", market: "KOSDAQ", ticker: "A", reviewRank: 9 },
+    { signalDate: "2026-08-18", market: "KOSPI", ticker: "A", reviewRank: 3 }
+  ];
+
+  const prev = previousRanksFrom(records, "2026-08-18");
+  assert.equal(prev.signalDate, "2026-08-14", "picks the latest date strictly before today");
+  assert.equal(prev.ranks.get("KOSPI|A"), 2);
+  assert.equal(prev.ranks.get("KOSDAQ|A"), 9, "market is part of the key");
+  assert.equal(prev.ranks.get("KOSPI|Z"), undefined, "unknown ticker has no previous rank");
+
+  const skipsGaps = previousRanksFrom(records, "2026-08-14");
+  assert.equal(skipsGaps.signalDate, "2026-08-13", "holidays/gaps just mean the prior recorded day");
+
+  const noHistory = previousRanksFrom([], "2026-08-18");
+  assert.equal(noHistory.signalDate, null);
+  assert.equal(noHistory.ranks.size, 0, "empty history yields no deltas rather than throwing");
+
+  const firstEver = previousRanksFrom(
+    [{ signalDate: "2026-08-18", market: "KOSPI", ticker: "A", reviewRank: 1 }],
+    "2026-08-18"
+  );
+  assert.equal(firstEver.ranks.size, 0, "the very first day has nothing to compare against");
+
+  console.log("Ranking V2 previous-rank lookup self-test: PASS");
 }

@@ -137,6 +137,23 @@ function scoreTone(score) {
 const RS20_TOOLTIP = "RS(20D)\n최근 20거래일 수익률을 같은 시장(KOSPI/KOSDAQ) 종목끼리 비교한 상대강도.\n0~99이며 높을수록 최근 시장 대비 강함.\n매수신호 또는 Ranking 점수가 아님.";
 const TIER_TOOLTIP = "Ranking V2 Tier (순위를 가르는 등급)\nT1 최우선 · T2 하락정지 · T3 저위험\nT4~T6 후순위 · T6 제외";
 
+// Day-over-day Ranking V2 move. Only meaningful while the table is in its
+// default Ranking V2 order — comparing a stored Ranking V2 rank against an
+// RS-sorted or 거래강도-sorted position would be two different scales.
+function rankMoveHtml(row) {
+  if (state.screenerSort || state.explorerMode !== "rebound") return "";
+  const move = row.rankMove;
+  if (!move) return "";
+  if (move.isNew) {
+    return `<span class="rank-move new" title="직전 거래일(${move.previousSignalDate}) 순위 없음">NEW</span>`;
+  }
+  if (!Number.isFinite(move.delta)) return "";
+  const base = `직전 거래일(${move.previousSignalDate}) ${move.previousRank}위 → 오늘 ${move.rank}위`;
+  if (move.delta === 0) return `<span class="rank-move flat" title="${base} (변동 없음)">–</span>`;
+  const up = move.delta > 0;
+  return `<span class="rank-move ${up ? "up" : "down"}" title="${base}">${up ? "▲" : "▼"}${Math.abs(move.delta)}</span>`;
+}
+
 function rs20Tone(rs20) {
   if (!Number.isFinite(rs20)) return "muted";
   if (rs20 >= 90) return "rs-strong";
@@ -912,7 +929,7 @@ function renderExplorerRows(rows) {
     const supply = row.supply ?? {};
     const combined = row.combined ?? {};
     return `<tr>
-      <td><div class="rank-main">${index + 1}</div><div class="cell-sub rank-tier" title="${TIER_TOOLTIP}">${state.explorerMode === "rebound" ? `T${reboundRankingTier(row)}` : state.explorerMode.toUpperCase()}</div></td>
+      <td><div class="rank-main">${index + 1}</div><div class="cell-sub rank-tier" title="${TIER_TOOLTIP}">${state.explorerMode === "rebound" ? `T${reboundRankingTier(row)}` : state.explorerMode.toUpperCase()}</div>${rankMoveHtml(row)}</td>
       <td><div class="stock-title-line"><a class="stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><span class="strategy-badges">${explorerBadges(row)}</span></div><div class="explorer-price-line"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div></td>
       <td><b class="rs20-value ${rs20Tone(scout.rs20)}" title="${RS20_TOOLTIP}">${Number.isFinite(scout.rs20) ? scout.rs20 : "-"}</b></td>
       <td><span class="leader-badge ${leaderTone(leader.grade)}">${Number.isFinite(leader.score) ? `${leader.grade} ${leader.score}` : "계산불가"}</span></td>
