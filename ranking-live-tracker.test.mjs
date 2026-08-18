@@ -3,6 +3,7 @@ import { appendFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
+  buildRankingLiveObservations,
   createRankingLiveTracker,
   readRankingLiveJsonl,
   safeTrackerTask
@@ -116,4 +117,40 @@ try {
   console.log("Ranking V2 live tracker self-test: PASS");
 } finally {
   rmSync(tempDir, { recursive: true, force: true });
+}
+
+// --- transient-error tolerance (2026-08 fix) ---
+{
+  const mkRow = (code, name, market) => ({
+    code, name, market, price: 1000, changeRate: 0, changeRate3d: 0,
+    leader: { score: 50, grade: "C" },
+    scout: { drawdownFromHighPct: -25, riskScore: 20, stabilizeScore: 70, status: "하락 정지 확인", rs20: 50 },
+    combined: { score: 50, label: "관심 관찰", tier: 3, rankable: true, blocked: false },
+    confirmation: {}, stockEasy: {}, supply: {}
+  });
+  const hist = new Map([["A1", [{ date: "20260818", close: 1000 }]]]);
+  const rows = {
+    KOSPI: [mkRow("A1", "가", "KOSPI"), mkRow("A2", "나", "KOSPI")],
+    KOSDAQ: [mkRow("B1", "다", "KOSDAQ"), mkRow("B2", "라", "KOSDAQ")]
+  };
+
+  const clean = buildRankingLiveObservations({ errors: [], rows }, hist);
+  assert.equal(clean.length, 4, "no errors: every row recorded");
+
+  const oneBad = buildRankingLiveObservations(
+    { errors: [{ code: "A2", message: "초당 거래건수를 초과하였습니다." }], rows },
+    hist
+  );
+  assert.equal(oneBad.length, 3, "one transient error must not discard the whole day");
+  assert.ok(!oneBad.some((o) => o.ticker === "A2"), "the failed ticker itself is excluded");
+  assert.ok(oneBad.some((o) => o.ticker === "A1"), "healthy rows survive");
+  assert.equal(oneBad.find((o) => o.ticker === "A1").reviewRank, 1, "rank still reflects the full market");
+
+  const broadlyBroken = buildRankingLiveObservations(
+    { errors: [{ code: "A1" }, { code: "A2" }, { code: "B1" }, { code: "B2" }, { code: "B3" }], rows },
+    hist
+  );
+  assert.equal(broadlyBroken.length, 0, "a broadly degraded run is still rejected");
+
+  console.log("Ranking V2 tracker transient-error tolerance self-test: PASS");
 }

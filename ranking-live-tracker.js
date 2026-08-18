@@ -124,16 +124,40 @@ function snapshotObservation(row, market, rank, signalDate, recordedAt, regime) 
   };
 }
 
+// A single transient KIS error (e.g. "초당 거래건수를 초과하였습니다") used to
+// discard the whole trading day's OOS record. Instead, drop only the tickers
+// that actually failed and still record the healthy rest, as long as the day
+// is not broadly broken.
+export const RANKING_LIVE_MAX_ERROR_RATIO = 0.1;
+export const RANKING_LIVE_MAX_ERROR_ABSOLUTE = 3;
+
 export function buildRankingLiveObservations(payload, historyByCode, now = new Date()) {
-  if ((payload?.errors?.length ?? 0) > 0 || !(payload?.rows?.KOSPI?.length) || !(payload?.rows?.KOSDAQ?.length)) return [];
+  const kospiRows = payload?.rows?.KOSPI ?? [];
+  const kosdaqRows = payload?.rows?.KOSDAQ ?? [];
+  if (!kospiRows.length || !kosdaqRows.length) return [];
+
+  const errors = payload?.errors ?? [];
+  // Bail out only when the run is broadly degraded, not for a stray failure.
+  const errorBudget = Math.max(
+    RANKING_LIVE_MAX_ERROR_ABSOLUTE,
+    (kospiRows.length + kosdaqRows.length) * RANKING_LIVE_MAX_ERROR_RATIO
+  );
+  if (errors.length > errorBudget) return [];
+  const failedTickers = new Set(errors.map((error) => String(error?.code ?? "")).filter(Boolean));
+
   const signalDate = deriveSignalDate(historyByCode);
   if (!signalDate) return [];
   const regimes = marketRegimes(payload?.rows ?? {});
   const recordedAt = now.toISOString();
   const observations = [];
   for (const market of ["KOSPI", "KOSDAQ"]) {
+    // Rank over the full market first so the recorded reviewRank matches what
+    // the dashboard shows, then omit the rows whose data failed to load.
     const ranked = rankMarketRowsV2(payload?.rows?.[market] ?? []);
-    ranked.forEach((row, index) => observations.push(snapshotObservation(row, market, index + 1, signalDate, recordedAt, regimes[market])));
+    ranked.forEach((row, index) => {
+      if (failedTickers.has(String(row?.code ?? ""))) return;
+      observations.push(snapshotObservation(row, market, index + 1, signalDate, recordedAt, regimes[market]));
+    });
   }
   return observations;
 }
