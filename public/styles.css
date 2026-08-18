@@ -2047,7 +2047,7 @@ td {
   }
 
   .explorer-table th:nth-child(1),
-  .explorer-table td:nth-child(1) { width: 27px !important; }
+  .explorer-table td:nth-child(1) { width: 34px !important; }
   .explorer-table th:nth-child(2),
   .explorer-table td:nth-child(2) { width: 104px !important; }
   .explorer-table th:nth-child(3),
@@ -2078,17 +2078,21 @@ td {
     white-space: nowrap;
   }
 
+  /* The 18px desktop rank number dominated the row on a phone; here the
+     rank and its tier read as one small pair instead. */
   .explorer-table .rank-main {
     display: inline;
+    font-size: 10px;
+    font-weight: 800;
   }
 
   /* Needs .cell-sub in the selector to outrank the later
      `.explorer-table .cell-sub { display: none }` hide rule. */
   .explorer-table .cell-sub.rank-tier {
     display: inline;
-    margin-left: 3px;
+    margin-left: 2px;
     color: var(--muted);
-    font-size: 7.5px;
+    font-size: 8px;
     font-weight: 700;
   }
 
