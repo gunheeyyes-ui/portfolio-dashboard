@@ -14,8 +14,12 @@
           <h1>현재 타이밍 종합순위</h1>
         </div>
         <nav class="top-actions" aria-label="대시보드 메뉴">
-          <a class="ghost-btn nav-btn active-nav" href="/">종목 탐색</a>
+          <a class="ghost-btn nav-btn active-nav" href="/">종합순위</a>
+          <a class="ghost-btn nav-btn" href="/leader.html">주도주</a>
+          <a class="ghost-btn nav-btn" href="/scout.html">반등후보</a>
+          <a class="ghost-btn nav-btn" href="/strategies.html">전략후보</a>
           <a class="ghost-btn nav-btn" href="/simulator.html">시뮬레이터</a>
+          <a class="ghost-btn nav-btn" href="/ranking-validation.html">실전검증</a>
           <button id="refreshBtn" class="icon-btn" title="새로고침" aria-label="새로고침">↻</button>
           <button id="fallbackBtn" class="ghost-btn">스크린샷 기준</button>
         </nav>
@@ -47,6 +51,7 @@
         </div>
         <div class="explorer-mode-bar" id="explorerModes" aria-label="보기 모드">
           <button class="active" data-explorer-mode="rebound" type="button">반등후보</button>
+          <button data-explorer-mode="entry" type="button" title="시뮬레이터가 오늘 실제로 진입하는 종목만">진입후보</button>
           <button data-explorer-mode="timing" type="button">타이밍</button>
           <button data-explorer-mode="leader" type="button">주도주</button>
           <button data-explorer-mode="cafe" type="button">CAFE</button>

@@ -1548,6 +1548,25 @@ function previousRanksCached(signalDate) {
   return previous;
 }
 
+// Surfaces the simulator's entry verdict on the main table. Same
+// simulationCategory() the simulator uses, so the dashboard can never
+// disagree with which stocks it opened positions on. Display only.
+function attachSimCategories(byMarket) {
+  if (!byMarket) return;
+  for (const market of ["KOSPI", "KOSDAQ"]) {
+    for (const row of byMarket[market] ?? []) {
+      const category = simulationCategory(row);
+      row.simCategory = {
+        key: category.key,
+        label: category.label,
+        targetDays: category.targetDays,
+        actionable: category.actionable,
+        tone: category.tone
+      };
+    }
+  }
+}
+
 function attachRankMoves(byMarket, signalDate) {
   if (!byMarket) return;
   let previous;
@@ -2858,6 +2877,7 @@ const server = http.createServer(async (req, res) => {
         }
         const payload = cloudMarketPayload(snapshot, String(url.searchParams.get("market") || "ALL").toUpperCase());
         attachRankMoves(payload.rows, payload.marketDataAsOf);
+        attachSimCategories(payload.rows);
         json(res, 200, payload);
         return;
       }
@@ -2870,6 +2890,7 @@ const server = http.createServer(async (req, res) => {
       const market = String(url.searchParams.get("market") || "ALL").toUpperCase();
       const screenerPayload = await buildMarketScreener(limit, force, market);
       attachRankMoves(screenerPayload.rows, screenerPayload.marketDataAsOf);
+      attachSimCategories(screenerPayload.rows);
       json(res, 200, screenerPayload);
       return;
     }

@@ -1064,6 +1064,15 @@ td {
   color: #8fc4ff;
 }
 
+/* The simulator's entry verdict — strongest badge, since it is the only one
+   that says "a position is being opened today". */
+.strategy-badge.sim-entry {
+  border-color: rgba(243, 179, 64, 0.7);
+  background: #2e2413;
+  color: var(--amber);
+  font-weight: 900;
+}
+
 /* Tier as colour on the rank number. Deliberately avoids the red/blue used
    by the ▲/▼ rank-move arrows so the two never read as the same signal. */
 .rank-main.tier-1 { color: #23c483; }

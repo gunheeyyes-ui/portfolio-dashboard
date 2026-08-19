@@ -827,9 +827,21 @@ const SE_BADGE_TOOLTIP = {
   "SE-VALUE": "SE-VALUE\nStockEasy 밸류 Easy 현재 편입"
 };
 
+// The simulator's entry verdict, shown first because it answers "would we
+// open a position today" — which the Ranking V2 order deliberately does not.
+const SIM_BADGE = {
+  candidate: { short: "분할", tip: "분할 후보 — 시뮬레이터가 오늘 진입하는 대상 (10일 관찰)" },
+  ready: { short: "검토", tip: "우선 검토 — 시뮬레이터가 오늘 진입하는 대상 (5일 관찰)" },
+  special: { short: "단기", tip: "단기 특수(강수급 낙주) — 시뮬레이터가 오늘 진입하는 대상 (3일 관찰)" }
+};
+
 function explorerBadges(row) {
   const confirmation = row.confirmation ?? {};
   const stockEasy = row.stockEasy ?? {};
+  const sim = row.simCategory ?? null;
+  const simBadge = sim?.actionable && SIM_BADGE[sim.key]
+    ? `<span class="strategy-badge sim-entry" title="${SIM_BADGE[sim.key].tip}">${SIM_BADGE[sim.key].short}</span>`
+    : "";
   const labels = [
     confirmation.minerviniPass ? "MTT" : null,
     confirmation.cafePass ? "CAFE" : null,
@@ -837,7 +849,7 @@ function explorerBadges(row) {
     stockEasy.sePeak ? "SE-PEAK" : null,
     stockEasy.seValue ? "SE-VALUE" : null
   ].filter(Boolean);
-  return labels
+  return simBadge + labels
     .map((label) => {
       const tone = label.startsWith("SE-") ? "se" : "buy";
       const title = SE_BADGE_TOOLTIP[label] ? ` title="${SE_BADGE_TOOLTIP[label]}"` : "";
@@ -851,6 +863,7 @@ function explorerModeRows(market) {
   let rows = explorerMarketRows(market).filter((row) => !query || row.name.toLowerCase().includes(query) || row.code.includes(query));
   if (state.explorerMode === "cafe") rows = rows.filter((row) => row.confirmation?.cafePass);
   if (state.explorerMode === "mtt") rows = rows.filter((row) => row.confirmation?.minerviniPass);
+  if (state.explorerMode === "entry") rows = rows.filter((row) => row.simCategory?.actionable);
   return rows;
 }
 
