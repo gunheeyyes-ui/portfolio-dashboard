@@ -14,10 +14,15 @@ Installation, update, backup, rollback, and private phone access are documented 
 cd C:\Users\gunhe\Documents\Codex\2026-06-21\d\outputs\portfolio-dashboard
 Copy-Item .env.example .env
 notepad .env
+Copy-Item portfolio.example.js portfolio.js
+notepad portfolio.js
 npm start
 ```
 
 브라우저에서 `http://localhost:5177`을 엽니다.
+
+`.env`와 `portfolio.js`는 개인 정보(API 키, 보유 수량·평단가)이므로 git에 올라가지 않습니다.
+저장소에는 `.env.example`과 `portfolio.example.js`만 들어 있습니다.
 
 ## 화면 역할
 
