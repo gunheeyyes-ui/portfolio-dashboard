@@ -32,12 +32,15 @@ const KIS_BASE_URL = process.env.KIS_BASE_URL || "https://openapi.koreainvestmen
 const KIS_QUOTE_MARKET = process.env.KIS_QUOTE_MARKET || process.env.KIS_MARKET_DIV_CODE || "UN";
 const USER_AGENT = "Mozilla/5.0 PortfolioSignalDashboard/0.2";
 const FREE_FLOAT_RATES = loadFreeFloatRates();
-const SIMULATION_FILE = path.join(__dirname, "simulation-ledger.json");
 const SIM_TRADE_AMOUNT = Number(process.env.SIM_TRADE_AMOUNT || 1_000_000);
 const DASHBOARD_CACHE_DIR = path.resolve(process.env.DASHBOARD_CACHE_DIR || path.join(__dirname, "backtest-cache"));
 const KIS_TOKEN_FILE = path.join(DASHBOARD_CACHE_DIR, "kis-token-server.json");
 const BACKTEST_CACHE_DIR = DASHBOARD_CACHE_DIR;
 const DASHBOARD_DATA_DIR = path.resolve(process.env.DASHBOARD_DATA_DIR || path.join(__dirname, "data"));
+// Lives with the other persistent state, not next to the code: the cloud
+// unit runs with ProtectSystem=strict and only /var/lib and /var/cache are
+// writable, so a ledger under __dirname could never be saved.
+const SIMULATION_FILE = path.join(DASHBOARD_DATA_DIR, "simulation-ledger.json");
 const RANKING_LIVE_DIR = DASHBOARD_DATA_DIR;
 const RANKING_LIVE_HISTORY_FILE = path.join(RANKING_LIVE_DIR, "ranking-live-history.jsonl");
 const RANKING_LIVE_SUMMARY_FILE = path.join(RANKING_LIVE_DIR, "ranking-live-summary.json");
@@ -2038,10 +2041,16 @@ function dedupeSimulationCandidates(candidates) {
 
 async function collectSimulationCandidates({ force = false, limit = 100 } = {}) {
   const live = Boolean(process.env.KIS_APP_KEY && process.env.KIS_APP_SECRET);
-  const [snapshot, screener] = await Promise.all([
-    buildSnapshot(live, force),
-    live ? buildMarketScreener(limit, force, "ALL") : Promise.resolve({ rows: { KOSPI: [], KOSDAQ: [] }, errors: [] })
-  ]);
+  // In cloud mode the background refresh has already produced both halves.
+  // Rebuilding them here made /api/simulation re-fetch the whole universe
+  // from KIS on every request, which never finished inside a browser wait.
+  const cloudSnapshot = CLOUD_MODE ? cloudManager?.getSnapshot() : null;
+  const [snapshot, screener] = cloudSnapshot
+    ? [cloudSnapshot.portfolio, cloudSnapshot.marketScreener]
+    : await Promise.all([
+      buildSnapshot(live, force),
+      live ? buildMarketScreener(limit, force, "ALL") : Promise.resolve({ rows: { KOSPI: [], KOSDAQ: [] }, errors: [] })
+    ]);
   const marketRows = [
     ...(screener.rows?.KOSPI ?? []),
     ...(screener.rows?.KOSDAQ ?? [])
