@@ -77,9 +77,12 @@ function renderTodayCandidates() {
   const actionable = state.data?.actionableToday ?? [];
   const fallback = (state.data?.todayCandidates ?? []).filter((row) => row.category?.key !== "none").slice(0, 12);
   const rows = actionable.length ? actionable : fallback;
+  const stamp = new Date(state.data.asOf).toLocaleString("ko-KR");
   document.querySelector("#simStatus").textContent = state.data?.alreadyRanToday
-    ? `오늘은 이미 기록됨 · ${new Date(state.data.asOf).toLocaleString("ko-KR")}`
-    : `아직 오늘 신규 기록 전 · 진입 후보 ${actionable.length}개 · ${new Date(state.data.asOf).toLocaleString("ko-KR")}`;
+    ? `오늘은 이미 기록됨 · ${stamp}`
+    : state.data?.skippedReason
+      ? `${state.data.skippedReason} · 진입 후보 ${actionable.length}개`
+      : `아직 오늘 신규 기록 전 · 진입 후보 ${actionable.length}개 · ${stamp}`;
 
   document.querySelector("#todayCandidates").innerHTML = rows.length ? rows.slice(0, 12).map((row) => `
     <article class="sim-card ${badgeClass(row.category.label)}">

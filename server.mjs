@@ -2051,6 +2051,9 @@ async function collectSimulationCandidates({ force = false, limit = 100 } = {}) 
       buildSnapshot(live, force),
       live ? buildMarketScreener(limit, force, "ALL") : Promise.resolve({ rows: { KOSPI: [], KOSDAQ: [] }, errors: [] })
     ]);
+  const cloudMeta = cloudSnapshot
+    ? { dataMode: cloudSnapshot.dataMode ?? null, marketDataAsOf: cloudSnapshot.marketDataAsOf ?? null }
+    : null;
   const marketRows = [
     ...(screener.rows?.KOSPI ?? []),
     ...(screener.rows?.KOSDAQ ?? [])
@@ -2062,6 +2065,7 @@ async function collectSimulationCandidates({ force = false, limit = 100 } = {}) 
     asOf: new Date().toISOString(),
     snapshot,
     screener,
+    cloudMeta,
     candidates: dedupeSimulationCandidates([...holdings, ...market])
   };
 }
@@ -2206,7 +2210,17 @@ async function buildSimulation({ record = false, force = false, limit = 100 } = 
 
   let opened = [];
   const alreadyRanToday = ledger.runs.some((run) => run.date === runDate);
-  if (record && !alreadyRanToday) {
+  // Positions must be opened on the day's confirmed EOD judgement. An
+  // intraday snapshot still carries the *previous* session's tier/risk/flags
+  // with only prices refreshed, so recording mid-session would both lock in
+  // yesterday's verdict and burn the once-per-day slot, silently skipping
+  // the real EOD candidates.
+  const eodConfirmed = !collected.cloudMeta
+    || (collected.cloudMeta.dataMode === "EOD_FULL" && collected.cloudMeta.marketDataAsOf === runDate);
+  const skippedReason = record && !alreadyRanToday && !eodConfirmed
+    ? `당일 장마감 확정 데이터가 아직 없습니다 (현재 ${collected.cloudMeta?.dataMode ?? "?"} · 기준일 ${collected.cloudMeta?.marketDataAsOf ?? "?"}). 15:50 이후 EOD 갱신 뒤 자동 기록됩니다.`
+    : null;
+  if (record && !alreadyRanToday && eodConfirmed) {
     const openIds = new Set(ledger.positions.map((position) => `${position.code}:${position.categoryKey}`));
     opened = actionableToday
       .filter((candidate) => !openIds.has(`${candidate.code}:${candidate.category.key}`))
@@ -2218,6 +2232,8 @@ async function buildSimulation({ record = false, force = false, limit = 100 } = 
       {
         date: runDate,
         asOf: collected.asOf,
+        dataMode: collected.cloudMeta?.dataMode ?? "local",
+        marketDataAsOf: collected.cloudMeta?.marketDataAsOf ?? null,
         opened: opened.length,
         candidates: actionableToday.length,
         holdingSignals: actionableToday.filter((candidate) => candidate.source === "holding").length
@@ -2232,8 +2248,12 @@ async function buildSimulation({ record = false, force = false, limit = 100 } = 
   return {
     asOf: collected.asOf,
     date: runDate,
-    recordedToday: record && !alreadyRanToday,
+    recordedToday: record && !alreadyRanToday && eodConfirmed,
     alreadyRanToday: alreadyRanTodayAfter,
+    eodConfirmed,
+    skippedReason,
+    dataMode: collected.cloudMeta?.dataMode ?? "local",
+    marketDataAsOf: collected.cloudMeta?.marketDataAsOf ?? null,
     opened,
     summary: summarizeSimulation(ledger, todayCandidates),
     todayCandidates,
