@@ -14,12 +14,12 @@
           <h1>현재 타이밍 종합순위</h1>
         </div>
         <nav class="top-actions" aria-label="대시보드 메뉴">
-          <a class="ghost-btn nav-btn active-nav" href="/">종합순위</a>
-          <a class="ghost-btn nav-btn" href="/leader.html">주도주</a>
-          <a class="ghost-btn nav-btn" href="/scout.html">반등후보</a>
-          <a class="ghost-btn nav-btn" href="/strategies.html">전략후보</a>
-          <a class="ghost-btn nav-btn" href="/simulator.html">시뮬레이터</a>
-          <a class="ghost-btn nav-btn" href="/ranking-validation.html">실전검증</a>
+          <a class="ghost-btn nav-btn active-nav" href="/"><i class="nav-full">종합순위</i><i class="nav-short">종합</i></a>
+          <a class="ghost-btn nav-btn" href="/leader.html"><i class="nav-full">주도주</i><i class="nav-short">주도</i></a>
+          <a class="ghost-btn nav-btn" href="/scout.html"><i class="nav-full">반등후보</i><i class="nav-short">반등</i></a>
+          <a class="ghost-btn nav-btn" href="/strategies.html"><i class="nav-full">전략후보</i><i class="nav-short">전략</i></a>
+          <a class="ghost-btn nav-btn" href="/simulator.html"><i class="nav-full">시뮬레이터</i><i class="nav-short">시뮬</i></a>
+          <a class="ghost-btn nav-btn" href="/ranking-validation.html"><i class="nav-full">실전검증</i><i class="nav-short">검증</i></a>
           <button id="refreshBtn" class="icon-btn" title="새로고침" aria-label="새로고침">↻</button>
           <button id="fallbackBtn" class="ghost-btn">스크린샷 기준</button>
         </nav>
@@ -49,13 +49,14 @@
         <div class="screener-tools">
           <input id="screenerSearch" type="search" placeholder="시장 후보 검색">
         </div>
+        <p class="mode-hint">아래 버튼은 <b>이 표를 보는 방식</b>입니다. 위쪽 메뉴(주도주·반등후보·전략후보)는 각각 다른 화면입니다.</p>
         <div class="explorer-mode-bar" id="explorerModes" aria-label="보기 모드">
-          <button class="active" data-explorer-mode="rebound" type="button">반등후보</button>
-          <button data-explorer-mode="entry" type="button" title="시뮬레이터가 오늘 실제로 진입하는 종목만">진입후보</button>
-          <button data-explorer-mode="timing" type="button">타이밍</button>
-          <button data-explorer-mode="leader" type="button">주도주</button>
-          <button data-explorer-mode="cafe" type="button">CAFE</button>
-          <button data-explorer-mode="mtt" type="button">MTT</button>
+          <button class="active" data-explorer-mode="rebound" type="button" title="Ranking V2 기본 순서 (이 표의 기본값)">기본순</button>
+          <button data-explorer-mode="entry" type="button" title="시뮬레이터가 오늘 실제로 진입하는 종목만 남깁니다">진입후보</button>
+          <button data-explorer-mode="timing" type="button" title="현재 타이밍 점수 높은 순">타이밍순</button>
+          <button data-explorer-mode="leader" type="button" title="주도주(Leader) 점수 높은 순">주도주순</button>
+          <button data-explorer-mode="cafe" type="button" title="CAFE 전략을 통과한 종목만">CAFE</button>
+          <button data-explorer-mode="mtt" type="button" title="MTT(미네르비니) 전략을 통과한 종목만">MTT</button>
         </div>
         <div class="explorer-legend">
           <span class="legend-tier">순위색 = <b class="legend-tier-chip t1">T1 최우선</b> · <b class="legend-tier-chip t2">T2 하락정지</b> · <b class="legend-tier-chip t3">T3 저위험</b> · <b class="legend-tier-chip t6">T6 제외</b></span><span>낙폭 = 2년 고점 대비</span><span>Risk↓ 낮을수록 좋음</span><span>Stab↑ 높을수록 좋음</span><span>RS = 20일 상대강도(참고용)</span><span>타이밍 = 기존 Main 70 + Scout 30</span>

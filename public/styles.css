@@ -1126,6 +1126,26 @@ td {
   font-style: normal;
 }
 
+/* Same full/short swap for the top navigation labels. */
+.nav-full {
+  font-style: normal;
+}
+
+.nav-short {
+  display: none;
+  font-style: normal;
+}
+
+.mode-hint {
+  padding: 0 14px 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.mode-hint b {
+  color: var(--text);
+}
+
 .market-chip.kospi {
   border-color: #346aa0;
   color: #8ec9ff;
@@ -2236,22 +2256,38 @@ td {
     border-radius: 4px;
   }
 
-  /* Title and the action buttons share one row instead of stacking. */
+  /* The six menu entries plus the two buttons need the whole width to fit
+     on one line; the h1 duplicates the active menu entry and the section
+     heading below, so it steps aside on a phone rather than pushing the
+     menu off-screen. */
   body:has(.screener-table) .topbar {
     align-items: center;
     flex-direction: row;
     justify-content: space-between;
   }
 
-  body:has(.screener-table) h1 {
-    font-size: 13px;
-    white-space: nowrap;
+  body:has(.screener-table) .topbar > div:first-child {
+    display: none;
+  }
+
+  body:has(.screener-table) .nav-full {
+    display: none;
+  }
+
+  body:has(.screener-table) .nav-short {
+    display: inline;
   }
 
   body:has(.screener-table) .top-actions {
-    width: auto;
-    justify-content: flex-end;
+    width: 100%;
+    justify-content: space-between;
     padding-bottom: 0;
+  }
+
+  body:has(.screener-table) .mode-hint {
+    padding: 0 10px 4px;
+    font-size: 8.5px;
+    line-height: 1.3;
   }
 
   /* Covers every button in the top bar, not just .nav-btn — the plain
