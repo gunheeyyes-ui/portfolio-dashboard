@@ -2651,6 +2651,28 @@ const cloudSchedulerState = {
   marketClosedDate: null
 };
 
+// Opens the day's simulated positions right after the EOD full refresh, so
+// the ledger fills in without anyone opening the page. buildSimulation is
+// idempotent per KST date (ledger.runs), so a manual "오늘 시뮬 기록" press or
+// a second full refresh on the same day will not double-open. Fail-soft:
+// a simulator problem must never disturb the refresh or the scheduler.
+function recordDailySimulation(reason) {
+  buildSimulation({ record: true })
+    .then((result) => {
+      structuredLog("SIMULATION_RECORDED", {
+        reason,
+        date: result?.date ?? null,
+        alreadyRanToday: result?.alreadyRanToday === true,
+        opened: result?.opened?.length ?? 0,
+        open: result?.open?.length ?? 0,
+        closed: result?.closed?.length ?? 0
+      });
+    })
+    .catch((error) => {
+      structuredLog("SIMULATION_RECORD_FAILED", { reason, message: error?.message ?? String(error) });
+    });
+}
+
 function startCloudScheduler() {
   if (!cloudManager) return;
   const loaded = cloudManager.load();
@@ -2669,7 +2691,9 @@ function startCloudScheduler() {
     else cloudSchedulerState.lastEodAttemptAt = now.toISOString();
     const task = cloudManager.run(kind, "schedule");
     task.promise.then((snapshot) => {
-      if (kind === "full") cloudSchedulerState.lastEodTradingDate = snapshot.marketDataAsOf;
+      if (kind !== "full") return;
+      cloudSchedulerState.lastEodTradingDate = snapshot.marketDataAsOf;
+      recordDailySimulation("schedule-eod");
     }).catch((error) => {
       if (/MARKET_CLOSED_OR_NO_EOD_DATA/.test(error.message)) cloudSchedulerState.marketClosedDate = kstParts(now).date;
     });
