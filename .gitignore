@@ -21,3 +21,8 @@ Thumbs.db
 
 # Personal holdings (quantities / average prices). Use portfolio.example.js.
 portfolio.js
+
+# V3 feature matrix (regenerated from backtest-cache-v2; 200MB+)
+backtest-v3/matrix/
+backtest-results-v3/observations-*.csv
+backtest-results-v3/strategy-trades-*.csv

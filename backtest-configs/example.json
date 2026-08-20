@@ -1,0 +1,25 @@
+[
+  {
+    "name": "LeaderA_Risk39_Stab65",
+    "all": [
+      { "field": "leaderGrade", "op": "in", "value": ["A"] },
+      { "field": "scoutRiskScore", "op": "lte", "value": 39 },
+      { "field": "scoutStabilizeScore", "op": "gte", "value": 65 }
+    ]
+  },
+  {
+    "name": "F2_LIQ60_MTT",
+    "all": [
+      { "field": "F2", "op": "true" },
+      { "field": "liquidityScore", "op": "gte", "value": 60 },
+      { "field": "minerviniPass", "op": "true" }
+    ]
+  },
+  {
+    "name": "LeaderTop_or_RS90",
+    "any": [
+      { "field": "leaderRank", "op": "between", "value": [1, 5] },
+      { "field": "rs20", "op": "gte", "value": 90 }
+    ]
+  }
+]

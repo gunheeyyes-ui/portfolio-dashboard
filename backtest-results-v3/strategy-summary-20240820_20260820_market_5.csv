@@ -1,0 +1,101 @@
+strategy,definition,horizonDays,mode,trainTrades,testTrades,allTrades,trainAvgPct,testAvgPct,allAvgPct,generalizationGap,trainPF,testPF,testWinRatePct,testMedianPct,testExcessPct,testMfePct,testMaePct,testHitPlus3Pct,testHitPlus5Pct,testHitMinus3Pct,testHitMinus5Pct,testMddPct,overfitWarning,axis,baselineTestAvgPct,verdict
+COMBINED_TOP,"combinedRank between [1,3]",5,cooldown,200,89,289,1.3,3.56,2,-2.26,1.49,1.98,61.8,1.92,-0.86,12.05,-7.77,76.4,65.17,67.42,48.31,-78.52,false,preset,2.56,유망
+COMBINED_TOP,"combinedRank between [1,3]",10,cooldown,140,66,206,2.46,6.65,3.8,-4.19,1.81,2.4,57.58,2.57,0.32,19.81,-10.26,84.85,78.79,74.24,54.55,-88.16,false,preset,5.57,유망
+COMBINED_SPLIT,combinedScore gte 60,5,cooldown,19,22,41,4.87,4.07,4.44,0.8,2.34,1.68,54.55,1.63,-1.79,18.56,-10.45,81.82,68.18,77.27,63.64,-49.08,false,preset,2.56,유망
+COMBINED_SPLIT,combinedScore gte 60,10,cooldown,17,20,37,2.3,6.88,4.77,-4.58,1.39,1.85,45,-1.4,-0.78,26.33,-14.29,80,75,85,75,-61.48,false,preset,5.57,유망
+TIMING_TOP10,"combinedRank between [1,10]",5,cooldown,200,89,289,1.3,3.56,2,-2.26,1.49,1.98,61.8,1.92,-0.86,12.05,-7.77,76.4,65.17,67.42,48.31,-78.52,false,preset,2.56,유망
+TIMING_TOP10,"combinedRank between [1,10]",10,cooldown,140,66,206,2.46,6.65,3.8,-4.19,1.81,2.4,57.58,2.57,0.32,19.81,-10.26,84.85,78.79,74.24,54.55,-88.16,false,preset,5.57,유망
+LEADER_A,leaderGrade in [A],5,cooldown,87,119,206,1.79,3.95,3.04,-2.16,1.54,1.88,60.5,2.89,0.88,13.85,-8.64,87.39,73.11,70.59,57.14,-73.86,false,preset,2.56,유망
+LEADER_A,leaderGrade in [A],10,cooldown,51,72,123,4.57,8.11,6.64,-3.54,2.35,2.73,65.28,4.51,1.81,22.34,-10.4,91.67,80.56,79.17,63.89,-71.95,false,preset,5.57,유망
+LEADER_AB,"leaderGrade in [A,B]",5,cooldown,157,205,362,1.72,3.74,2.86,-2.02,1.66,2.01,57.07,2.52,0.39,12.88,-7.72,81.95,67.8,71.71,53.66,-86.42,false,preset,2.56,유망
+LEADER_AB,"leaderGrade in [A,B]",10,cooldown,93,116,209,3.88,6.27,5.21,-2.39,2.16,2.35,61.21,4.06,0.19,19.68,-10.6,88.79,81.03,75,63.79,-85.88,false,preset,5.57,유망
+LEADER_A_RS80,leaderGrade in [A] AND rs20 gte 80,5,cooldown,50,63,113,3.8,5.51,4.75,-1.71,2.51,2.68,57.14,2.09,1.37,16.87,-7.71,87.3,74.6,74.6,52.38,-70.2,false,preset,2.56,유망
+LEADER_A_RS80,leaderGrade in [A] AND rs20 gte 80,10,cooldown,33,40,73,6.57,10.22,8.57,-3.65,2.87,3.62,60,5.58,2.64,26.25,-8.57,92.5,82.5,80,62.5,-54.18,false,preset,5.57,유망
+LEADER_A_RS90,leaderGrade in [A] AND rs20 gte 90,5,cooldown,50,63,113,3.8,5.51,4.75,-1.71,2.51,2.68,57.14,2.09,1.37,16.87,-7.71,87.3,74.6,74.6,52.38,-70.2,false,preset,2.56,유망
+LEADER_A_RS90,leaderGrade in [A] AND rs20 gte 90,10,cooldown,33,40,73,6.57,10.22,8.57,-3.65,2.87,3.62,60,5.58,2.64,26.25,-8.57,92.5,82.5,80,62.5,-54.18,false,preset,5.57,유망
+REBOUND_READY,reboundStateKey eq ready,5,cooldown,190,56,246,0.07,2.19,0.55,-2.12,1.02,1.5,39.29,-2.49,0.04,12,-9.28,66.07,55.36,80.36,69.64,-69.54,false,preset,2.56,역효과
+REBOUND_READY,reboundStateKey eq ready,10,cooldown,129,37,166,1.14,5.72,2.16,-4.58,1.31,2.61,59.46,2.95,0.39,19.45,-10.81,86.49,78.38,78.38,67.57,-60.82,false,preset,5.57,유망
+REBOUND_STOPPED,reboundStateKey eq stopped,5,cooldown,193,81,274,1.26,-3.02,-0.01,4.28,1.56,0.52,44.44,-1.18,-0.51,8.19,-10.46,65.43,55.56,74.07,64.2,-97.69,true,preset,2.56,역효과
+REBOUND_STOPPED,reboundStateKey eq stopped,10,cooldown,130,58,188,2.27,-1.5,1.11,3.77,1.74,0.77,41.38,-3.15,-0.67,12.13,-14.27,77.59,68.97,87.93,79.31,-95.86,true,preset,5.57,역효과
+LEADER_REBOUND,leaderReboundPass,5,cooldown,5,13,18,4.7,3.84,4.08,0.86,3.59,1.71,53.85,3.26,0.68,19.76,-9.39,69.23,69.23,84.62,69.23,-29.16,false,preset,2.56,유망
+LEADER_REBOUND,leaderReboundPass,10,cooldown,3,9,12,8.41,-0.14,1.99,8.55,,0.98,55.56,3.39,-0.86,27.28,-13.41,100,77.78,88.89,66.67,-52.28,true,preset,5.57,표본부족
+DEEP_RECOVERY,deepRecoveryPass,5,cooldown,124,42,166,0.62,1,0.72,-0.38,1.21,1.18,57.14,1.26,1.1,12.03,-10.21,88.1,61.9,69.05,57.14,-86.59,false,preset,2.56,역효과
+DEEP_RECOVERY,deepRecoveryPass,10,cooldown,78,26,104,1.5,2.98,1.87,-1.48,1.46,1.64,57.69,3.67,0.63,16.88,-12.41,84.62,80.77,73.08,65.38,-58.69,false,preset,5.57,역효과
+DEEP_RECOVERY_LEADER_AB,"deepRecoveryPass AND leaderGrade in [A,B]",5,cooldown,8,19,27,2.77,0.11,0.9,2.66,1.85,1.02,36.84,-2.56,0.29,11.36,-9.42,84.21,42.11,78.95,68.42,-45.77,false,preset,2.56,역효과
+DEEP_RECOVERY_LEADER_AB,"deepRecoveryPass AND leaderGrade in [A,B]",10,cooldown,5,12,17,10.5,3.65,5.66,6.85,5.75,1.56,41.67,-5.22,-0.37,23.79,-9.9,91.67,75,66.67,66.67,-30.36,false,preset,5.57,역효과
+RANKING_V2_T1,rankingTier eq 1,5,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,2.56,표본부족
+RANKING_V2_T1,rankingTier eq 1,10,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,5.57,표본부족
+RANKING_V2_T2,rankingTier eq 2,5,cooldown,114,16,130,0.37,1.35,0.49,-0.98,1.13,1.52,68.75,2.65,1.48,7.98,-7.36,81.25,75,81.25,62.5,-27.28,false,preset,2.56,역효과
+RANKING_V2_T2,rankingTier eq 2,10,cooldown,69,11,80,1.48,7.81,2.35,-6.33,1.47,12.79,72.73,2.97,1.56,16.82,-8.92,100,90.91,81.82,72.73,-7.14,false,preset,5.57,유망
+RANKING_V2_T3,rankingTier eq 3,5,cooldown,256,72,328,0.35,1.41,0.58,-1.06,1.12,1.33,51.39,0.4,0.07,10.44,-9.51,76.39,56.94,75,61.11,-86.38,false,preset,2.56,역효과
+RANKING_V2_T3,rankingTier eq 3,10,cooldown,155,47,202,1.56,4.31,2.2,-2.75,1.44,1.76,51.06,0.25,0.66,18.55,-11.43,82.98,72.34,78.72,65.96,-90.51,false,preset,5.57,역효과
+LEADER_A_REBOUND_READY,leaderGrade in [A] AND reboundStateKey eq ready,5,cooldown,5,12,17,4.7,5.85,5.51,-1.15,3.59,2.39,58.33,5.37,2.63,20.71,-8.14,66.67,66.67,83.33,66.67,-29.16,false,preset,2.56,유망
+LEADER_A_REBOUND_READY,leaderGrade in [A] AND reboundStateKey eq ready,10,cooldown,3,8,11,8.41,6.37,6.93,2.04,,2.47,62.5,6.04,3.15,29.66,-8.49,100,75,87.5,62.5,-16.33,false,preset,5.57,표본부족
+LEADER_A_STOPPED,leaderGrade in [A] AND reboundStateKey eq stopped,5,cooldown,0,1,1,,-20.28,-20.28,,,0,0,-20.28,-22.78,8.29,-24.39,100,100,100,100,-20.28,false,preset,2.56,표본부족
+LEADER_A_STOPPED,leaderGrade in [A] AND reboundStateKey eq stopped,10,cooldown,0,1,1,,-52.28,-52.28,,,0,0,-52.28,-32.9,8.29,-52.78,100,100,100,100,-52.28,false,preset,5.57,표본부족
+LEADER_AB_STOPPED,"leaderGrade in [A,B] AND reboundStateKey eq stopped",5,cooldown,7,19,26,0.38,-2.01,-1.37,2.39,1.19,0.64,47.37,-0.99,0.44,8.88,-11.38,73.68,52.63,78.95,63.16,-55.14,true,preset,2.56,역효과
+LEADER_AB_STOPPED,"leaderGrade in [A,B] AND reboundStateKey eq stopped",10,cooldown,7,14,21,11.03,-5.11,0.27,16.14,7.6,0.31,42.86,-3.8,-1.63,10.57,-16.37,78.57,71.43,92.86,85.71,-64.89,true,preset,5.57,역효과
+REBOUND_RS70,reboundStateKey eq ready AND rs20 gte 70,5,cooldown,124,42,166,0.97,0.13,0.76,0.84,1.38,1.03,38.1,-2.57,-1.69,11.41,-10.18,66.67,57.14,85.71,73.81,-69.54,false,preset,2.56,역효과
+REBOUND_RS70,reboundStateKey eq ready AND rs20 gte 70,10,cooldown,83,29,112,2.26,1.81,2.14,0.45,1.7,1.37,55.17,1.55,-0.29,18.61,-12.06,93.1,79.31,93.1,79.31,-60.82,false,preset,5.57,역효과
+DEEP_RS70,deepRecoveryPass AND rs20 gte 70,5,cooldown,51,26,77,0.73,0.18,0.55,0.55,1.27,1.03,50,-0.16,-0.86,12.59,-10.8,92.31,61.54,80.77,69.23,-69.86,false,preset,2.56,역효과
+DEEP_RS70,deepRecoveryPass AND rs20 gte 70,10,cooldown,37,18,55,1.83,-1.7,0.67,3.53,1.51,0.74,38.89,-5.21,-2.2,16.84,-14.36,94.44,77.78,88.89,83.33,-64.86,true,preset,5.57,역효과
+TIMING_TOP10_RS70,"combinedRank between [1,10] AND rs20 gte 70",5,cooldown,116,56,172,1.36,2.1,1.6,-0.74,1.5,1.49,53.57,0.97,-1.65,12.07,-8.37,75,66.07,75,57.14,-67.65,false,preset,2.56,역효과
+TIMING_TOP10_RS70,"combinedRank between [1,10] AND rs20 gte 70",10,cooldown,87,42,129,2.65,3.11,2.8,-0.46,1.97,1.58,54.76,0.65,-3.03,18.01,-11.18,88.1,80.95,80.95,61.9,-74.39,false,preset,5.57,역효과
+DD20_40_STAB65_RISK39,"drawdownFromHighPct between [-30,-20.0001] AND scoutStabilizeScore gte 65 AND scoutRiskScore lte 39",5,cooldown,93,28,121,0.21,1.46,0.5,-1.25,1.08,1.36,42.86,-2.23,-0.93,13.26,-9.98,67.86,64.29,82.14,67.86,-40.92,false,preset,2.56,역효과
+DD20_40_STAB65_RISK39,"drawdownFromHighPct between [-30,-20.0001] AND scoutStabilizeScore gte 65 AND scoutRiskScore lte 39",10,cooldown,68,20,88,0.89,4.74,1.77,-3.85,1.24,2.08,55,2.49,0.53,21.5,-10.96,90,85,95,70,-39,false,preset,5.57,역효과
+DD40_50_STAB65_RISK39,"drawdownFromHighPct between [-50,-40.0001] AND scoutStabilizeScore gte 65 AND scoutRiskScore lte 39",5,cooldown,4,12,16,3.96,0.88,1.65,3.08,2.85,1.15,33.33,-3.04,-1.66,12.14,-11.37,50,41.67,100,83.33,-35.78,false,preset,2.56,표본부족
+DD40_50_STAB65_RISK39,"drawdownFromHighPct between [-50,-40.0001] AND scoutStabilizeScore gte 65 AND scoutRiskScore lte 39",10,cooldown,4,8,12,5.2,-1.04,1.04,6.24,2.41,0.87,37.5,-6.5,-3.44,21.7,-16.56,75,62.5,100,87.5,-46.48,true,preset,5.57,표본부족
+DD50_STAB65_RISK39,drawdownFromHighPct lte -50 AND scoutStabilizeScore gte 65 AND scoutRiskScore lte 39,5,cooldown,48,12,60,-0.84,5.83,0.49,-6.67,0.83,2.68,58.33,1.65,2.54,11.89,-8.37,75,41.67,75,75,-32.15,false,preset,2.56,유망
+DD50_STAB65_RISK39,drawdownFromHighPct lte -50 AND scoutStabilizeScore gte 65 AND scoutRiskScore lte 39,10,cooldown,33,7,40,-1.88,7.8,-0.19,-9.68,0.71,6.61,71.43,3.39,-1.33,18.44,-10.05,100,85.71,71.43,71.43,-6.01,false,preset,5.57,유망
+STREAK_2,(foreignStreak gte 2 OR instStreak gte 2),5,cooldown,362,235,597,1.06,2.83,1.76,-1.77,1.38,1.66,54.04,1.38,0.39,12.06,-8.51,77.02,64.26,74.04,56.6,-99.4,false,preset,2.56,유망
+STREAK_2,(foreignStreak gte 2 OR instStreak gte 2),10,cooldown,225,139,364,2.46,4.12,3.09,-1.66,1.71,1.66,51.8,1,0.22,18.71,-11.42,84.89,74.82,78.42,67.63,-99.64,false,preset,5.57,역효과
+STREAK_3,foreignStreak gte 3,5,cooldown,142,77,219,1.02,-0.38,0.53,1.4,1.37,0.92,42.86,-1.39,-0.23,9.95,-9.73,74.03,64.94,76.62,61.04,-88.59,true,preset,2.56,역효과
+STREAK_3,foreignStreak gte 3,10,cooldown,106,61,167,2.79,0.31,1.88,2.48,1.81,1.05,49.18,-0.34,-1.84,12.6,-13.58,78.69,65.57,85.25,68.85,-84.34,false,preset,5.57,역효과
+SMART_MONEY,(smartMoneyBodyPct gte 0.3 OR smartMoneyTradingSharePct gte 10),5,cooldown,303,186,489,0.96,2.53,1.55,-1.57,1.36,1.64,55.38,1.4,-0.29,11.71,-8.49,76.88,64.52,76.34,58.06,-95.69,false,preset,2.56,역효과
+SMART_MONEY,(smartMoneyBodyPct gte 0.3 OR smartMoneyTradingSharePct gte 10),10,cooldown,200,115,315,2.05,4.46,2.93,-2.41,1.61,1.78,53.04,1.11,-0.09,18.09,-11.16,81.74,72.17,79.13,64.35,-98.64,false,preset,5.57,역효과
+LIQ70,liquidityScore gte 70,5,cooldown,13,18,31,1.61,3.62,2.78,-2.01,1.4,1.63,50,-0.35,-0.63,20.27,-11.03,83.33,83.33,77.78,72.22,-35.54,false,preset,2.56,유망
+LIQ70,liquidityScore gte 70,10,cooldown,12,16,28,0.14,4.95,2.89,-4.81,1.02,1.62,43.75,-1.97,0.32,25.7,-15.07,81.25,81.25,93.75,81.25,-56.57,false,preset,5.57,역효과
+R,R,5,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,2.56,표본부족
+R,R,10,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,5.57,표본부족
+F,F,5,cooldown,9,7,16,0.97,6.61,3.44,-5.64,1.31,2.61,71.43,8.27,-0.39,15.6,-5.96,71.43,57.14,42.86,42.86,-17.19,false,preset,2.56,유망
+F,F,10,cooldown,8,7,15,-4.67,23.22,8.34,-27.89,0.16,12.03,71.43,2.29,10.29,36.19,-7.64,85.71,85.71,57.14,57.14,-14.48,false,preset,5.57,유망
+F2,F2,5,cooldown,5,4,9,-2.31,15.06,5.41,-17.37,0.39,,100,9.28,-0.6,21.47,-2.53,100,75,25,25,0,false,preset,2.56,표본부족
+F2,F2,10,cooldown,5,4,9,-8.96,18.72,3.35,-27.68,0,39.7,75,12.98,0.01,32.09,-4.26,100,100,50,50,-1.94,false,preset,5.57,표본부족
+B,B,5,cooldown,19,17,36,0.54,3.2,1.79,-2.66,1.14,1.67,64.71,2.44,-2.89,16.81,-8.81,76.47,58.82,70.59,52.94,-51.69,false,preset,2.56,유망
+B,B,10,cooldown,19,14,33,0.02,0.46,0.21,-0.44,1,1.07,42.86,-1.4,-4.6,20.31,-12.3,78.57,71.43,78.57,71.43,-45.48,false,preset,5.57,역효과
+C,C,5,cooldown,13,18,31,1.61,3.62,2.78,-2.01,1.4,1.63,50,-0.35,-0.63,20.27,-11.03,83.33,83.33,77.78,72.22,-35.54,false,preset,2.56,유망
+C,C,10,cooldown,12,16,28,0.14,4.95,2.89,-4.81,1.02,1.62,43.75,-1.97,0.32,25.7,-15.07,81.25,81.25,93.75,81.25,-56.57,false,preset,5.57,역효과
+H2,H2,5,cooldown,1,0,1,20.6,,20.6,,,,,,,,,,,,,0,false,preset,2.56,표본부족
+H2,H2,10,cooldown,1,0,1,15.54,,15.54,,,,,,,,,,,,,0,false,preset,5.57,표본부족
+H3,H3,5,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,2.56,표본부족
+H3,H3,10,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,5.57,표본부족
+I_CONTROL,I,5,cooldown,82,123,205,0.94,0.13,0.45,0.81,1.29,1.03,43.09,-1.14,-1.04,10.84,-10.23,84.55,69.92,86.99,73.98,-90.16,false,preset,2.56,역효과
+I_CONTROL,I,10,cooldown,73,92,165,2.17,1.18,1.62,0.99,1.65,1.2,44.57,-0.81,-1.34,15.03,-13.05,88.04,73.91,86.96,78.26,-97.54,false,preset,5.57,역효과
+CAFE,cafePass,5,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,2.56,표본부족
+CAFE,cafePass,10,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,5.57,표본부족
+MTT,minerviniPass,5,cooldown,90,201,291,2.44,3.5,3.17,-1.06,2.02,1.92,54.73,1.23,-0.04,12.54,-8.03,75.62,63.68,69.65,51.24,-87.08,false,preset,2.56,유망
+MTT,minerviniPass,10,cooldown,54,111,165,4.95,6.59,6.05,-1.64,2.84,2.32,54.95,3.84,-0.04,20.32,-10.24,88.29,76.58,72.97,57.66,-92.76,false,preset,5.57,유망
+CAFE_MTT,cafePass AND minerviniPass,5,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,2.56,표본부족
+CAFE_MTT,cafePass AND minerviniPass,10,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,5.57,표본부족
+CAFE_TIMING_TOP,"cafePass AND combinedRank between [1,10]",5,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,2.56,표본부족
+CAFE_TIMING_TOP,"cafePass AND combinedRank between [1,10]",10,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,5.57,표본부족
+CAFE_F2,cafePass AND F2,5,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,2.56,표본부족
+CAFE_F2,cafePass AND F2,10,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,5.57,표본부족
+CAFE_LEADER_A,cafePass AND leaderGrade in [A],5,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,2.56,표본부족
+CAFE_LEADER_A,cafePass AND leaderGrade in [A],10,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,5.57,표본부족
+CAFE_RS80,cafePass AND rs20 gte 80,5,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,2.56,표본부족
+CAFE_RS80,cafePass AND rs20 gte 80,10,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,5.57,표본부족
+MTT_TIMING_TOP,"minerviniPass AND combinedRank between [1,10]",5,cooldown,44,67,111,1.85,4.44,3.41,-2.59,1.64,2.21,62.69,2.23,-1.01,12.68,-7.21,80.6,73.13,64.18,43.28,-70.41,false,preset,2.56,유망
+MTT_TIMING_TOP,"minerviniPass AND combinedRank between [1,10]",10,cooldown,30,51,81,4.79,7.98,6.8,-3.19,2.44,2.74,60.78,4.36,-0.84,21,-10.07,88.24,86.27,72.55,49.02,-80.2,false,preset,5.57,유망
+MTT_F2,minerviniPass AND F2,5,cooldown,2,3,5,-2.62,19.02,10.36,-21.64,0.35,,100,10.3,-1.47,27.2,-2.64,100,100,33.33,33.33,0,false,preset,2.56,표본부족
+MTT_F2,minerviniPass AND F2,10,cooldown,2,3,5,-8.62,24.2,11.07,-32.82,0,38.52,66.67,23.66,0.23,38.58,-4.95,100,100,66.67,66.67,-1.94,false,preset,5.57,표본부족
+MTT_RISK39,minerviniPass AND scoutRiskScore lte 39,5,cooldown,88,166,254,2.2,4.15,3.48,-1.95,1.9,2.2,57.83,2.16,0.67,13.35,-7.67,84.34,65.06,68.07,51.2,-83.21,false,preset,2.56,유망
+MTT_RISK39,minerviniPass AND scoutRiskScore lte 39,10,cooldown,53,93,146,4.81,8.49,7.15,-3.68,2.75,2.83,60.22,4.89,1.06,21.96,-9.63,91.4,81.72,72.04,54.84,-83.92,false,preset,5.57,유망
+MTT_STAB65,minerviniPass AND scoutStabilizeScore gte 65,5,cooldown,79,185,264,2.78,3.53,3.31,-0.75,2.12,1.91,54.05,1.63,-0.01,12.92,-7.82,76.76,67.03,69.19,51.35,-87.3,false,preset,2.56,유망
+MTT_STAB65,minerviniPass AND scoutStabilizeScore gte 65,10,cooldown,48,108,156,5.53,7.36,6.8,-1.83,2.8,2.65,57.41,3.89,0.13,19.79,-10.19,84.26,71.3,75,63.89,-86.43,false,preset,5.57,유망
+MTT_DD5_20,"minerviniPass AND drawdownFromHighPct between [-20,-5]",5,cooldown,58,118,176,1.71,2.48,2.23,-0.77,1.6,1.63,52.54,1.51,-1.05,11.65,-8.14,84.75,68.64,74.58,57.63,-76.02,false,preset,2.56,역효과
+MTT_DD5_20,"minerviniPass AND drawdownFromHighPct between [-20,-5]",10,cooldown,40,75,115,5.56,5.9,5.79,-0.34,3,2.09,54.67,1.13,-1.74,18.09,-11.52,84,69.33,78.67,68,-83.92,false,preset,5.57,유망
+MTT_T1,minerviniPass AND rankingTier eq 1,5,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,2.56,표본부족
+MTT_T1,minerviniPass AND rankingTier eq 1,10,cooldown,0,0,0,,,,,,,,,,,,,,,,0,false,preset,5.57,표본부족
+MTT_T2,minerviniPass AND rankingTier eq 2,5,cooldown,0,1,1,,4.55,4.55,,,,100,4.55,-4.79,8.83,-2.59,100,100,0,0,0,false,preset,2.56,표본부족
+MTT_T2,minerviniPass AND rankingTier eq 2,10,cooldown,0,1,1,,15.1,15.1,,,,100,15.1,1.82,25.41,-2.59,100,100,0,0,0,false,preset,5.57,표본부족

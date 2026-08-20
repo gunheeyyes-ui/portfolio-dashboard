@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-08-20T12:45:38.204Z",
+  "survivorshipBias": "CURRENT-UNIVERSE SURVIVORSHIP BIAS: current market-cap universe applied historically.",
+  "shareCountApproximation": "Current listed shares used for historical market cap / turnover.",
+  "vwapApproximation": "H3/VWAP is an EOD approximation from daily tradingValue/volume.",
+  "observations": 4780,
+  "tradingDays": 478,
+  "splitDate": "20251031",
+  "universeKOSPI": 5,
+  "universeKOSDAQ": 5,
+  "skipped": [],
+  "investorNA": 0,
+  "investorNAPct": 0,
+  "leaderNA": 0,
+  "scoutNA": 0,
+  "rs20NA": 0
+}
