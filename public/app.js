@@ -8,7 +8,10 @@ const state = {
   holdingSort: "priority-desc",
   screenerSort: null,
   screenerFetchCount: 0,
-  explorerMode: "rebound",
+  // The page opens on the entry candidates: "what actually met today's entry
+  // conditions" is the first question, not the Ranking V2 review order.
+  // Mode is not persisted anywhere, so a reload always returns here.
+  explorerMode: "entry",
   screenerQuery: "",
   screenerLoading: false,
   backgroundRefresh: null,
@@ -135,7 +138,7 @@ function scoreTone(score) {
 }
 
 const RS20_TOOLTIP = "RS(20D)\n최근 20거래일 수익률을 같은 시장(KOSPI/KOSDAQ) 종목끼리 비교한 상대강도.\n0~99이며 높을수록 최근 시장 대비 강함.\n매수신호 또는 Ranking 점수가 아님.";
-const TIER_TOOLTIP = "Ranking V2 Tier (순위를 가르는 등급)\nT1 최우선 · T2 하락정지 · T3 저위험\nT4~T6 후순위 · T6 제외";
+const TIER_TOOLTIP = "Tier = 반등후보 검토 우선순위이며, 종목의 종합등급이나 매수등급이 아닙니다.\n(T2는 '매수 2등급'이라는 뜻이 아닙니다.)\n\nT1 최우선 · T2 하락정지 · T3 저위험\nT4~T5 후순위 · T6 제외";
 
 const TIER_LABEL = {
   1: "T1 최우선",
@@ -149,14 +152,18 @@ const TIER_LABEL = {
 // On a phone the tier is carried by the rank number's colour instead of a
 // "T2" label, which frees the width for a readable rank. The text stays in
 // the DOM for desktop and the tooltip keeps the meaning available either way.
+// Tier is a property of the stock, not of the sort, so it stays visible in
+// 진입후보 too — the row there is still a Ranking V2 tier, just filtered.
+const TIER_MODES = new Set(["rebound", "entry"]);
+
 function rankTierClass(row) {
-  if (state.explorerMode !== "rebound") return "";
+  if (!TIER_MODES.has(state.explorerMode)) return "";
   const tier = reboundRankingTier(row);
   return Number.isFinite(tier) ? `tier-${tier}` : "";
 }
 
 function rankCellTitle(row) {
-  if (state.explorerMode !== "rebound") return ` title="${TIER_TOOLTIP}"`;
+  if (!TIER_MODES.has(state.explorerMode)) return ` title="${TIER_TOOLTIP}"`;
   const tier = reboundRankingTier(row);
   const label = TIER_LABEL[tier] ?? `T${tier}`;
   return ` title="${label}\n\n${TIER_TOOLTIP}"`;
@@ -827,6 +834,22 @@ const SE_BADGE_TOOLTIP = {
   "SE-VALUE": "SE-VALUE\nStockEasy 밸류 Easy 현재 편입"
 };
 
+// Shown when a mode yields nothing. For 진입후보 this is a real answer, not a
+// failure: the conditions are never relaxed and no substitute is promoted, so
+// the message says so and points at the observation views instead.
+//
+// The table renders one section per market, so a market with no entries while
+// the other has some must not claim there is nothing today — only the
+// genuinely empty case gets the full "we do not relax conditions" wording.
+function explorerEmptyMessage(market) {
+  if (state.explorerMode !== "entry") return "조건에 맞는 종목이 없습니다.";
+  const otherMarket = market === "KOSPI" ? "KOSDAQ" : "KOSPI";
+  const otherHasEntries = market ? explorerRows(otherMarket).length > 0 : false;
+  if (otherHasEntries) return `${market} 진입조건 충족 종목이 없습니다.`;
+  return "오늘 진입조건 충족 종목이 없습니다."
+    + "<small>조건을 억지로 완화하지 않습니다. 종합타이밍 또는 반등우선에서 관찰 후보를 확인할 수 있습니다.</small>";
+}
+
 // The simulator's entry verdict, shown first because it answers "would we
 // open a position today" — which the Ranking V2 order deliberately does not.
 const SIM_BADGE = {
@@ -957,30 +980,30 @@ function renderExplorerMobile(rows, market) {
       <div class="explorer-card-price"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div>
       <div class="explorer-card-grid"><span>RS <b class="${rs20Tone(scout.rs20)}" title="${RS20_TOOLTIP}">${Number.isFinite(scout.rs20) ? scout.rs20 : "-"}</b></span><span>Leader <b>${leader.grade ?? "-"}${Number.isFinite(leader.score) ? ` ${leader.score}` : ""}</b></span><span>낙폭 <b>${pct(scout.drawdownFromHighPct)}</b></span><span>Risk <b>${scout.riskScore ?? "-"}</b></span><span>Stab <b>${scout.stabilizeScore ?? "-"}</b></span><span>거래강도 <b>${supply.liquidityScore ?? 0}</b><small>외 ${signedEok(supply.foreignNetAmount)} · 기 ${signedEok(supply.instNetAmount)}</small></span><span>타이밍 <b>${combined.score ?? 0}</b><small>${combined.label ?? "관망"}</small></span></div>
     </article>`;
-  }).join("") || `<div class="loading">${state.explorerMode.toUpperCase()} 조건에 맞는 종목이 없습니다.</div>`;
+  }).join("") || `<div class="loading empty-state">${explorerEmptyMessage(market)}</div>`;
 }
 
-function renderExplorerRows(rows) {
+function renderExplorerRows(rows, market) {
   return rows.map((row, index) => {
     const scout = row.scout ?? {};
     const leader = row.leader ?? {};
     const supply = row.supply ?? {};
     const combined = row.combined ?? {};
     return `<tr>
-      <td${rankCellTitle(row)}><div class="rank-main ${rankTierClass(row)}">${index + 1}</div><div class="cell-sub rank-tier">${state.explorerMode === "rebound" ? `T${reboundRankingTier(row)}` : state.explorerMode.toUpperCase()}</div>${rankMoveHtml(row)}</td>
+      <td${rankCellTitle(row)}><div class="rank-main ${rankTierClass(row)}">${index + 1}</div><div class="cell-sub rank-tier">${TIER_MODES.has(state.explorerMode) ? `T${reboundRankingTier(row)}` : state.explorerMode.toUpperCase()}</div>${rankMoveHtml(row)}</td>
       <td><div class="stock-title-line"><a class="stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><span class="strategy-badges">${explorerBadges(row)}</span></div><div class="explorer-price-line"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div></td>
-      <td><b class="rs20-value ${rs20Tone(scout.rs20)}" title="${RS20_TOOLTIP}">${Number.isFinite(scout.rs20) ? scout.rs20 : "-"}</b></td>
+      <td class="col-support"><b class="rs20-value ${rs20Tone(scout.rs20)}" title="${RS20_TOOLTIP}">${Number.isFinite(scout.rs20) ? scout.rs20 : "-"}</b></td>
       <td><span class="leader-badge ${leaderTone(leader.grade)}">${Number.isFinite(leader.score)
         ? `${leader.grade} ${leader.score}`
         : `<i class="judge-full">계산불가</i><i class="judge-short" title="계산불가">–</i>`}</span></td>
-      <td><b>${pct(scout.drawdownFromHighPct)}</b></td>
+      <td class="col-support"><b>${pct(scout.drawdownFromHighPct)}</b></td>
       <td><b class="${Number(scout.riskScore ?? 100) <= 35 ? "good-score" : Number(scout.riskScore ?? 100) >= 65 ? "bad-score" : ""}">${scout.riskScore ?? "-"}</b></td>
       <td><b class="${Number(scout.stabilizeScore ?? 0) >= 65 ? "good-score" : ""}">${scout.stabilizeScore ?? "-"}</b></td>
       <td><div class="score-pill ${scoreTone(supply.liquidityScore ?? 0)}">${supply.liquidityScore ?? 0}</div><div class="cell-sub supply-compact">외 ${signedEok(supply.foreignNetAmount)} · 기 ${signedEok(supply.instNetAmount)}</div></td>
-      <td><b>${combined.score ?? 0}</b><div class="cell-sub">${combined.label ?? "관망"}</div></td>
-      <td><span class="badge judge-badge ${scoutStatusTone(row)}" title="${scoutStatusLabel(scout.status)}"><i class="judge-full">${scoutStatusLabel(scout.status)}</i><i class="judge-short">${scoutStatusShort(scout.status)}</i></span><div class="cell-sub">현재 타이밍 ${combined.label ?? "관망"}</div></td>
+      <td class="col-timing"><b>${combined.score ?? 0}</b><div class="cell-sub">${combined.label ?? "관망"}</div></td>
+      <td class="col-judge"><span class="badge judge-badge ${scoutStatusTone(row)}" title="${scoutStatusLabel(scout.status)}"><i class="judge-full">${scoutStatusLabel(scout.status)}</i><i class="judge-short">${scoutStatusShort(scout.status)}</i></span><div class="cell-sub">현재 타이밍 ${combined.label ?? "관망"}</div></td>
     </tr>`;
-  }).join("") || `<tr><td colspan="10" class="loading">조건에 맞는 종목이 없습니다.</td></tr>`;
+  }).join("") || `<tr><td colspan="10" class="loading empty-state">${explorerEmptyMessage(market)}</td></tr>`;
 }
 
 function explorerTableHeader() {
@@ -1002,7 +1025,7 @@ function renderMarketSection(market) {
   return `<section class="market-ranking-section ${market.toLowerCase()}" data-market="${market}">
     <header class="market-ranking-header"><h3>${market}</h3><span>시장 내 독립 순위 · ${rows.length}종목</span></header>
     <div class="mobile-screener" aria-label="${market} 모바일 종목 순위"><div class="explorer-mobile-list">${renderExplorerMobile(rows, market)}</div></div>
-    <div class="table-wrap screener-wrap"><table class="screener-table explorer-table">${explorerTableHeader()}<tbody>${renderExplorerRows(rows)}</tbody></table></div>
+    <div class="table-wrap screener-wrap"><table class="screener-table explorer-table">${explorerTableHeader()}<tbody>${renderExplorerRows(rows, market)}</tbody></table></div>
   </section>`;
 }
 

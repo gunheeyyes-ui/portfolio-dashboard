@@ -11,7 +11,8 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Daily Portfolio Signal</p>
-          <h1>현재 타이밍 종합순위</h1>
+          <h1>오늘 종목 후보</h1>
+          <p class="page-sub">진입후보를 먼저 확인하고, 종합타이밍 → 주도주 → 반등 품질 순으로 검토합니다.</p>
         </div>
         <nav class="top-actions" aria-label="대시보드 메뉴">
           <a class="ghost-btn nav-btn active-nav" href="/"><i class="nav-full">종합순위</i><i class="nav-short">종합</i></a>
@@ -27,11 +28,11 @@
 
       <section class="notice">
         <strong>주의</strong>
-        <span>종합순위는 현재 진입 타이밍 비교입니다. 장기 종목의 질은 주도주, 반등 여부는 반등후보를 함께 확인하세요.</span>
+        <span>진입후보는 실제 진입조건을 충족한 종목입니다. 종합타이밍은 현재 진입 매력, Leader는 장기 추세 품질, Risk/Stab은 반등 안정성을 뜻합니다.</span>
       </section>
 
       <section class="score-guide" aria-label="전략 기준">
-        <strong>현재 타이밍 종합순위</strong>
+        <strong>종합타이밍 점수 구성</strong>
         <span><b>메인 70점</b> 눌림·거래강도·외/기 연속수급·기술회복</span>
         <span><b>반등 30점</b> 하락 멈춤·낮은 위험·가격 매력</span>
         <span><b>선 제외</b> 매수보류·추격과열·위험65+·데이터 부족</span>
@@ -49,11 +50,11 @@
         <div class="screener-tools">
           <input id="screenerSearch" type="search" placeholder="시장 후보 검색">
         </div>
-        <p class="mode-hint">아래 버튼은 <b>이 표를 보는 방식</b>입니다. 위쪽 메뉴(주도주·반등후보·전략후보)는 각각 다른 화면입니다.</p>
+        <p class="mode-hint">보는 순서 <b>① 진입후보 → ② 종합타이밍 → ③ Leader → ④ Risk·Stab → ⑤ CAFE·MTT</b>. 아래 버튼은 이 표의 보기 방식이고, 위쪽 메뉴는 각각 다른 화면입니다.</p>
         <div class="explorer-mode-bar" id="explorerModes" aria-label="보기 모드">
-          <button class="active" data-explorer-mode="rebound" type="button" title="Ranking V2 기본 순서 (이 표의 기본값)">기본순</button>
-          <button data-explorer-mode="entry" type="button" title="시뮬레이터가 오늘 실제로 진입하는 종목만 남깁니다">진입후보</button>
-          <button data-explorer-mode="timing" type="button" title="현재 타이밍 점수 높은 순">타이밍순</button>
+          <button class="active" data-explorer-mode="entry" type="button" title="오늘 실제 진입조건을 충족한 종목만 남깁니다">진입후보</button>
+          <button data-explorer-mode="timing" type="button" title="현재 타이밍 점수(Main 70 + Scout 30) 높은 순">종합타이밍</button>
+          <button data-explorer-mode="rebound" type="button" title="Ranking V2 반등 검토 우선순위 (매수등급 아님)">반등우선</button>
           <button data-explorer-mode="leader" type="button" title="주도주(Leader) 점수 높은 순">주도주순</button>
           <button data-explorer-mode="cafe" type="button" title="CAFE 전략을 통과한 종목만">CAFE</button>
           <button data-explorer-mode="mtt" type="button" title="MTT(미네르비니) 전략을 통과한 종목만">MTT</button>
@@ -70,7 +71,7 @@
 
       <section class="action-strip">
         <div class="section-title">
-          <h2>전략 후보</h2>
+          <h2>단기 신호 현황</h2>
           <p id="sourceLabel">데이터 확인 중</p>
         </div>
         <div class="action-grid" id="actionGrid"></div>
@@ -78,7 +79,7 @@
 
       <section class="trade-strip">
         <div class="section-title">
-          <h2>오늘 후보 체크</h2>
+          <h2>오늘 신호 상세</h2>
           <p>눌림목 우선 · 강수급 낙주는 1~3일 단기만</p>
         </div>
         <div id="todayTrades" class="trade-list"></div>
