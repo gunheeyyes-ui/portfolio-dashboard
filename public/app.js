@@ -12,6 +12,7 @@ const state = {
   // conditions" is the first question, not the Ranking V2 review order.
   // Mode is not persisted anywhere, so a reload always returns here.
   explorerMode: "entry",
+  explorerModeTouched: false,
   screenerQuery: "",
   screenerLoading: false,
   backgroundRefresh: null,
@@ -336,8 +337,23 @@ async function loadMarketScreener(force = false) {
     };
   } finally {
     state.screenerLoading = false;
+    applyDefaultExplorerMode();
     renderUnifiedExplorer();
   }
+}
+
+// 진입후보가 하나라도 있으면 그것부터, 없으면 관찰용 반등우선으로 연다.
+// 사용자가 직접 모드를 고른 뒤에는 다시 건드리지 않는다.
+function applyDefaultExplorerMode() {
+  if (state.explorerModeTouched) return;
+  const hasEntry = ["KOSPI", "KOSDAQ"].some((market) =>
+    (state.screener?.rows?.[market] ?? []).some((row) => row.simCategory?.actionable));
+  const nextMode = hasEntry ? "entry" : "rebound";
+  if (state.explorerMode === nextMode) return;
+  state.explorerMode = nextMode;
+  state.screenerSort = null;
+  document.querySelectorAll("#explorerModes button").forEach((item) =>
+    item.classList.toggle("active", item.dataset.explorerMode === nextMode));
 }
 
 function renderMetrics(summary) {
@@ -1211,6 +1227,7 @@ document.querySelector("#explorerModes").addEventListener("click", (event) => {
   const button = event.target.closest("[data-explorer-mode]");
   if (!button) return;
   state.explorerMode = button.dataset.explorerMode;
+  state.explorerModeTouched = true;
   state.screenerSort = null;
   document.querySelectorAll("#explorerModes button").forEach((item) => item.classList.toggle("active", item === button));
   renderUnifiedExplorer();

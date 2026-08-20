@@ -2313,18 +2313,21 @@ td {
     display: none;
   }
 
-  body:has(.screener-table) .nav-full {
+  /* Full menu names stay readable on a phone: the screenshot-fallback
+     toggle (a rarely used debug switch) yields its width instead. */
+  body:has(.screener-table) #fallbackBtn {
     display: none;
-  }
-
-  body:has(.screener-table) .nav-short {
-    display: inline;
   }
 
   body:has(.screener-table) .top-actions {
     width: 100%;
     justify-content: space-between;
     padding-bottom: 0;
+  }
+
+  body:has(.screener-table) .nav-btn {
+    padding: 0 4px;
+    font-size: 9.5px;
   }
 
   body:has(.screener-table) .mode-hint {
