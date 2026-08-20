@@ -1,0 +1,8 @@
+strategy,cooldown0_n,cooldown0_excess,cooldown3_n,cooldown3_excess,cooldown5_n,cooldown5_excess,cooldown10_n,cooldown10_excess,holdingCooldown_n,holdingCooldown_excess,firstSignalOnly_n,firstSignalOnly_excess,verdict
+Leader A,8764,2.11,4222,1.84,2584,1.54,1697,1.4,1197,1.35,181,-1.27,cooldown 민감 — 주의
+Leader TOP3,1086,4.68,576,4.77,409,4.53,285,4.12,223,4.53,88,5.35,cooldown 무관 안정
+RS80+,7240,2.31,3502,2.06,2222,1.66,1482,1.57,1086,1.51,197,1.28,cooldown 무관 안정
+Leader A + RS80,5057,3.4,2481,3.18,1565,2.61,1054,2.32,769,2.32,173,-0.8,cooldown 민감 — 주의
+RankingV2 TOP10,3620,-0.74,2055,-0.79,1454,-0.72,1027,-0.7,790,-0.38,175,1.39,cooldown 민감 — 주의
+Scout TOP10,3620,-0.82,1688,-0.68,987,-0.61,659,-0.4,464,-0.77,85,-0.5,전 구간 열위
+낙폭 <-60,803,3.36,376,3.16,248,2.9,162,3.35,131,3.68,60,3.33,cooldown 무관 안정
