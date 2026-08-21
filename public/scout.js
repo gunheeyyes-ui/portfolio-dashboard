@@ -1,5 +1,4 @@
 const state = {
-  market: "KOSPI",
   data: null,
   query: "",
   filter: "all",
@@ -7,6 +6,7 @@ const state = {
   sortDirection: "asc"
 };
 
+const MARKETS = ["KOSPI", "KOSDAQ"];
 const fmtNum = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 });
 const fmtInt = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 });
 
@@ -57,16 +57,20 @@ function strategyBadges(row) {
 }
 
 async function loadScout(force = false) {
-  document.querySelector("#scoutStatus").textContent = `${state.market} 반등 조건 계산 중입니다. 첫 실행은 오래 걸릴 수 있습니다.`;
-  const url = `/api/scout?market=${state.market}&limit=100${force ? `&t=${Date.now()}` : ""}`;
+  document.querySelector("#scoutStatus").textContent = "KOSPI·KOSDAQ 반등 조건을 한 번에 불러오는 중입니다.";
+  const url = `/api/scout?market=ALL&limit=100${force ? `&t=${Date.now()}` : ""}`;
   const response = await fetch(url, { signal: AbortSignal.timeout(300000) });
   if (!response.ok) throw new Error((await response.json()).error ?? "rebound failed");
   state.data = await response.json();
   render();
 }
 
-function rawMarketRows() {
-  return state.data?.rows?.[state.market] ?? [];
+function rawMarketRows(market) {
+  return state.data?.rows?.[market] ?? [];
+}
+
+function allRawRows() {
+  return MARKETS.flatMap((market) => rawMarketRows(market));
 }
 
 function matchesFilter(row) {
@@ -84,10 +88,10 @@ function sortValue(row, key) {
   return Number(row[key]);
 }
 
-function marketRows() {
+function marketRows(market) {
   const query = state.query.trim().toLowerCase();
   const direction = state.sortDirection === "asc" ? 1 : -1;
-  const rows = rawMarketRows().filter((row) => matchesFilter(row)
+  const rows = rawMarketRows(market).filter((row) => matchesFilter(row)
     && (!query || row.name.toLowerCase().includes(query) || row.code.includes(query)));
   return [...rows].sort((a, b) => {
     if (state.sortKey === "name") return String(a.name).localeCompare(String(b.name), "ko") * direction;
@@ -99,15 +103,16 @@ function marketRows() {
   });
 }
 
-function marketSummary() {
-  return state.data?.summary?.[state.market === "KOSPI" ? "kospi" : "kosdaq"] ?? {};
+function average(rows, key) {
+  const values = rows.map((row) => Number(row[key])).filter(Number.isFinite);
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
 }
 
 function renderMetrics() {
-  const rows = rawMarketRows();
+  const rows = allRawRows();
   const count = (test) => rows.filter(test).length;
   const metrics = [
-    ["좋은종목 반등", `${count((row) => row.confirmation?.leaderReboundPass)}개`, "Leader A + 하락정지 + Risk 39 이하", "positive"],
+    ["좋은종목 반등", `${count((row) => row.confirmation?.leaderReboundPass)}개`, "KOSPI+KOSDAQ · Leader A + 하락정지 + Risk 39 이하", "positive"],
     ["반등 1차 후보", `${count((row) => row.confirmation?.reboundState?.key === "ready")}개`, "조정·정지·저위험 동시 충족", "positive"],
     ["하락 정지", `${count((row) => row.confirmation?.reboundState?.key === "stopped")}개`, "하락 둔화 확인 단계", "watch-text"],
     ["고위험 제외", `${count((row) => row.confirmation?.reboundState?.key === "risk")}개`, "Risk 65 이상", "negative"]
@@ -118,12 +123,12 @@ function renderMetrics() {
 }
 
 function renderSummary() {
-  const rows = rawMarketRows();
+  const rows = allRawRows();
   const cards = [
-    ["후보 Universe", `${rows.length}개`, "시총 상위+거래대금 후보"],
+    ["후보 Universe", `${rows.length}개`, "KOSPI+KOSDAQ"],
     ["고위험 제외", `${rows.filter((row) => row.riskScore < 65).length}개`, "Risk 65 미만"],
-    ["평균 하락정지", `${fmtNum.format(marketSummary().avgStabilize ?? 0)}점`, "높을수록 회복 단서"],
-    ["평균 위험", `${fmtNum.format(marketSummary().avgRisk ?? 0)}점`, "낮을수록 좋음"]
+    ["평균 하락정지", `${fmtNum.format(average(rows, "stabilizeScore"))}점`, "높을수록 회복 단서"],
+    ["평균 위험", `${fmtNum.format(average(rows, "riskScore"))}점`, "낮을수록 좋음"]
   ];
   document.querySelector("#scoutSummary").innerHTML = cards.map(([label, value, sub]) => `
     <div class="mini-metric"><span>${label}</span><b>${value}</b><small>${sub}</small></div>
@@ -134,41 +139,36 @@ function trendText(row) {
   return `5일 ${Number(row.slope5 ?? -1) > 0 ? "회복" : "약세"} · 20일 ${Number(row.slope20 ?? -1) > 0 ? "회복" : "약세"}`;
 }
 
-function renderCards(rows) {
-  document.querySelector("#reboundCards").innerHTML = rows.map((row) => {
-    const current = status(row);
-    return `
-      <article class="rebound-card ${current.tone}">
-        <div class="rebound-card-head"><b>${row.rank ?? "-"}위</b><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><span class="badge ${current.tone}">${current.label}</span></div>
-        <div class="rebound-card-values"><span>낙폭 <b>${pct(row.drawdownFromHighPct)}</b></span><span>정지 <b>${row.stabilizeScore ?? "-"}</b></span><span>위험 <b>${row.riskScore ?? "-"}</b></span><span>Leader <b>${row.leader?.grade ?? "-"}</b></span><span>거래 <b>${row.liquidityScore ?? 0}</b></span></div>
-        <div class="cell-sub">저점 후 ${row.daysSinceLow ?? "-"}일 · ${trendText(row)}</div>
-        <div class="strategy-badges">${strategyBadges(row)}</div>
-      </article>
-    `;
-  }).join("") || `<div class="loading">조건에 맞는 반등후보가 없습니다.</div>`;
+function renderRow(row) {
+  const current = status(row);
+  return `
+    <tr>
+      <td><b class="rank-main">${row.rank ?? "-"}</b><div class="cell-sub">${current.label}</div></td>
+      <td><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><div class="cell-sub">${row.code} · ${price(row.price)} · 전일 ${pct(row.changeRate)}</div></td>
+      <td><span class="leader-badge ${leaderClass(row.leader?.grade)}">${Number.isFinite(row.leader?.score) ? `${row.leader.score} ${row.leader.grade}` : "계산불가"}</span></td>
+      <td><b class="${scoreClass(row.liquidityScore)}">${row.liquidityScore ?? 0}</b><div class="cell-sub">현재 돈 유입/회전</div></td>
+      <td><b class="${scoreClass(row.stabilizeScore)}">${row.stabilizeScore ?? "-"}</b></td>
+      <td><b class="${scoreClass(row.riskScore, true)}">${row.riskScore ?? "-"}</b></td>
+      <td><b>${plainPct(row.pricePositionPct)}</b><div class="cell-sub">데이터 ${row.dataDays ?? 0}일</div></td>
+      <td><b class="high-drop">${dropFromHigh(row.drawdownFromHighPct)}</b><div class="cell-sub">고점 ${price(row.high2y)}</div></td>
+      <td><b>${row.daysSinceLow ?? "-"}일</b><div class="cell-sub">${row.noNewLow5 ? "5일 저점 유지" : "저점 확인 필요"}</div></td>
+      <td><b>${trendText(row)}</b><div class="cell-sub">시장대비 20일 ${pct(row.relative20)}p</div></td>
+      <td><span class="badge ${current.tone}">${current.label}</span><div class="strategy-badges">${strategyBadges(row)}</div><div class="cell-sub">${(row.riskReasons ?? []).join(" · ")}</div></td>
+    </tr>
+  `;
+}
+
+function marketDivider(market, count) {
+  return `<tr class="market-table-divider ${market.toLowerCase()}"><td colspan="11"><b>${market}</b><span> · ${count}종목 · 각 시장 안에서 현재 정렬 기준 적용</span></td></tr>`;
 }
 
 function renderRows() {
-  const rows = marketRows();
-  renderCards(rows);
-  document.querySelector("#scoutRows").innerHTML = rows.map((row) => {
-    const current = status(row);
-    return `
-      <tr>
-        <td><b class="rank-main">${row.rank ?? "-"}</b><div class="cell-sub">${current.label}</div></td>
-        <td><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><div class="cell-sub">${row.code} · ${price(row.price)} · 전일 ${pct(row.changeRate)}</div></td>
-        <td><span class="leader-badge ${leaderClass(row.leader?.grade)}">${Number.isFinite(row.leader?.score) ? `${row.leader.score} ${row.leader.grade}` : "계산불가"}</span></td>
-        <td><b class="${scoreClass(row.liquidityScore)}">${row.liquidityScore ?? 0}</b><div class="cell-sub">현재 돈 유입/회전</div></td>
-        <td><b class="${scoreClass(row.stabilizeScore)}">${row.stabilizeScore ?? "-"}</b></td>
-        <td><b class="${scoreClass(row.riskScore, true)}">${row.riskScore ?? "-"}</b></td>
-        <td><b>${plainPct(row.pricePositionPct)}</b><div class="cell-sub">데이터 ${row.dataDays ?? 0}일</div></td>
-        <td><b class="high-drop">${dropFromHigh(row.drawdownFromHighPct)}</b><div class="cell-sub">고점 ${price(row.high2y)}</div></td>
-        <td><b>${row.daysSinceLow ?? "-"}일</b><div class="cell-sub">${row.noNewLow5 ? "5일 저점 유지" : "저점 확인 필요"}</div></td>
-        <td><b>${trendText(row)}</b><div class="cell-sub">시장대비 20일 ${pct(row.relative20)}p</div></td>
-        <td><span class="badge ${current.tone}">${current.label}</span><div class="strategy-badges">${strategyBadges(row)}</div><div class="cell-sub">${(row.riskReasons ?? []).join(" · ")}</div></td>
-      </tr>
-    `;
-  }).join("") || `<tr><td colspan="11" class="loading">조건에 맞는 반등후보가 없습니다.</td></tr>`;
+  const sections = MARKETS.map((market) => ({ market, rows: marketRows(market) }));
+  const allRows = sections.flatMap((section) => section.rows);
+  document.querySelector("#reboundCards").innerHTML = "";
+  document.querySelector("#scoutRows").innerHTML = allRows.length
+    ? sections.map(({ market, rows }) => `${marketDivider(market, rows.length)}${rows.map(renderRow).join("")}`).join("")
+    : `<tr><td colspan="11" class="loading">조건에 맞는 반등후보가 없습니다.</td></tr>`;
 }
 
 function renderSortState() {
@@ -191,7 +191,9 @@ function setSort(key) {
 function render() {
   const asOf = state.data?.asOf ? new Date(state.data.asOf).toLocaleString("ko-KR") : "-";
   const errors = state.data?.errors?.length ? ` · 일부 실패 ${state.data.errors.length}건` : "";
-  document.querySelector("#scoutStatus").textContent = `${state.market} 후보 ${rawMarketRows().length}개 · ${asOf}${errors}`;
+  const kospiCount = rawMarketRows("KOSPI").length;
+  const kosdaqCount = rawMarketRows("KOSDAQ").length;
+  document.querySelector("#scoutStatus").textContent = `KOSPI ${kospiCount} · KOSDAQ ${kosdaqCount} 연속 표시 · ${asOf}${errors}`;
   renderMetrics();
   renderSummary();
   renderSortState();
@@ -200,13 +202,6 @@ function render() {
 
 document.querySelectorAll("[data-scout-sort]").forEach((button) => button.addEventListener("click", () => setSort(button.dataset.scoutSort)));
 document.querySelector("#refreshBtn").addEventListener("click", () => loadScout(true).catch((error) => document.querySelector("#scoutStatus").textContent = error.message));
-document.querySelector("#marketTabs").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-market]");
-  if (!button) return;
-  state.market = button.dataset.market;
-  document.querySelectorAll("#marketTabs button").forEach((item) => item.classList.toggle("active", item === button));
-  loadScout(false).catch((error) => document.querySelector("#scoutStatus").textContent = error.message);
-});
 document.querySelector("#reboundFilters").addEventListener("click", (event) => {
   const button = event.target.closest("[data-rebound-filter]");
   if (!button) return;
