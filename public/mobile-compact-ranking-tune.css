@@ -1,4 +1,38 @@
+/* Leader / rebound pages now always show both markets together. */
+#marketTabs {
+  display: none !important;
+}
+
+.market-table-divider td {
+  padding: 7px 10px !important;
+  border-top: 4px solid #0c1014;
+  border-bottom: 1px solid var(--line);
+  background: #172536;
+  color: #8cc8ff;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.market-table-divider.kosdaq td {
+  background: #142a23;
+  color: #78e0b1;
+}
+
+.market-table-divider span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
 @media (max-width: 720px) {
+  /* Long desktop helper copy inside sortable headers caused Korean text to
+     stack vertically in 20~30px cells. Mobile keeps only the short header. */
+  .leader-table .sort-btn small,
+  .scout-table .sort-btn small {
+    display: none !important;
+  }
+
   /* Short judgement copy keeps the last columns readable without changing the
      underlying values or desktop wording. */
   .leader-table td:nth-child(10) .badge,
@@ -43,5 +77,21 @@
   .leader-table tbody tr,
   .scout-table tbody tr {
     height: 42px;
+  }
+
+  .leader-table tbody tr.market-table-divider,
+  .scout-table tbody tr.market-table-divider {
+    height: 25px;
+  }
+
+  .market-table-divider td {
+    height: 25px;
+    padding: 4px 6px !important;
+    font-size: 10px !important;
+    line-height: 1;
+  }
+
+  .market-table-divider span {
+    font-size: 7px;
   }
 }
