@@ -93,8 +93,9 @@ function renderTodayCandidates() {
       <a class="stock-link sim-name" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a>
       <div class="cell-sub">${row.code} · ${price(row.price)} · 전일 ${pct(row.changeRate)}</div>
       <div class="sim-mini">
+        <span>낙폭 <b>${pct(row.drawdownFromHighPct)}</b></span>
+        <span>3일등락 <b>${pct(row.changeRate3d)}</b></span>
         <span>거래강도 <b>${row.liquidityScore}</b></span>
-        <span>3일 <b>${pct(row.changeRate3d)}</b></span>
         <span>외/기 <b>${row.foreignStreak}/${row.instStreak}일</b></span>
         <span>주도주 <b>${Number.isFinite(row.leaderScore) ? `${row.leaderScore} ${row.leaderGrade}` : "계산불가"}</b></span>
       </div>
