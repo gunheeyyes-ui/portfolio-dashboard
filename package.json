@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.mjs",
     "backtest": "node backtest-criteria.mjs",
+    "backtest:consensus": "node backtest-consensus-v3.mjs",
     "test": "node --test *.test.mjs"
   },
   "engines": {
