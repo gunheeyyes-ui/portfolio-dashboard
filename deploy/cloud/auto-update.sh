@@ -15,4 +15,4 @@ if [ "$dow" -le 5 ] && [ "$minute_of_day" -ge 920 ] && [ "$minute_of_day" -lt 99
   exit 0
 fi
 
-exec "$APP_DIR/deploy/cloud/update.sh"
+exec /usr/bin/env bash "$APP_DIR/deploy/cloud/update.sh"
