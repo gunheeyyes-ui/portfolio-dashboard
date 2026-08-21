@@ -1,11 +1,11 @@
 const state = {
-  market: "KOSPI",
   data: null,
   query: "",
   sortKey: "score",
   sortDirection: "desc"
 };
 
+const MARKETS = ["KOSPI", "KOSDAQ"];
 const fmtNum = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 });
 const fmtInt = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 });
 
@@ -37,9 +37,9 @@ function reboundLabel(row) {
   return row.confirmation?.reboundState?.label ?? row.scout?.status ?? "계산불가";
 }
 
-function marketRows() {
+function marketRows(market) {
   const query = state.query.trim().toLowerCase();
-  const rows = [...(state.data?.rows?.[state.market] ?? [])].filter((row) => !query || row.name.toLowerCase().includes(query) || row.code.includes(query));
+  const rows = [...(state.data?.rows?.[market] ?? [])].filter((row) => !query || row.name.toLowerCase().includes(query) || row.code.includes(query));
   const direction = state.sortDirection === "asc" ? 1 : -1;
   return rows.sort((a, b) => {
     if (state.sortKey === "name") return String(a.name).localeCompare(String(b.name), "ko") * direction;
@@ -55,17 +55,28 @@ function marketRows() {
   });
 }
 
-function summary() {
-  return state.data?.summary?.[state.market === "KOSPI" ? "kospi" : "kosdaq"] ?? {};
+function aggregateSummary() {
+  const kospi = state.data?.summary?.kospi ?? {};
+  const kosdaq = state.data?.summary?.kosdaq ?? {};
+  const sum = (key) => Number(kospi[key] ?? 0) + Number(kosdaq[key] ?? 0);
+  return {
+    count: sum("count"),
+    calculable: sum("calculable"),
+    a: sum("a"),
+    b: sum("b"),
+    c: sum("c"),
+    d: sum("d"),
+    unavailable: sum("unavailable")
+  };
 }
 
 function renderMetrics() {
-  const data = summary();
+  const data = aggregateSummary();
   const cards = [
-    ["A 핵심 주도주", `${data.a ?? 0}개`, "85~100점", "positive"],
-    ["B 준주도주", `${data.b ?? 0}개`, "70~84점", "watch-text"],
-    ["C 중립", `${data.c ?? 0}개`, "50~69점", ""],
-    ["D 약세", `${data.d ?? 0}개`, `계산불가 ${data.unavailable ?? 0}개`, "negative"]
+    ["A 핵심 주도주", `${data.a}개`, "KOSPI+KOSDAQ · 85~100점", "positive"],
+    ["B 준주도주", `${data.b}개`, "KOSPI+KOSDAQ · 70~84점", "watch-text"],
+    ["C 중립", `${data.c}개`, "KOSPI+KOSDAQ · 50~69점", ""],
+    ["D 약세", `${data.d}개`, `계산불가 ${data.unavailable}개`, "negative"]
   ];
   document.querySelector("#leaderMetrics").innerHTML = cards.map(([label, value, sub, cls]) => `
     <article class="metric"><div class="label">${label}</div><div class="value ${cls}">${value}</div><div class="sub">${sub}</div></article>
@@ -73,12 +84,12 @@ function renderMetrics() {
 }
 
 function renderSummary() {
-  const data = summary();
+  const data = aggregateSummary();
   const cards = [
-    ["전체", data.count ?? 0, "시총+거래 후보"],
-    ["계산 가능", data.calculable ?? 0, "252거래일 이상"],
-    ["A+B", (data.a ?? 0) + (data.b ?? 0), "주도주 우선군"],
-    ["계산불가", data.unavailable ?? 0, "가격 이력 부족"]
+    ["전체", data.count, "KOSPI+KOSDAQ"],
+    ["계산 가능", data.calculable, "252거래일 이상"],
+    ["A+B", data.a + data.b, "주도주 우선군"],
+    ["계산불가", data.unavailable, "가격 이력 부족"]
   ];
   document.querySelector("#leaderSummary").innerHTML = cards.map(([label, value, sub]) => `
     <div class="mini-metric"><span>${label}</span><b>${value}개</b><small>${sub}</small></div>
@@ -92,43 +103,48 @@ function renderSortState() {
   });
 }
 
+function renderRow(row) {
+  const leader = row.leader ?? {};
+  const scout = row.scout ?? {};
+  const combined = row.combined ?? {};
+  const leaderText = Number.isFinite(leader.score) ? `${leader.score} ${leader.grade}` : "계산불가";
+  return `
+    <tr>
+      <td><b class="rank-main">${leader.rank ?? "–"}</b><div class="cell-sub">${leader.total ? `${leader.total}개 중` : "순위 없음"}</div></td>
+      <td><a class="stock-link stock-name" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><div class="cell-sub">${row.code} · ${price(row.price)}</div></td>
+      <td><span class="leader-badge ${gradeClass(leader.grade)}">${leaderText}</span></td>
+      <td><b>${leader.trendScore ?? "-"}/30</b><div class="cell-sub">MA20·60·120</div></td>
+      <td><b>${leader.relativeStrengthScore ?? "-"}/30</b><div class="cell-sub">20·60·120일 백분위</div></td>
+      <td><b>${leader.highRetentionScore ?? "-"}/20</b><div class="cell-sub">고점 ${price(leader.high52w)}</div></td>
+      <td><b>${leader.persistenceScore ?? "-"}/20</b><div class="cell-sub">월5선 ${leader.monthAboveMa5 ? "위" : "아래"} · ${leader.monthMa5Rising ? "상승" : "비상승"}</div></td>
+      <td><b>${pct(leader.drawdown52wPct)}</b></td>
+      <td><b>${pct(leader.ret60)}</b><div class="cell-sub">120일 ${pct(leader.ret120)}</div></td>
+      <td><span class="badge ${combined.tone === "buy" ? "buy" : combined.tone === "danger" ? "danger" : "hold"}">${combined.label ?? "관망"}</span><div class="cell-sub">${combined.rank ? `종합 ${combined.rank}위 · ${combined.score}점` : "종합 순위권 밖"}</div></td>
+      <td><span class="badge ${row.confirmation?.reboundState?.tone ?? "hold"}">${reboundLabel(row)}</span><div class="cell-sub">멈춤 ${scout.stabilizeScore ?? "-"} · 위험 ${scout.riskScore ?? "-"}</div></td>
+      <td><div class="judgement-line">거래강도 ${row.supply?.liquidityScore ?? 0}</div><div class="strategy-badges">${strategyBadges(row)}</div><div class="cell-sub">${leader.decision ?? "가격 이력 확인 필요"}</div></td>
+    </tr>
+  `;
+}
+
+function marketDivider(market, count) {
+  return `<tr class="market-table-divider ${market.toLowerCase()}"><td colspan="12"><b>${market}</b><span> · ${count}종목 · 각 시장 안에서 현재 정렬 기준 적용</span></td></tr>`;
+}
+
 function renderRows() {
-  const rows = marketRows();
-  document.querySelector("#leaderCards").innerHTML = rows.map((row) => `
-    <article class="leader-card">
-      <div class="leader-card-head"><span class="leader-badge ${gradeClass(row.leader?.grade)}">${row.leader?.grade ?? "-"}</span><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><b>${row.leader?.score ?? "-"}</b></div>
-      <div class="leader-card-values"><span>현재가 <b>${price(row.price)}</b></span><span>낙폭 <b>${pct(row.leader?.drawdown52wPct)}</b></span><span>반등 <b>${reboundLabel(row)}</b></span><span>Risk <b>${row.scout?.riskScore ?? "-"}</b></span><span>거래 <b>${row.supply?.liquidityScore ?? 0}</b></span><span>종합 <b>${row.combined?.score ?? "-"}</b></span></div>
-      <div class="strategy-badges">${strategyBadges(row)}</div>
-    </article>
-  `).join("") || `<div class="loading">표시할 종목이 없습니다.</div>`;
-  document.querySelector("#leaderRows").innerHTML = rows.length ? rows.map((row) => {
-    const leader = row.leader ?? {};
-    const scout = row.scout ?? {};
-    const combined = row.combined ?? {};
-    const leaderText = Number.isFinite(leader.score) ? `${leader.score} ${leader.grade}` : "계산불가";
-    return `
-      <tr>
-        <td><b class="rank-main">${leader.rank ?? "–"}</b><div class="cell-sub">${leader.total ? `${leader.total}개 중` : "순위 없음"}</div></td>
-        <td><a class="stock-link stock-name" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><div class="cell-sub">${row.code} · ${price(row.price)}</div></td>
-        <td><span class="leader-badge ${gradeClass(leader.grade)}">${leaderText}</span></td>
-        <td><b>${leader.trendScore ?? "-"}/30</b><div class="cell-sub">MA20·60·120</div></td>
-        <td><b>${leader.relativeStrengthScore ?? "-"}/30</b><div class="cell-sub">20·60·120일 백분위</div></td>
-        <td><b>${leader.highRetentionScore ?? "-"}/20</b><div class="cell-sub">고점 ${price(leader.high52w)}</div></td>
-        <td><b>${leader.persistenceScore ?? "-"}/20</b><div class="cell-sub">월5선 ${leader.monthAboveMa5 ? "위" : "아래"} · ${leader.monthMa5Rising ? "상승" : "비상승"}</div></td>
-        <td><b>${pct(leader.drawdown52wPct)}</b></td>
-        <td><b>${pct(leader.ret60)}</b><div class="cell-sub">120일 ${pct(leader.ret120)}</div></td>
-        <td><span class="badge ${combined.tone === "buy" ? "buy" : combined.tone === "danger" ? "danger" : "hold"}">${combined.label ?? "관망"}</span><div class="cell-sub">${combined.rank ? `종합 ${combined.rank}위 · ${combined.score}점` : "종합 순위권 밖"}</div></td>
-        <td><span class="badge ${row.confirmation?.reboundState?.tone ?? "hold"}">${reboundLabel(row)}</span><div class="cell-sub">멈춤 ${scout.stabilizeScore ?? "-"} · 위험 ${scout.riskScore ?? "-"}</div></td>
-        <td><div class="judgement-line">거래강도 ${row.supply?.liquidityScore ?? 0}</div><div class="strategy-badges">${strategyBadges(row)}</div><div class="cell-sub">${leader.decision ?? "가격 이력 확인 필요"}</div></td>
-      </tr>
-    `;
-  }).join("") : `<tr><td colspan="12" class="loading">표시할 종목이 없습니다.</td></tr>`;
+  const sections = MARKETS.map((market) => ({ market, rows: marketRows(market) }));
+  const allRows = sections.flatMap((section) => section.rows);
+  document.querySelector("#leaderCards").innerHTML = "";
+  document.querySelector("#leaderRows").innerHTML = allRows.length
+    ? sections.map(({ market, rows }) => `${marketDivider(market, rows.length)}${rows.map(renderRow).join("")}`).join("")
+    : `<tr><td colspan="12" class="loading">표시할 종목이 없습니다.</td></tr>`;
 }
 
 function render() {
   const asOf = state.data?.asOf ? new Date(state.data.asOf).toLocaleString("ko-KR") : "-";
   const errors = state.data?.errors?.length ? ` · 일부 실패 ${state.data.errors.length}건` : "";
-  document.querySelector("#leaderStatus").textContent = `${state.market} 기존 시장 Universe · ${asOf}${errors}`;
+  const kospiCount = state.data?.rows?.KOSPI?.length ?? 0;
+  const kosdaqCount = state.data?.rows?.KOSDAQ?.length ?? 0;
+  document.querySelector("#leaderStatus").textContent = `KOSPI ${kospiCount} · KOSDAQ ${kosdaqCount} 연속 표시 · ${asOf}${errors}`;
   renderMetrics();
   renderSummary();
   renderSortState();
@@ -136,8 +152,8 @@ function render() {
 }
 
 async function loadLeader(force = false) {
-  document.querySelector("#leaderStatus").textContent = `${state.market} 주도주 계산 중입니다. 첫 실행은 시간이 걸릴 수 있습니다.`;
-  const response = await fetch(`/api/leader?market=${state.market}&limit=100${force ? `&t=${Date.now()}` : ""}`, { signal: AbortSignal.timeout(300000) });
+  document.querySelector("#leaderStatus").textContent = "KOSPI·KOSDAQ 주도주를 한 번에 불러오는 중입니다.";
+  const response = await fetch(`/api/leader?market=ALL&limit=100${force ? `&t=${Date.now()}` : ""}`, { signal: AbortSignal.timeout(300000) });
   if (!response.ok) throw new Error((await response.json()).error ?? "leader failed");
   state.data = await response.json();
   render();
@@ -157,14 +173,6 @@ document.querySelectorAll("[data-leader-sort]").forEach((button) => button.addEv
 document.querySelector("#leaderSearch").addEventListener("input", (event) => {
   state.query = event.target.value;
   renderRows();
-});
-
-document.querySelector("#marketTabs").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-market]");
-  if (!button) return;
-  state.market = button.dataset.market;
-  document.querySelectorAll("#marketTabs button").forEach((item) => item.classList.toggle("active", item === button));
-  loadLeader(false).catch((error) => document.querySelector("#leaderStatus").textContent = error.message);
 });
 
 document.querySelector("#refreshBtn").addEventListener("click", () => loadLeader(true).catch((error) => document.querySelector("#leaderStatus").textContent = error.message));
