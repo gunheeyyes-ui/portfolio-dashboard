@@ -22,7 +22,7 @@ if [ ! -d "$APP_DIR" ]; then
   echo "$APP_DIR does not exist." >&2
   exit 1
 fi
-for command in git node npm curl systemctl tar flock; do
+for command in git node npm curl systemctl tar flock tr; do
   command -v "$command" >/dev/null 2>&1 || {
     echo "Required command is missing: $command" >&2
     exit 1
@@ -42,7 +42,12 @@ done
 tar -C "$APP_DIR" -czf "$code_backup" .
 echo "Code backup: $code_backup"
 if [ -f "$APP_DIR/deploy/cloud/backup.sh" ]; then
-  bash "$APP_DIR/deploy/cloud/backup.sh" || {
+  # Older server copies may have CRLF line endings from Windows. Execute a
+  # normalized temporary copy so the safety backup still runs before checkout.
+  backup_runner="$preserve_dir/backup.sh"
+  tr -d '\r' < "$APP_DIR/deploy/cloud/backup.sh" > "$backup_runner"
+  chmod 0700 "$backup_runner"
+  bash "$backup_runner" || {
     echo "Persistent-data backup failed; refusing bootstrap." >&2
     exit 1
   }
