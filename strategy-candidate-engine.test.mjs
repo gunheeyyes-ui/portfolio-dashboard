@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 import {
+  STRATEGY_DEFINITION_VERSION,
+  STRATEGY_OOS_SCHEMA,
+  STRATEGY_REGISTRY_HASH,
   STRATEGY_REGISTRY as rootRegistry,
   strategyById
 } from "./strategy-oos-registry.js";
@@ -13,6 +18,10 @@ import {
   buildStrategyCandidates,
   strategyCatalogInfo
 } from "./public/strategy-candidate-engine.js";
+import {
+  buildFeatureRows,
+  buildSelections
+} from "./strategy-oos-tracker.js";
 
 function strongRow(code, marketRank = 1) {
   return {
@@ -70,13 +79,17 @@ function strongRow(code, marketRank = 1) {
         H3: false,
         I: false
       }
-    },
-    simCategory: {
-      key: "split",
-      label: "분할 후보",
-      actionable: true
     }
   };
+}
+
+function canonicalGitBlobSha1(content) {
+  const normalized = String(content).replace(/\r\n/g, "\n");
+  const body = Buffer.from(normalized, "utf8");
+  return createHash("sha1")
+    .update(`blob ${body.length}\0`)
+    .update(body)
+    .digest("hex");
 }
 
 test("Node and browser use the exact same strategy registry module", () => {
@@ -84,6 +97,16 @@ test("Node and browser use the exact same strategy registry module", () => {
   assert.equal(rootRegistry.length, 94);
   assert.equal(strategyCatalogInfo().featuredCount, 14);
   assert.equal(strategyCatalogInfo().allCount, 94);
+});
+
+test("OOS schema locks the intended strategy-definition version and registry hash", () => {
+  const registryText = readFileSync(new URL("./public/strategy-oos-registry.js", import.meta.url), "utf8");
+  assert.equal(STRATEGY_DEFINITION_VERSION, 1);
+  assert.equal(STRATEGY_REGISTRY_HASH, canonicalGitBlobSha1(registryText));
+  assert.equal(
+    STRATEGY_OOS_SCHEMA,
+    `strategy-oos-1-def${STRATEGY_DEFINITION_VERSION}-${STRATEGY_REGISTRY_HASH.slice(0, 12)}`
+  );
 });
 
 test("nested ranking strategies count separately but collapse to one independent axis", () => {
@@ -127,4 +150,37 @@ test("market-screener errors exclude the affected code like the OOS feature buil
   const rows = buildStrategyCandidates(payload);
   assert.equal(rows.some((item) => item.feature.code === "000001"), false);
   assert.equal(rows.some((item) => item.feature.code === "000002"), true);
+});
+
+test("candidate panel and OOS tracker select identical members for all 94 strategies", () => {
+  const payload = {
+    rows: {
+      KOSPI: [strongRow("000001"), strongRow("000002", 2)],
+      KOSDAQ: [strongRow("100001")]
+    },
+    errors: []
+  };
+
+  const candidates = buildStrategyCandidates(payload);
+  const features = buildFeatureRows(payload, { failedCodes: new Set() });
+  const selections = buildSelections(features, {
+    signalDate: "2026-08-21",
+    recordedAt: "2026-08-21T15:50:00+09:00"
+  });
+
+  assert.equal(new Set(selections.map((selection) => selection.strategyId)).size, 94);
+
+  for (const selection of selections) {
+    const expected = selection.members.map((member) => member.code).sort();
+    const actual = candidates
+      .filter((item) => item.feature.market === selection.market)
+      .filter((item) => item.matches.some((strategy) => strategy.id === selection.strategyId))
+      .map((item) => item.feature.code)
+      .sort();
+    assert.deepEqual(
+      actual,
+      expected,
+      `${selection.market} ${selection.strategyId} candidate/OOS membership drifted`
+    );
+  }
 });
