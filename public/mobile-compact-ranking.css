@@ -1,0 +1,257 @@
+@media (max-width: 720px) {
+  /* Leader / rebound pages use the same information-dense table pattern as
+     the main mobile ranking screen. The desktop table stays the source of
+     truth, so its existing sort handlers remain fully usable on mobile. */
+  body:has(.leader-table) .shell,
+  body:has(.scout-table) .shell {
+    width: 100%;
+    padding: 6px 8px 18px;
+  }
+
+  body:has(.leader-table) .notice,
+  body:has(.leader-table) .score-guide,
+  body:has(.leader-table) #leaderMetrics,
+  body:has(.leader-table) #leaderSummary,
+  body:has(.leader-table) #leaderCards,
+  body:has(.leader-table) #refreshLeader,
+  body:has(.scout-table) .notice,
+  body:has(.scout-table) .scout-help,
+  body:has(.scout-table) #scoutMetrics,
+  body:has(.scout-table) #scoutSummary,
+  body:has(.scout-table) #reboundCards {
+    display: none !important;
+  }
+
+  body:has(.leader-table) .screener-strip,
+  body:has(.scout-table) .screener-strip {
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  body:has(.leader-table) .screener-title,
+  body:has(.scout-table) .screener-title {
+    padding: 5px 8px 0;
+  }
+
+  body:has(.leader-table) .screener-title h2,
+  body:has(.scout-table) .screener-title h2 {
+    font-size: 13px;
+  }
+
+  body:has(.leader-table) .screener-title p,
+  body:has(.scout-table) .screener-title p {
+    margin-top: 1px;
+    font-size: 8.5px;
+    line-height: 1.2;
+  }
+
+  body:has(.leader-table) .screener-tools,
+  body:has(.scout-table) .screener-tools {
+    gap: 4px;
+    padding: 4px 8px;
+  }
+
+  body:has(.leader-table) .screener-tools .tabs,
+  body:has(.scout-table) .screener-tools .tabs {
+    width: 100%;
+    gap: 3px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  body:has(.leader-table) .screener-tools .tabs button,
+  body:has(.scout-table) .screener-tools .tabs button {
+    flex: 0 0 auto;
+    height: 23px;
+    padding: 0 7px;
+    font-size: 9px;
+  }
+
+  body:has(.leader-table) .screener-tools input[type="search"],
+  body:has(.scout-table) .screener-tools input[type="search"] {
+    height: 25px;
+    padding: 0 7px;
+    font-size: 10px;
+  }
+
+  body:has(.leader-table) .leader-wrap,
+  body:has(.scout-table) .scout-wrap {
+    display: block !important;
+    width: 100%;
+    max-height: calc(100vh - 190px);
+    overflow-x: hidden !important;
+    overflow-y: auto;
+  }
+
+  .leader-table,
+  .scout-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+  }
+
+  .leader-table th,
+  .leader-table td,
+  .scout-table th,
+  .scout-table td {
+    padding: 4px 1px !important;
+    overflow: hidden;
+    font-size: 8px !important;
+    line-height: 1.15;
+    white-space: nowrap;
+    text-overflow: clip;
+  }
+
+  .leader-table th,
+  .scout-table th {
+    top: 0;
+    z-index: 4;
+    height: 25px;
+    color: var(--muted);
+    background: #111820;
+    vertical-align: middle;
+  }
+
+  .leader-table .sort-btn,
+  .scout-table .sort-btn {
+    display: inline-flex;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    font-size: 0 !important;
+    white-space: nowrap;
+  }
+
+  .leader-table .sort-btn::before,
+  .scout-table .sort-btn::before {
+    font-size: 8px;
+    font-weight: 800;
+  }
+
+  .leader-table .sort-btn span,
+  .scout-table .sort-btn span {
+    min-width: 0;
+    margin-left: 0;
+    font-size: 8px;
+  }
+
+  .leader-table th:nth-child(1) .sort-btn::before { content: "순위"; }
+  .leader-table th:nth-child(2) .sort-btn::before { content: "종목"; }
+  .leader-table th:nth-child(3) .sort-btn::before { content: "주도"; }
+  .leader-table th:nth-child(4) .sort-btn::before { content: "장기"; }
+  .leader-table th:nth-child(5) .sort-btn::before { content: "상대"; }
+  .leader-table th:nth-child(6) .sort-btn::before { content: "고점"; }
+  .leader-table th:nth-child(7) .sort-btn::before { content: "지속"; }
+  .leader-table th:nth-child(8) .sort-btn::before { content: "낙폭"; }
+  .leader-table th:nth-child(9) .sort-btn::before { content: "60일"; }
+
+  .scout-table th:nth-child(1) .sort-btn::before { content: "순위"; }
+  .scout-table th:nth-child(2) .sort-btn::before { content: "종목"; }
+  .scout-table th:nth-child(3) .sort-btn::before { content: "주도"; }
+  .scout-table th:nth-child(4) .sort-btn::before { content: "거래"; }
+  .scout-table th:nth-child(5) .sort-btn::before { content: "정지"; }
+  .scout-table th:nth-child(6) .sort-btn::before { content: "Risk"; }
+  .scout-table th:nth-child(7) .sort-btn::before { content: "위치"; }
+  .scout-table th:nth-child(8) .sort-btn::before { content: "낙폭"; }
+  .scout-table th:nth-child(9) .sort-btn::before { content: "저점"; }
+
+  .leader-table th:nth-child(10) { font-size: 0 !important; }
+  .leader-table th:nth-child(10)::after { content: "종합"; font-size: 8px; }
+  .leader-table th:nth-child(11) { font-size: 0 !important; }
+  .leader-table th:nth-child(11)::after { content: "반등"; font-size: 8px; }
+  .leader-table th:nth-child(12) { font-size: 0 !important; }
+  .leader-table th:nth-child(12)::after { content: "거래"; font-size: 8px; }
+
+  .scout-table th:nth-child(10) { font-size: 0 !important; }
+  .scout-table th:nth-child(10)::after { content: "추세"; font-size: 8px; }
+  .scout-table th:nth-child(11) { font-size: 0 !important; }
+  .scout-table th:nth-child(11)::after { content: "판정"; font-size: 8px; }
+
+  .leader-table th:nth-child(1), .leader-table td:nth-child(1) { width: 24px !important; }
+  .leader-table th:nth-child(2), .leader-table td:nth-child(2) { width: 82px !important; }
+  .leader-table th:nth-child(3), .leader-table td:nth-child(3) { width: 30px !important; }
+  .leader-table th:nth-child(4), .leader-table td:nth-child(4),
+  .leader-table th:nth-child(5), .leader-table td:nth-child(5),
+  .leader-table th:nth-child(6), .leader-table td:nth-child(6),
+  .leader-table th:nth-child(7), .leader-table td:nth-child(7) { width: 24px !important; }
+  .leader-table th:nth-child(8), .leader-table td:nth-child(8) { width: 32px !important; }
+  .leader-table th:nth-child(9), .leader-table td:nth-child(9) { width: 34px !important; }
+  .leader-table th:nth-child(10), .leader-table td:nth-child(10),
+  .leader-table th:nth-child(11), .leader-table td:nth-child(11),
+  .leader-table th:nth-child(12), .leader-table td:nth-child(12) { width: 32px !important; }
+
+  .scout-table th:nth-child(1), .scout-table td:nth-child(1) { width: 24px !important; }
+  .scout-table th:nth-child(2), .scout-table td:nth-child(2) { width: 83px !important; }
+  .scout-table th:nth-child(3), .scout-table td:nth-child(3) { width: 31px !important; }
+  .scout-table th:nth-child(4), .scout-table td:nth-child(4),
+  .scout-table th:nth-child(5), .scout-table td:nth-child(5),
+  .scout-table th:nth-child(6), .scout-table td:nth-child(6) { width: 28px !important; }
+  .scout-table th:nth-child(7), .scout-table td:nth-child(7) { width: 31px !important; }
+  .scout-table th:nth-child(8), .scout-table td:nth-child(8) { width: 34px !important; }
+  .scout-table th:nth-child(9), .scout-table td:nth-child(9) { width: 29px !important; }
+  .scout-table th:nth-child(10), .scout-table td:nth-child(10) { width: 35px !important; }
+  .scout-table th:nth-child(11), .scout-table td:nth-child(11) { width: 39px !important; }
+
+  .leader-table .cell-sub,
+  .scout-table .cell-sub,
+  .leader-table .strategy-badges,
+  .scout-table .strategy-badges,
+  .leader-table .judgement-line {
+    display: none !important;
+  }
+
+  .leader-table td:nth-child(2) .cell-sub,
+  .scout-table td:nth-child(2) .cell-sub {
+    display: block !important;
+    margin-top: 2px;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 6.5px !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .leader-table .stock-link,
+  .scout-table .stock-link {
+    display: block;
+    overflow: hidden;
+    font-size: 9px !important;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .leader-table .rank-main,
+  .scout-table .rank-main {
+    font-size: 12px !important;
+    line-height: 1;
+  }
+
+  .leader-table .leader-badge,
+  .scout-table .leader-badge,
+  .leader-table .badge,
+  .scout-table .badge {
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 16px !important;
+    height: 16px;
+    padding: 0 1px !important;
+    overflow: hidden;
+    border-radius: 4px;
+    font-size: 7px !important;
+    line-height: 14px;
+    text-align: center;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+
+  .leader-table .high-drop,
+  .scout-table .high-drop {
+    font-size: 8px !important;
+  }
+}
