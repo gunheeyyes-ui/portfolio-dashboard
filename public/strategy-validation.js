@@ -15,14 +15,12 @@ function missing(value) {
   return value === null || value === undefined || value === "" || !Number.isFinite(Number(value));
 }
 
-// 수익률: 부호를 붙이되 반올림 후 0이면 부호를 붙이지 않는다(-0% 방지).
 function pct(value, digits = 2) {
   if (missing(value)) return "-";
   const rounded = Number(Number(value).toFixed(digits));
   return `${rounded > 0 ? "+" : ""}${rounded}%`;
 }
 
-// 승률처럼 부호가 의미 없는 비율
 function rate(value, digits = 1) {
   return missing(value) ? "-" : `${Number(Number(value).toFixed(digits))}%`;
 }
@@ -35,7 +33,6 @@ function price(value) {
   return Number.isFinite(Number(value)) ? `${new Intl.NumberFormat("ko-KR").format(Math.round(value))}원` : "-";
 }
 
-// KIS 일봉 날짜는 YYYYMMDD로 저장된다. 화면에서는 기록일과 같은 형식으로 보인다.
 function ymd(value) {
   const text = String(value ?? "");
   return /^\d{8}$/.test(text) ? `${text.slice(0, 4)}-${text.slice(4, 6)}-${text.slice(6, 8)}` : (text || "-");
@@ -94,9 +91,7 @@ function sortStrategies(rows) {
   return [...rows].sort((a, b) => {
     const left = sorter(a);
     const right = sorter(b);
-    if (typeof left === "string" || typeof right === "string") {
-      return String(left).localeCompare(String(right)) * direction;
-    }
+    if (typeof left === "string" || typeof right === "string") return String(left).localeCompare(String(right)) * direction;
     const leftValue = Number.isFinite(Number(left)) ? Number(left) : null;
     const rightValue = Number.isFinite(Number(right)) ? Number(right) : null;
     if (leftValue === null && rightValue === null) return a.displayName.localeCompare(b.displayName);
@@ -163,11 +158,13 @@ function renderMetrics() {
   const data = state.data ?? {};
   const meta = data.meta ?? {};
   const strategies = data.strategies ?? [];
+  const consensusCount = strategies.filter((row) => row.group === "consensus").length;
+  const baseCount = Math.max(0, Number(meta.strategyCount ?? 0) - consensusCount);
   const runningCohorts = strategies.reduce((sum, row) => sum + (row.pending?.cohorts ?? 0), 0);
   const lastEvaluated = strategies.map((row) => row.pending?.lastEvaluatedDate).filter(Boolean).sort().at(-1) ?? "-";
   document.querySelector("#strategyMetrics").innerHTML = [
     ["기록 시작일", meta.firstDate ?? "아직 없음", `${(meta.signalDates ?? []).length} 거래일 기록`],
-    ["추적 전략", `${meta.strategyCount ?? 0}개`, `순위 ${meta.rankingStrategyCount ?? 0} · 조건 ${meta.conditionStrategyCount ?? 0}`],
+    ["추적 전략", `${meta.strategyCount ?? 0}개`, `기본 ${baseCount} · 합의 ${consensusCount}`],
     ["20D까지 확정", `${meta.completedRecordCount ?? 0}건`, `진행중 ${meta.pendingRecordCount ?? 0}건`],
     ["진행중 cohort", `${runningCohorts}개`, `오늘 기준 ${ymd(lastEvaluated)}`]
   ].map(([label, value, sub]) => `<article class="metric"><div class="label">${label}</div><div class="value">${value}</div><div class="sub">${sub}</div></article>`).join("");
@@ -177,11 +174,16 @@ function renderTables() {
   const data = state.data ?? {};
   const strategies = data.strategies ?? [];
   const target = document.querySelector("#strategyTables");
-  document.querySelector("#strategyTableTitle").textContent = state.scope === "featured" ? "대표 전략 비교" : "전체 전략 비교";
+  const title = state.scope === "featured" ? "대표 전략 비교" : state.scope === "consensus" ? "전략·계열 합의 검증" : "전체 전략 비교";
+  document.querySelector("#strategyTableTitle").textContent = title;
 
   if (state.scope === "featured") {
     const featured = new Set(data.featured ?? []);
     target.innerHTML = strategyTable(strategies.filter((row) => featured.has(row.id)));
+    return;
+  }
+  if (state.scope === "consensus") {
+    target.innerHTML = strategyTable(strategies.filter((row) => row.group === "consensus"));
     return;
   }
   const groups = data.groups ?? [];
