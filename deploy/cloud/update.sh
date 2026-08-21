@@ -1,34 +1,118 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR=/opt/portfolio-dashboard
-BRANCH="${DASHBOARD_GIT_BRANCH:-cloud-dashboard}"
+APP_DIR="${DASHBOARD_APP_DIR:-/opt/portfolio-dashboard}"
+BRANCH="${DASHBOARD_GIT_BRANCH:-main}"
+HEALTH_URL="${DASHBOARD_HEALTH_URL:-http://127.0.0.1:5177/api/health}"
+LOCK_FILE="${DASHBOARD_DEPLOY_LOCK:-/run/lock/portfolio-dashboard-update.lock}"
+BACKUP_DIR="${DASHBOARD_BACKUP_DIR:-/var/backups/portfolio-dashboard}"
+FAILED_SHA_FILE="${DASHBOARD_FAILED_SHA_FILE:-/var/lib/portfolio-dashboard/auto-deploy-failed-sha}"
+
+if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+  echo "Run this updater as root (sudo)." >&2
+  exit 1
+fi
+
+install -d -m 0755 "$(dirname "$LOCK_FILE")"
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  echo "Another portfolio-dashboard deployment is already running; skipping."
+  exit 0
+fi
+
 cd "$APP_DIR"
 
+if [ ! -d .git ]; then
+  echo "$APP_DIR is not a git checkout. Run deploy/cloud/bootstrap-auto-deploy.sh once first." >&2
+  exit 1
+fi
 if ! git remote get-url origin >/dev/null 2>&1; then
   echo "No origin remote is configured in $APP_DIR." >&2
+  exit 1
+fi
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+  echo "Tracked files in $APP_DIR have local modifications; refusing automatic deployment." >&2
+  git status --short --untracked-files=no >&2
   exit 1
 fi
 
 previous="$(git rev-parse HEAD)"
 git fetch --prune origin "$BRANCH"
-git checkout "$BRANCH"
+target="$(git rev-parse "origin/$BRANCH")"
+
+if [ "$previous" = "$target" ]; then
+  rm -f "$FAILED_SHA_FILE"
+  echo "Already up to date at $previous"
+  exit 0
+fi
+
+if [ -f "$FAILED_SHA_FILE" ] && [ "$(cat "$FAILED_SHA_FILE" 2>/dev/null || true)" = "$target" ]; then
+  echo "Skipping previously failed deployment $target; waiting for a newer main commit."
+  exit 0
+fi
+# A newer target gets one fresh attempt.
+rm -f "$FAILED_SHA_FILE"
+
+if ! git merge-base --is-ancestor "$previous" "$target"; then
+  echo "origin/$BRANCH is not a fast-forward from $previous; refusing automatic deployment." >&2
+  exit 1
+fi
+
+if [ -f "$APP_DIR/deploy/cloud/backup.sh" ]; then
+  backup_path="$(bash "$APP_DIR/deploy/cloud/backup.sh" "$BACKUP_DIR")"
+  echo "Persistent-data backup: $backup_path"
+fi
+
+rollback() {
+  install -d -m 0755 "$(dirname "$FAILED_SHA_FILE")"
+  printf '%s\n' "$target" > "$FAILED_SHA_FILE"
+  echo "Deployment failed; rolling tracked code back to $previous" >&2
+  git reset --hard "$previous" >/dev/null 2>&1 || true
+  systemctl restart portfolio-dashboard || true
+  for _ in $(seq 1 20); do
+    if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then
+      echo "Rollback health check passed at $previous" >&2
+      return
+    fi
+    sleep 1
+  done
+  echo "Rollback completed but health check is still failing." >&2
+}
+
+if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+  git checkout -q "$BRANCH"
+else
+  git checkout -q -b "$BRANCH" --track "origin/$BRANCH"
+fi
+
 git merge --ff-only "origin/$BRANCH"
 
-node --check server.mjs
-node --check cloud-dashboard-runtime.js
-npm test
+if ! node --check server.mjs || ! node --check cloud-dashboard-runtime.js || ! node --check public/simulator.js; then
+  rollback
+  exit 1
+fi
+if [ -f public/simulator-strategy-candidates.js ] && ! node --check public/simulator-strategy-candidates.js; then
+  rollback
+  exit 1
+fi
+if [ -f public/strategy-validation.js ] && ! node --check public/strategy-validation.js; then
+  rollback
+  exit 1
+fi
+if ! npm test; then
+  rollback
+  exit 1
+fi
 
 systemctl restart portfolio-dashboard
-for _ in $(seq 1 20); do
-  if curl -fsS http://127.0.0.1:5177/api/health >/dev/null; then
-    echo "Updated to $(git rev-parse HEAD)"
+for _ in $(seq 1 30); do
+  if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then
+    rm -f "$FAILED_SHA_FILE"
+    echo "Updated $previous -> $(git rev-parse HEAD)"
     exit 0
   fi
   sleep 1
 done
 
-echo "Health check failed; rolling code back to $previous" >&2
-git checkout --detach "$previous"
-systemctl restart portfolio-dashboard
+rollback
 exit 1
