@@ -171,3 +171,45 @@ Start-Process "http://localhost:5177"
 ```
 
 이번 프로젝트는 작업 스케줄러를 자동으로 설치하거나 변경하지 않습니다.
+
+## 전략 실전검증 (Strategy OOS)
+
+기존 지표를 **바꾸지 않고**, 앞으로 쌓이는 미래 데이터에서 어떤 전략이 실제로 좋았는지만 기록하는 관찰 시스템입니다. 새 점수를 만들지 않고, Leader·RS20·종합타이밍·Ranking V2·반등후보·R/F/F2/B/C/H2/H3/I·CAFE·MTT·진입판정 등 **이미 계산된 결과를 그대로 재사용**합니다.
+
+- 전략 정의: `strategy-oos-registry.js` (중앙 registry, 94개 · 순위형 21 / 조건형 73)
+- 기록·평가: `strategy-oos-tracker.js`
+- 진입판정 공용 모듈: `simulation-category.js` (시뮬레이터가 쓰던 함수를 그대로 분리한 것)
+- 화면: `/strategy-validation.html` (실전검증 페이지 상단 `Ranking V2 검증` / `전략 비교` 탭)
+- API: `GET /api/strategy-validation?market=ALL|KOSPI|KOSDAQ`, `GET /api/strategy-validation/detail?id=<전략ID>&market=&limit=`
+
+### 저장 위치
+
+`DASHBOARD_DATA_DIR`(로컬 `data/`, 클라우드 `/var/lib/portfolio-dashboard`) 아래에 저장하며 Git에는 올리지 않습니다.
+
+| 파일 | 내용 |
+| --- | --- |
+| `strategy-oos-history.jsonl` | 거래일·시장·종목별 당시 factor snapshot과 이후 성과(1/3/5/10/20D, 진행중 liveReturn) |
+| `strategy-oos-selections.jsonl` | 거래일·시장·전략별 선정 종목과 당시 순위, `validCount/targetCount` |
+| `strategy-oos-summary.json` | 전략별 집계 캐시(trade/cohort, 초과수익, 표본등급) |
+| `strategy-oos-state.json` | 기록일 목록, 누락 평일, 건너뛴 사유, 일자별 diagnostics |
+
+전략마다 종목을 복사 저장하지 않고 종목 snapshot 1건을 여러 전략이 참조하므로, 전략을 늘려도 저장량과 계산량이 선형으로 늘지 않습니다.
+
+### 흐름
+
+```text
+장마감 EOD 전체 refresh (15:50 KST~)
+→ 이미 계산된 factor로 종목 snapshot 저장 (signalDate = 해당 거래일)
+→ 전략별 선정 저장 (순위형은 TOP-N, 조건형은 충족 종목 전부)
+→ 다음 거래일 시가로 진입가 확정
+→ 1·3·5·10·20 거래일 종가로 확정 성과, 매 거래일 종가로 진행중 수익 갱신
+→ 같은 날 같은 시장 universe 평균 대비 초과수익 계산
+→ summary 재생성
+```
+
+- 장마감 이전, 당일 확정 데이터가 아닌 refresh에서는 snapshot을 만들지 않습니다.
+- 같은 거래일을 두 번 실행해도 `signalDate+market+code`, `signalDate+market+strategyId` 키로 중복 저장되지 않습니다.
+- 서버가 꺼져 있던 날은 이후 데이터로 소급 생성하지 않고 `strategy-oos-state.json`에 기록 없음으로 남깁니다.
+- KIS 실패 등으로 factor가 없으면 0으로 바꾸지 않고 해당 전략에서 제외하며 `validCount/targetCount`로 표시합니다.
+- 표본 등급: N<10 표본 부족 · 10~19 초기 참고 · 20~49 비교 가능 · 50+ 누적 의미 있음.
+- 실전검증 결과로 라이브 전략(배점·Gate·cutoff)을 자동으로 바꾸지 않습니다. 관찰·연구용입니다.

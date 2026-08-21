@@ -2734,3 +2734,162 @@ td {
     flex-wrap: nowrap;
   }
 }
+
+/* ---- 전략 비교 실전검증 ---- */
+.validation-switch {
+  margin-bottom: 8px;
+}
+
+.validation-switch a {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.validation-switch a.active {
+  color: var(--text);
+  background: #263343;
+  border-color: #3b526b;
+}
+
+.strategy-table {
+  min-width: 0;
+}
+
+.strategy-table .th-sort {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.strategy-table .link-btn {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.strategy-table .link-btn:hover {
+  color: var(--blue);
+}
+
+.strategy-table td.strategy-name {
+  max-width: 260px;
+  white-space: normal;
+}
+
+.strategy-table td.strategy-name small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.sample-grade {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+}
+
+.sample-insufficient {
+  color: var(--muted);
+}
+
+.sample-early {
+  color: var(--amber);
+}
+
+.sample-comparable,
+.sample-solid {
+  color: var(--green);
+}
+
+.running-cell {
+  background: #16202b;
+}
+
+.pending-chip {
+  color: var(--amber);
+  font-size: 11px;
+}
+
+.strategy-group {
+  margin-bottom: 14px;
+}
+
+.strategy-group h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 14px;
+  flex-wrap: wrap;
+}
+
+.strategy-group h3 small {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.cohort-block {
+  margin-bottom: 14px;
+}
+
+.cohort-block h4 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.cohort-block h4 small {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.detail-table {
+  min-width: 900px;
+}
+
+.detail-table td.factor-cell {
+  max-width: 320px;
+  white-space: normal;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (max-width: 720px) {
+  /* 모바일 기본은 핵심 열(전략 · N · 5D · 10D · 초과수익)만. 나머지는 전략명을
+     눌러 상세에서 확인한다. 페이지 가로 overflow가 생기지 않아야 한다. */
+  .strategy-table .col-extra {
+    display: none;
+  }
+
+  .strategy-table {
+    font-size: 11px;
+  }
+
+  .strategy-table td.strategy-name {
+    max-width: 150px;
+  }
+
+  .validation-switch {
+    width: 100%;
+  }
+}

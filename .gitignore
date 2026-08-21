@@ -12,6 +12,10 @@ free-float.json
 simulation-ledger.json
 data/ranking-live-history.jsonl
 data/ranking-live-summary.json
+data/strategy-oos-history.jsonl
+data/strategy-oos-selections.jsonl
+data/strategy-oos-summary.json
+data/strategy-oos-state.json
 data/latest-snapshot.json
 data/refresh-state.json
 data/*.tmp

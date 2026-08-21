@@ -7,7 +7,9 @@ import { portfolio } from "./portfolio.js";
 import { buildIndicators, buildPortfolioSummary, classifyHolding, toNumber } from "./signals.js";
 import { buildLeaderDecision, calcLeaderBase, enrichLeaderScores } from "./leader.js";
 import { buildStrategyConfirmation } from "./strategy-confirmation.js";
+import { simulationCategory } from "./simulation-category.js";
 import { createRankingLiveTracker, deriveSignalDate, safeTrackerTask } from "./ranking-live-tracker.js";
+import { createStrategyOosTracker, safeStrategyTask } from "./strategy-oos-tracker.js";
 import { rankMarketRowsV2 } from "./public/rebound-ranking-v2.js";
 import { buildRelativeStrength20 } from "./relative-strength.js";
 import { createStockEasyCache } from "./stockeasy.js";
@@ -47,6 +49,19 @@ const RANKING_LIVE_SUMMARY_FILE = path.join(RANKING_LIVE_DIR, "ranking-live-summ
 const rankingLiveTracker = createRankingLiveTracker({
   historyFile: RANKING_LIVE_HISTORY_FILE,
   summaryFile: RANKING_LIVE_SUMMARY_FILE
+});
+// Live strategy comparison (out-of-sample). Separate files from both the
+// simulator ledger and the Ranking V2 tracker on purpose: this system only
+// observes the existing strategies, and must never write into either of them.
+const STRATEGY_OOS_HISTORY_FILE = path.join(DASHBOARD_DATA_DIR, "strategy-oos-history.jsonl");
+const STRATEGY_OOS_SELECTION_FILE = path.join(DASHBOARD_DATA_DIR, "strategy-oos-selections.jsonl");
+const STRATEGY_OOS_SUMMARY_FILE = path.join(DASHBOARD_DATA_DIR, "strategy-oos-summary.json");
+const STRATEGY_OOS_STATE_FILE = path.join(DASHBOARD_DATA_DIR, "strategy-oos-state.json");
+const strategyOosTracker = createStrategyOosTracker({
+  historyFile: STRATEGY_OOS_HISTORY_FILE,
+  selectionFile: STRATEGY_OOS_SELECTION_FILE,
+  summaryFile: STRATEGY_OOS_SUMMARY_FILE,
+  stateFile: STRATEGY_OOS_STATE_FILE
 });
 // Supplemental, display-only external-strategy badges. Fail-soft: a
 // StockEasy outage must never affect KIS data, Ranking V2, or page render.
@@ -109,6 +124,44 @@ function scheduleRankingLiveMaintenance({ payload = null, historyByCode = null, 
       trackerError(error);
     } finally {
       rankingMaintenanceRunning = false;
+    }
+  }, 0);
+}
+
+function strategyTrackerError(error) {
+  console.error(`[strategy-oos-tracker] ${error?.message ?? error}`);
+}
+
+let strategyMaintenanceRunning = false;
+
+// Runs on the payload the EOD full refresh just produced. recordSnapshot()
+// itself refuses anything that is not today's confirmed close, so a manual or
+// intraday refresh can never create a snapshot, and a day the server missed is
+// never back-filled. Evaluation reuses the already-loaded price history, so the
+// whole strategy registry costs no additional KIS calls for todays universe.
+function scheduleStrategyOosMaintenance({ payload = null, historyByCode = null, record = false } = {}) {
+  if (record && payload) {
+    const outcome = safeStrategyTask(() => strategyOosTracker.recordSnapshot(payload, historyByCode), strategyTrackerError);
+    if (outcome.ok) {
+      structuredLog("STRATEGY_OOS_SNAPSHOT", {
+        recorded: outcome.value.recorded === true,
+        reason: outcome.value.reason,
+        signalDate: outcome.value.signalDate,
+        records: outcome.value.addedRecords,
+        selections: outcome.value.addedSelections
+      });
+    }
+  }
+  if (strategyMaintenanceRunning || !process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET) return;
+  strategyMaintenanceRunning = true;
+  setTimeout(async () => {
+    try {
+      const result = await strategyOosTracker.evaluatePending(async (code) => historyByCode?.get(code) ?? fetchHistory(code));
+      if (result.updated) structuredLog("STRATEGY_OOS_EVALUATED", result);
+    } catch (error) {
+      strategyTrackerError(error);
+    } finally {
+      strategyMaintenanceRunning = false;
     }
   }, 0);
 }
@@ -1380,6 +1433,7 @@ async function buildMarketScreener(limit = 100, force = false, marketFilter = "A
   const cached = force ? null : cacheGet(cacheKey, 1000 * 60 * 30);
   if (cached) {
     if (normalizedMarket === "ALL") scheduleRankingLiveMaintenance();
+    if (normalizedMarket === "ALL") scheduleStrategyOosMaintenance();
     return cached;
   }
   if (!force && normalizedMarket !== "ALL") {
@@ -1525,6 +1579,7 @@ async function buildMarketScreener(limit = 100, force = false, marketFilter = "A
   };
   const cachedPayload = cacheSet(cacheKey, payload);
   if (normalizedMarket === "ALL") scheduleRankingLiveMaintenance({ payload, historyByCode, record: true });
+  if (normalizedMarket === "ALL") scheduleStrategyOosMaintenance({ payload, historyByCode, record: true });
   return cachedPayload;
 }
 
@@ -1974,27 +2029,6 @@ function simulationRank(row) {
     + Math.min(supply.instStreak ?? 0, 5) * 8
     + Math.min(supply.tradingValueRatio20 ?? 0, 8) * 7
     + Math.max(supply.smartMoneyBodyPct ?? 0, 0) * 20;
-}
-
-function simulationCategory(row) {
-  const flags = row.strategy?.flags ?? {};
-  const supply = row.supply ?? {};
-  const dayChange = row.changeRate ?? row.strategy?.dayChangePct ?? 0;
-  const change3d = row.changeRate3d ?? row.strategy?.change3dPct ?? 0;
-  const overheat = Boolean(row.strategy?.overheat) || dayChange >= 10 || change3d >= 12;
-  const streak = (supply.foreignStreak ?? 0) >= 2 || (supply.instStreak ?? 0) >= 2;
-  const smartMoney = (supply.smartMoneyBodyPct ?? 0) >= 0.3 || (supply.smartMoneyTradingSharePct ?? 0) >= 10;
-  const explosion = (supply.tradingValueRatio20 ?? 0) >= 3;
-
-  if (flags.I) return { key: "avoid", label: "매수보류", targetDays: 0, actionable: false, tone: "danger" };
-  if (overheat) return { key: "overheat", label: "추격주의", targetDays: 0, actionable: false, tone: "danger" };
-  if (flags.H3) return { key: "special", label: "단기 특수", targetDays: 3, actionable: true, tone: "watch" };
-  if (flags.R) return { key: "ready", label: "우선 검토", targetDays: 5, actionable: true, tone: "buy" };
-  if (flags.F || flags.F2 || (flags.B && (supply.liquidityScore ?? 0) >= 50)) {
-    return { key: "candidate", label: "분할 후보", targetDays: 10, actionable: true, tone: "buy" };
-  }
-  if (streak || smartMoney || explosion || flags.C) return { key: "observe", label: "관심 관찰", targetDays: 0, actionable: false, tone: "hold" };
-  return { key: "none", label: "관망", targetDays: 0, actionable: false, tone: "hold" };
 }
 
 function normalizeSimulationCandidate(row, source, leaderOverride = null) {
@@ -2786,7 +2820,8 @@ const server = http.createServer(async (req, res) => {
         snapshotAgeSeconds: snapshot ? Math.max(0, Math.round((Date.now() - new Date(snapshot.generatedAt).getTime()) / 1000)) : null,
         refreshStatus: refreshState.status,
         lastRefreshSuccessAt: refreshState.lastSuccessAt ?? null,
-        trackerStatus: existsSync(RANKING_LIVE_HISTORY_FILE) ? "available" : "empty"
+        trackerStatus: existsSync(RANKING_LIVE_HISTORY_FILE) ? "available" : "empty",
+        strategyTrackerStatus: existsSync(STRATEGY_OOS_HISTORY_FILE) ? "available" : "empty"
       });
       return;
     }
@@ -2901,6 +2936,24 @@ const server = http.createServer(async (req, res) => {
       json(res, 200, rankingLiveTracker.summary({ market: normalizedMarket, signalDate }));
       return;
     }
+    if (url.pathname === "/api/strategy-validation") {
+      const market = String(url.searchParams.get("market") || "ALL").toUpperCase();
+      const normalizedMarket = ["KOSPI", "KOSDAQ"].includes(market) ? market : "ALL";
+      json(res, 200, strategyOosTracker.summary({ market: normalizedMarket }));
+      return;
+    }
+    if (url.pathname === "/api/strategy-validation/detail") {
+      const strategyId = url.searchParams.get("id");
+      if (!strategyId) {
+        json(res, 400, { error: "STRATEGY_ID_REQUIRED" });
+        return;
+      }
+      const market = String(url.searchParams.get("market") || "ALL").toUpperCase();
+      const normalizedMarket = ["KOSPI", "KOSDAQ"].includes(market) ? market : "ALL";
+      const limit = Math.min(120, Math.max(1, Number(url.searchParams.get("limit") || 40)));
+      json(res, 200, strategyOosTracker.detail({ strategyId, market: normalizedMarket, limit }));
+      return;
+    }
     if (url.pathname === "/api/leader") {
       if (!CLOUD_MODE && (!process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET)) {
         json(res, 400, { error: "KIS keys are required" });
@@ -2992,6 +3045,7 @@ server.listen(PORT, HOST, () => {
   console.log(`Portfolio signal dashboard: http://${HOST}:${PORT}`);
   if (CLOUD_MODE) startCloudScheduler();
   if (existsSync(RANKING_LIVE_HISTORY_FILE)) scheduleRankingLiveMaintenance();
+  if (existsSync(STRATEGY_OOS_HISTORY_FILE)) scheduleStrategyOosMaintenance();
   // Fire-and-forget: never awaited, never blocks server startup or any request.
   stockEasyCache.ensureFresh();
   setInterval(() => stockEasyCache.ensureFresh(), 5 * 60 * 1000);

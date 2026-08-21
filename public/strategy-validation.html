@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>전략 비교 실전검증</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell validation-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Live Strategy Comparison</p>
+          <h1>전략 비교 실전검증</h1>
+        </div>
+        <nav class="top-actions" aria-label="대시보드 메뉴">
+          <a class="ghost-btn nav-btn" href="/"><i class="nav-full">종합순위</i><i class="nav-short">종합</i></a>
+          <a class="ghost-btn nav-btn" href="/leader.html"><i class="nav-full">주도주</i><i class="nav-short">주도</i></a>
+          <a class="ghost-btn nav-btn" href="/scout.html"><i class="nav-full">반등후보</i><i class="nav-short">반등</i></a>
+          <a class="ghost-btn nav-btn" href="/strategies.html"><i class="nav-full">전략후보</i><i class="nav-short">전략</i></a>
+          <a class="ghost-btn nav-btn" href="/simulator.html"><i class="nav-full">시뮬레이터</i><i class="nav-short">시뮬</i></a>
+          <a class="ghost-btn nav-btn active-nav" href="/strategy-validation.html"><i class="nav-full">실전검증</i><i class="nav-short">검증</i></a>
+          <button id="strategyRefresh" class="icon-btn" title="새로고침" aria-label="새로고침">↻</button>
+        </nav>
+      </header>
+
+      <div class="tabs validation-switch" role="tablist">
+        <a href="/ranking-validation.html" role="tab">Ranking V2 검증</a>
+        <a href="/strategy-validation.html" class="active" role="tab" aria-selected="true">전략 비교</a>
+      </div>
+
+      <section class="notice">
+        <strong>실전 OOS 결과입니다. 미래 데이터만 누적하며 과거 snapshot은 이후 정보로 수정하지 않습니다.</strong>
+        <span>표본이 적은 초기 성과는 전략 우열을 의미하지 않습니다. 신호일 장마감 확정 후 다음 거래일 시가 진입, 왕복비용 0.23%, 같은 날 같은 시장 평균 대비 초과수익 기준입니다.</span>
+      </section>
+
+      <section class="metrics" id="strategyMetrics"></section>
+
+      <section class="validation-toolbar" aria-label="전략 비교 필터">
+        <div class="tabs" id="strategyMarkets">
+          <button class="active" data-market="ALL" type="button">전체</button>
+          <button data-market="KOSPI" type="button">KOSPI</button>
+          <button data-market="KOSDAQ" type="button">KOSDAQ</button>
+        </div>
+        <div class="tabs" id="strategyScope">
+          <button class="active" data-scope="featured" type="button">대표 전략</button>
+          <button data-scope="all" type="button">전체 전략</button>
+        </div>
+        <div class="tabs" id="strategyLevel">
+          <button class="active" data-level="cohorts" type="button">코호트(동일비중)</button>
+          <button data-level="trades" type="button">개별 종목</button>
+        </div>
+      </section>
+
+      <section class="validation-panel">
+        <div class="section-title">
+          <div>
+            <h2 id="strategyTableTitle">대표 전략 비교</h2>
+            <p id="strategyStatus">기록 확인 중</p>
+          </div>
+        </div>
+        <div id="strategyTables"></div>
+      </section>
+
+      <section class="validation-panel" id="strategyDetailPanel" hidden>
+        <div class="section-title">
+          <div>
+            <h2 id="strategyDetailTitle">전략 상세</h2>
+            <p id="strategyDetailSub">날짜별 cohort · 당시 순위 · 당시 factor · 진입가 · 확정 성과</p>
+          </div>
+          <button id="strategyDetailClose" class="ghost-btn" type="button">닫기</button>
+        </div>
+        <div id="strategyDetail"></div>
+      </section>
+    </main>
+    <script type="module" src="/strategy-validation.js"></script>
+  </body>
+</html>
