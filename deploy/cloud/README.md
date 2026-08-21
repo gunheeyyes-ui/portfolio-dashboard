@@ -82,4 +82,4 @@ sudo chown -R portfolio-dashboard:portfolio-dashboard /var/lib/portfolio-dashboa
 sudo systemctl start portfolio-dashboard
 ```
 
-Deployment updates never remove `/var/lib/portfolio-dashboard`. Back up `latest-snapshot.json` and `ranking-live-history.jsonl` regularly.
+Deployment updates never remove `/var/lib/portfolio-dashboard`. Back up `latest-snapshot.json`, `ranking-live-history.jsonl`, and the strategy OOS files (`strategy-oos-history.jsonl`, `strategy-oos-selections.jsonl`, `strategy-oos-state.json`) regularly. `backup.sh` includes the strategy OOS and simulator files automatically once they exist.
