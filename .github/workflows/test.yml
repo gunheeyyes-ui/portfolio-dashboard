@@ -27,8 +27,13 @@ jobs:
           node --check public/simulator.js
           node --check public/simulator-strategy-candidates.js
           node --check public/strategy-candidate-engine.js
+          node --check public/strategy-consensus.js
+          node --check public/strategy-consensus-cohorts.js
+          node --check public/strategy-validation.js
           node --check public/simulation-category.js
           node --check public/strategy-oos-registry.js
+          node --check backtest-v3/consensus.mjs
+          node --check backtest-consensus-v3.mjs
           node --check deploy/cloud/github-ci-gate.mjs
           bash -n deploy/cloud/update.sh
           bash -n deploy/cloud/backup.sh

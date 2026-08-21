@@ -57,6 +57,9 @@ function hasCafeMtt(item) {
 function passesFilter(item, view) {
   if (state.filter === "five") return view.strategies.length >= 5;
   if (state.filter === "three-axes") return view.axes.length >= 3;
+  if (state.filter === "five-three") return view.strategies.length >= 5 && view.axes.length >= 3;
+  if (state.filter === "four-actionable") return view.axes.length >= 4 && item.feature.actionable === true;
+  if (state.filter === "leader-rs-three") return view.axes.length >= 3 && hasLeaderRs(view.axes);
   if (state.filter === "actionable") return item.feature.actionable === true;
   if (state.filter === "leader-rs") return hasLeaderRs(view.axes);
   if (state.filter === "confirm") return hasCafeMtt(item);
