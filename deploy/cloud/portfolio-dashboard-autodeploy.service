@@ -8,5 +8,8 @@ Type=oneshot
 User=root
 Environment=DASHBOARD_GIT_BRANCH=main
 Environment=DASHBOARD_APP_DIR=/opt/portfolio-dashboard
+Environment=DASHBOARD_REQUIRE_GITHUB_CI=1
+Environment=DASHBOARD_GITHUB_REPOSITORY=gunheeyyes-ui/portfolio-dashboard
+Environment=DASHBOARD_GITHUB_WORKFLOW_NAME=test
 ExecStart=/usr/bin/env bash /opt/portfolio-dashboard/deploy/cloud/auto-update.sh
 Nice=10
