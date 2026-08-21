@@ -6,6 +6,7 @@ BRANCH="${DASHBOARD_GIT_BRANCH:-main}"
 HEALTH_URL="${DASHBOARD_HEALTH_URL:-http://127.0.0.1:5177/api/health}"
 LOCK_FILE="${DASHBOARD_DEPLOY_LOCK:-/run/lock/portfolio-dashboard-update.lock}"
 BACKUP_DIR="${DASHBOARD_BACKUP_DIR:-/var/backups/portfolio-dashboard}"
+FAILED_SHA_FILE="${DASHBOARD_FAILED_SHA_FILE:-/var/lib/portfolio-dashboard/auto-deploy-failed-sha}"
 
 if [ "${EUID:-$(id -u)}" -ne 0 ]; then
   echo "Run this updater as root (sudo)." >&2
@@ -40,9 +41,17 @@ git fetch --prune origin "$BRANCH"
 target="$(git rev-parse "origin/$BRANCH")"
 
 if [ "$previous" = "$target" ]; then
+  rm -f "$FAILED_SHA_FILE"
   echo "Already up to date at $previous"
   exit 0
 fi
+
+if [ -f "$FAILED_SHA_FILE" ] && [ "$(cat "$FAILED_SHA_FILE" 2>/dev/null || true)" = "$target" ]; then
+  echo "Skipping previously failed deployment $target; waiting for a newer main commit."
+  exit 0
+fi
+# A newer target gets one fresh attempt.
+rm -f "$FAILED_SHA_FILE"
 
 if ! git merge-base --is-ancestor "$previous" "$target"; then
   echo "origin/$BRANCH is not a fast-forward from $previous; refusing automatic deployment." >&2
@@ -55,6 +64,8 @@ if [ -f "$APP_DIR/deploy/cloud/backup.sh" ]; then
 fi
 
 rollback() {
+  install -d -m 0755 "$(dirname "$FAILED_SHA_FILE")"
+  printf '%s\n' "$target" > "$FAILED_SHA_FILE"
   echo "Deployment failed; rolling tracked code back to $previous" >&2
   git reset --hard "$previous" >/dev/null 2>&1 || true
   systemctl restart portfolio-dashboard || true
@@ -96,6 +107,7 @@ fi
 systemctl restart portfolio-dashboard
 for _ in $(seq 1 30); do
   if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then
+    rm -f "$FAILED_SHA_FILE"
     echo "Updated $previous -> $(git rev-parse HEAD)"
     exit 0
   fi
