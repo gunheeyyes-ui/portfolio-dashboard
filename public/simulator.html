@@ -65,7 +65,7 @@
           </div>
           <div class="top-actions">
             <button id="strategyCandidateRefresh" class="icon-btn" type="button" title="전략 후보 새로고침" aria-label="전략 후보 새로고침">↻</button>
-            <a class="ghost-btn nav-btn" href="/strategy-validation.html">94개 전략 성과</a>
+            <a class="ghost-btn nav-btn" href="/strategy-validation.html">전략·합의 성과</a>
           </div>
         </div>
 
@@ -82,6 +82,9 @@
           <button class="active" data-strategy-filter="all" type="button">전체</button>
           <button data-strategy-filter="five" type="button">5전략+</button>
           <button data-strategy-filter="three-axes" type="button">3계열+</button>
+          <button data-strategy-filter="five-three" type="button">5전략+·3계열+</button>
+          <button data-strategy-filter="four-actionable" type="button">4계열+·실제진입</button>
+          <button data-strategy-filter="leader-rs-three" type="button">Leader+RS·3계열+</button>
           <button data-strategy-filter="actionable" type="button">실제진입</button>
           <button data-strategy-filter="leader-rs" type="button">Leader+RS</button>
           <button data-strategy-filter="confirm" type="button">CAFE/MTT</button>
@@ -89,10 +92,10 @@
 
         <section class="score-guide">
           <strong>합의 해석</strong>
-          <span><b>전략 수</b> 실제로 충족한 전략 개수</span>
+          <span><b>전략 수</b> 실제로 충족한 기본 전략 개수</span>
           <span><b>계열 수</b> 주도·RS·타이밍·진입·반등/자리·CAFE/MTT 중 서로 다른 논리 수</span>
           <span><b>예: 7전략 · 4계열</b> 중첩 전략 7개지만 독립 논리는 4종류라는 뜻</span>
-          <small>대표14/전체94 모두 중앙 Strategy Registry의 동일 정의를 직접 사용합니다. TOP3와 TOP10 같은 포함관계는 전략 수에는 각각 잡히지만 계열 수에서는 한 번만 계산합니다. 이 패널은 관찰용이며 실제 가상매수는 위의 기존 진입후보 규칙만 따릅니다.</small>
+          <small>대표14/전체94는 기본 Strategy Registry만 셉니다. 합의 자체를 또 하나의 전략으로 재귀적으로 세지 않습니다. 아래 조합 필터의 미래 성과는 실전검증의 ‘전략·계열 합의’ 그룹에서 별도로 누적합니다. 실제 가상매수는 위의 기존 진입후보 규칙만 따릅니다.</small>
         </section>
         <div id="strategyCandidateList" class="sim-card-grid"></div>
       </section>
