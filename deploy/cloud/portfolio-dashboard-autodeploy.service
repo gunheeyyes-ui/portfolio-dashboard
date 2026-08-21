@@ -1,0 +1,12 @@
+[Unit]
+Description=Portfolio Dashboard GitHub main auto deploy
+After=network-online.target portfolio-dashboard.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Environment=DASHBOARD_GIT_BRANCH=main
+Environment=DASHBOARD_APP_DIR=/opt/portfolio-dashboard
+ExecStart=/opt/portfolio-dashboard/deploy/cloud/auto-update.sh
+Nice=10
