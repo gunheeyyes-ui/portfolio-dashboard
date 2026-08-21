@@ -110,14 +110,14 @@ const COLUMNS = [
   { key: "name", label: "전략", align: "left", core: true },
   { key: "n", label: "N", core: true },
   { key: "running", label: "진행중", extra: true },
-  { key: "runningReturn", label: "진행중 수익", extra: true },
-  { key: "r3", label: "3D", extra: true },
-  { key: "r5", label: "5D", core: true },
-  { key: "r10", label: "10D", core: true },
-  { key: "r20", label: "20D", extra: true },
-  { key: "excess10", label: "10D 초과", core: true },
+  { key: "runningReturn", label: "진행중 순", extra: true },
+  { key: "r3", label: "3D 순", extra: true },
+  { key: "r5", label: "5D 순", core: true },
+  { key: "r10", label: "10D 순", core: true },
+  { key: "r20", label: "20D 순", extra: true },
+  { key: "excess10", label: "10D 초과(순)", core: true },
   { key: "win10", label: "승률", extra: true },
-  { key: "median10", label: "10D 중앙", extra: true },
+  { key: "median10", label: "10D 중앙(순)", extra: true },
   { key: "pf10", label: "PF", extra: true },
   { key: "mae10", label: "MAE", extra: true },
   { key: "latest", label: "최근 선정", extra: true }
@@ -209,19 +209,26 @@ function factorSummary(factors) {
   return escapeHtml(parts.join(" · "));
 }
 
+function returnBreakdown(outcome) {
+  if (!outcome) return '<span class="pending-chip">진행중</span>';
+  const gross = missing(outcome.grossReturnPct) ? "" : `<br><small>총 ${pct(outcome.grossReturnPct)}</small>`;
+  return `${pct(outcome.netReturnPct)}${gross}`;
+}
+
 function detailRows(cohort) {
   return cohort.rows.map((row) => {
     const live = row.live;
     const confirmed = HORIZONS.map((horizon) => {
       const outcome = row.outcomes?.[horizon];
-      return `<td class="${tone(outcome?.netReturnPct)}">${outcome ? pct(outcome.netReturnPct) : '<span class="pending-chip">진행중</span>'}</td>`;
+      return `<td class="${tone(outcome?.netReturnPct)}">${returnBreakdown(outcome)}</td>`;
     }).join("");
+    const liveGross = live && !missing(live.currentGrossReturnPct) ? `<br><small>총 ${pct(live.currentGrossReturnPct)} · ${live.tradingDaysElapsed}거래일 · ${ymd(live.lastEvaluatedDate)}</small>` : "";
     return `<tr>
       <td>${row.strategyRank ?? "-"}</td>
       <td><a class="stock-link" href="https://stock.naver.com/domestic/stock/${row.code}/price" target="_blank" rel="noopener noreferrer">${escapeHtml(row.name)}</a><small>${row.code}</small></td>
       <td class="factor-cell">${factorSummary(row.factors)}</td>
       <td>${price(row.entryOpen)}<small>${row.entryDate ? ymd(row.entryDate) : "진입 대기"}</small></td>
-      <td class="${tone(live?.currentReturnPct)}">${live ? `${pct(live.currentReturnPct)}<small>${live.tradingDaysElapsed}거래일 · ${ymd(live.lastEvaluatedDate)}</small>` : "-"}</td>
+      <td class="${tone(live?.currentReturnPct)}">${live ? `${pct(live.currentReturnPct)}${liveGross}` : "-"}</td>
       ${confirmed}
       <td class="${tone(row.outcomes?.["10"]?.excessReturnPct)}">${row.outcomes?.["10"] ? pct(row.outcomes["10"].excessReturnPct) : "-"}</td>
     </tr>`;
@@ -232,15 +239,15 @@ function renderDetail(detail, strategy) {
   const panel = document.querySelector("#strategyDetailPanel");
   panel.hidden = false;
   document.querySelector("#strategyDetailTitle").textContent = `${strategy?.displayName ?? detail.strategyId} 상세`;
-  document.querySelector("#strategyDetailSub").textContent = `${strategy?.description ?? ""} · 과거 결과는 당시 snapshot 그대로이며 현재 값으로 재계산하지 않습니다.`;
+  document.querySelector("#strategyDetailSub").textContent = `${strategy?.description ?? ""} · 큰 수익률은 비용후 순수익(net), 셀 아래 '총'은 비용 차감 전 gross입니다. 과거 snapshot은 현재 값으로 재계산하지 않습니다.`;
   const body = detail.cohorts.length ? detail.cohorts.map((cohort) => `
     <section class="cohort-block">
       <h4>${cohort.signalDate} · ${cohort.market}
-        <small>선정 ${cohort.validCount}/${cohort.targetCount}종목 · 10D 코호트 ${pct(cohort.cohortReturns?.["10"]?.returnPct)} · 진행중 ${pct(cohort.liveReturnPct)}</small>
+        <small>선정 ${cohort.validCount}/${cohort.targetCount}종목 · 10D 코호트 순 ${pct(cohort.cohortReturns?.["10"]?.returnPct)} · 진행중 순 ${pct(cohort.liveReturnPct)}</small>
       </h4>
       <div class="validation-table-wrap">
         <table class="validation-table detail-table">
-          <thead><tr><th>순위</th><th>종목</th><th>당시 factor</th><th>진입가</th><th>현재(진행중)</th><th>1D</th><th>3D</th><th>5D</th><th>10D</th><th>20D</th><th>10D 초과</th></tr></thead>
+          <thead><tr><th>순위</th><th>종목</th><th>당시 factor</th><th>진입가</th><th>현재 순(진행중)</th><th>1D 순</th><th>3D 순</th><th>5D 순</th><th>10D 순</th><th>20D 순</th><th>10D 초과(순)</th></tr></thead>
           <tbody>${detailRows(cohort)}</tbody>
         </table>
       </div>
@@ -253,12 +260,14 @@ function render() {
   renderMetrics();
   renderTables();
   const meta = state.data?.meta ?? {};
-  const missing = (meta.missingSnapshotDates ?? []).length;
+  const missingDays = (meta.missingSnapshotDates ?? []).length;
+  const costPct = missing(state.data?.costPct) ? 0.23 : Number(state.data.costPct);
   document.querySelector("#strategyStatus").textContent = [
     `${(meta.signalDates ?? []).length}개 기록일`,
     `20D 확정 ${meta.completedRecordCount ?? 0}건 · 진행중 ${meta.pendingRecordCount ?? 0}건`,
-    missing ? `기록 없는 평일 ${missing}일(휴장일 포함, 소급 생성하지 않음)` : "누락 없음",
-    `집계 기준: ${state.level === "cohorts" ? "코호트 동일비중" : "개별 종목"} · 확정 성과와 진행중 수익은 분리 표시`
+    missingDays ? `기록 없는 평일 ${missingDays}일(휴장일 포함, 소급 생성하지 않음)` : "누락 없음",
+    `집계 기준: ${state.level === "cohorts" ? "코호트 동일비중" : "개별 종목"}`,
+    `수익률: 비용후(net) · 왕복 ${costPct}% 차감 · 확정/진행중 분리`
   ].join(" · ");
 }
 
