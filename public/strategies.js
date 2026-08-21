@@ -17,6 +17,10 @@ function strategyBadges(row) {
   return (row.confirmation?.badges ?? []).map((label) => `<span class="strategy-badge ${label === "실험: 낙주" ? "hold" : "buy"}">${label}</span>`).join("");
 }
 
+function strategyCount(row) {
+  return row.confirmation?.badges?.length ?? 0;
+}
+
 function matches(row) {
   const signal = row.confirmation ?? {};
   const query = state.query.trim().toLowerCase();
@@ -32,7 +36,8 @@ function matches(row) {
 
 function rows() {
   const all = [...(state.data?.rows?.KOSPI ?? []), ...(state.data?.rows?.KOSDAQ ?? [])];
-  return all.filter(matches).sort((a, b) => Number(b.confirmation?.leaderReboundPass) - Number(a.confirmation?.leaderReboundPass)
+  return all.filter(matches).sort((a, b) => strategyCount(b) - strategyCount(a)
+    || Number(b.confirmation?.leaderReboundPass) - Number(a.confirmation?.leaderReboundPass)
     || Number(b.confirmation?.cafeAndMtt) - Number(a.confirmation?.cafeAndMtt)
     || Number(a.scout?.riskScore ?? 100) - Number(b.scout?.riskScore ?? 100)
     || Number(b.scout?.stabilizeScore ?? 0) - Number(a.scout?.stabilizeScore ?? 0)
@@ -52,21 +57,20 @@ function renderMetrics() {
 
 function render() {
   const visible = rows();
-  const total = (state.data?.strategySummary?.all?.count ?? 0);
-  const asOf = state.data?.asOf ? new Date(state.data.asOf).toLocaleString("ko-KR") : "-";
-  document.querySelector("#strategyStatus").textContent = `실시간 Universe ${total}개 중 전략 통과 ${visible.length}개 · ${asOf}`;
+  const total = state.data?.strategySummary?.all?.count ?? 0;
+  document.querySelector("#strategyStatus").textContent = `검토순 ${visible.length}개 · 전략겹침↓ → Leader반등 → CAFE+MTT → Risk↓ → 하락정지↑ → 종합↑ · 성과순위 아님`;
   renderMetrics();
-  document.querySelector("#strategyCards").innerHTML = visible.map((row) => `
+  document.querySelector("#strategyCards").innerHTML = visible.map((row, index) => `
     <article class="strategy-card">
-      <div><span class="market-chip ${row.market.toLowerCase()}">${row.market}</span><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a></div>
+      <div><b class="strategy-review-rank">#${index + 1} · ${strategyCount(row)}전략</b><span class="market-chip ${row.market.toLowerCase()}">${row.market}</span><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a></div>
       <div class="strategy-card-values"><span>${price(row.price)} <b>${pct(row.changeRate)}</b></span><span>종합 <b>${row.combined?.score ?? "-"}</b></span><span>Leader <b>${row.leader?.grade ?? "-"}</b></span><span>정지 <b>${row.scout?.stabilizeScore ?? "-"}</b></span><span>Risk <b>${row.scout?.riskScore ?? "-"}</b></span><span>거래 <b>${row.supply?.liquidityScore ?? 0}</b></span></div>
       <div class="strategy-badges">${strategyBadges(row)}</div>
     </article>
   `).join("") || `<div class="loading">선택한 조건을 통과한 종목이 없습니다.</div>`;
-  document.querySelector("#strategyRows").innerHTML = visible.map((row) => {
+  document.querySelector("#strategyRows").innerHTML = visible.map((row, index) => {
     const rebound = row.confirmation?.reboundState ?? {};
     return `<tr>
-      <td><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><div class="cell-sub">${row.code}</div></td>
+      <td><b class="strategy-review-rank">#${index + 1} · ${strategyCount(row)}전략</b><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><div class="cell-sub">${row.code}</div></td>
       <td><span class="market-chip ${row.market.toLowerCase()}">${row.market}</span></td>
       <td><b>${price(row.price)}</b><div class="cell-sub">전일 ${pct(row.changeRate)} · 3일 ${pct(row.changeRate3d)}</div></td>
       <td><b>${row.combined?.score ?? "-"}</b><div class="cell-sub">${row.combined?.label ?? "관망"}</div></td>
