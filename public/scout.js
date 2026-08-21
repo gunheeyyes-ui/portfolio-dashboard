@@ -66,7 +66,7 @@ async function loadScout(force = false) {
 }
 
 function rawMarketRows(market) {
-  return state.data?.rows?.[market] ?? [];
+  return (state.data?.rows?.[market] ?? []).map((row, index) => ({ ...row, reboundRank: index + 1 }));
 }
 
 function allRawRows() {
@@ -83,6 +83,7 @@ function matchesFilter(row) {
 }
 
 function sortValue(row, key) {
+  if (key === "rank") return Number(row.reboundRank);
   if (key === "leaderScore") return Number(row.leader?.score);
   if (key === "drawdownFromHighPct") return Math.abs(Number(row.drawdownFromHighPct));
   return Number(row[key]);
@@ -99,7 +100,7 @@ function marketRows(market) {
     const bValue = sortValue(b, state.sortKey);
     const safeA = Number.isFinite(aValue) ? aValue : (direction === 1 ? Infinity : -Infinity);
     const safeB = Number.isFinite(bValue) ? bValue : (direction === 1 ? Infinity : -Infinity);
-    return (safeA - safeB) * direction || Number(a.rank ?? 9999) - Number(b.rank ?? 9999);
+    return (safeA - safeB) * direction || Number(a.reboundRank ?? 9999) - Number(b.reboundRank ?? 9999);
   });
 }
 
@@ -143,7 +144,7 @@ function renderRow(row) {
   const current = status(row);
   return `
     <tr>
-      <td><b class="rank-main">${row.rank ?? "-"}</b><div class="cell-sub">${current.label}</div></td>
+      <td><b class="rank-main">${row.reboundRank ?? "-"}</b><div class="cell-sub">${current.label}</div></td>
       <td><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><div class="cell-sub">${row.code} · ${price(row.price)} · 전일 ${pct(row.changeRate)}</div></td>
       <td><span class="leader-badge ${leaderClass(row.leader?.grade)}">${Number.isFinite(row.leader?.score) ? `${row.leader.score} ${row.leader.grade}` : "계산불가"}</span></td>
       <td><b class="${scoreClass(row.liquidityScore)}">${row.liquidityScore ?? 0}</b><div class="cell-sub">현재 돈 유입/회전</div></td>
