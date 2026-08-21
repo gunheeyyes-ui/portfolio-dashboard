@@ -41,7 +41,7 @@ done
 # /opt/portfolio-dashboard into a git checkout.
 tar -C "$APP_DIR" -czf "$code_backup" .
 echo "Code backup: $code_backup"
-if [ -x "$APP_DIR/deploy/cloud/backup.sh" ]; then
+if [ -f "$APP_DIR/deploy/cloud/backup.sh" ]; then
   bash "$APP_DIR/deploy/cloud/backup.sh" || {
     echo "Persistent-data backup failed; refusing bootstrap." >&2
     exit 1
@@ -82,14 +82,19 @@ if [ ! -f "$APP_DIR/portfolio.js" ]; then
   exit 1
 fi
 
-chmod +x "$APP_DIR/deploy/cloud/update.sh" "$APP_DIR/deploy/cloud/auto-update.sh" "$APP_DIR/deploy/cloud/bootstrap-auto-deploy.sh"
-
-if ! node --check server.mjs \
-  || ! node --check cloud-dashboard-runtime.js \
-  || ! node --check public/simulator.js \
-  || { [ ! -f public/simulator-strategy-candidates.js ] || node --check public/simulator-strategy-candidates.js; } \
-  || { [ ! -f public/strategy-validation.js ] || node --check public/strategy-validation.js; } \
-  || ! npm test; then
+if ! node --check server.mjs || ! node --check cloud-dashboard-runtime.js || ! node --check public/simulator.js; then
+  rollback_code
+  exit 1
+fi
+if [ -f public/simulator-strategy-candidates.js ] && ! node --check public/simulator-strategy-candidates.js; then
+  rollback_code
+  exit 1
+fi
+if [ -f public/strategy-validation.js ] && ! node --check public/strategy-validation.js; then
+  rollback_code
+  exit 1
+fi
+if ! npm test; then
   rollback_code
   exit 1
 fi
