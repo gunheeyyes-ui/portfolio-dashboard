@@ -47,6 +47,8 @@ persistent-data backup
 
 Automatic deployment is deferred on weekdays from **15:20 through 16:29 KST** so the 15:50 EOD full refresh and immutable OOS snapshots cannot be interrupted by a restart. A deferred commit is picked up automatically after 16:30 KST.
 
+If a commit fails syntax/tests/health, its SHA is quarantined in `/var/lib/portfolio-dashboard/auto-deploy-failed-sha`. The timer will not retry that same bad commit every two minutes; it waits until GitHub `main` advances to a newer SHA, then makes one fresh attempt.
+
 No GitHub secret, inbound webhook, public port, or self-hosted Actions runner is required. OCI only makes outbound HTTPS requests to GitHub.
 
 ## Status / logs
@@ -62,6 +64,13 @@ curl -fsS http://127.0.0.1:5177/api/health
 ## Manual deployment / retry
 
 ```bash
+sudo DASHBOARD_GIT_BRANCH=main bash /opt/portfolio-dashboard/deploy/cloud/update.sh
+```
+
+To deliberately retry a quarantined SHA after fixing an environment-only problem, remove the marker first:
+
+```bash
+sudo rm -f /var/lib/portfolio-dashboard/auto-deploy-failed-sha
 sudo DASHBOARD_GIT_BRANCH=main bash /opt/portfolio-dashboard/deploy/cloud/update.sh
 ```
 
