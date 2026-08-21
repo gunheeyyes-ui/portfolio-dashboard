@@ -60,28 +60,38 @@
         <div class="section-title">
           <div>
             <h2>오늘 전략 후보군</h2>
-            <p id="strategyCandidateStatus">대표 전략 후보 확인 중</p>
+            <p id="strategyCandidateStatus">중앙 전략 Registry 기준 후보 확인 중</p>
           </div>
           <div class="top-actions">
             <button id="strategyCandidateRefresh" class="icon-btn" type="button" title="전략 후보 새로고침" aria-label="전략 후보 새로고침">↻</button>
             <a class="ghost-btn nav-btn" href="/strategy-validation.html">94개 전략 성과</a>
           </div>
         </div>
+
         <div class="tabs" id="strategyCandidateMarkets" aria-label="전략 후보 시장">
-          <button class="active" data-strategy-market="ALL" type="button">전체</button>
+          <button class="active" data-strategy-market="ALL" type="button">전체시장</button>
           <button data-strategy-market="KOSPI" type="button">KOSPI</button>
           <button data-strategy-market="KOSDAQ" type="button">KOSDAQ</button>
         </div>
+        <div class="tabs" id="strategyCandidateModes" aria-label="전략 범위">
+          <button class="active" data-strategy-mode="featured" type="button">대표 14</button>
+          <button data-strategy-mode="all" type="button">전체 94</button>
+        </div>
+        <div class="tabs" id="strategyCandidateFilters" aria-label="전략 후보 필터">
+          <button class="active" data-strategy-filter="all" type="button">전체</button>
+          <button data-strategy-filter="five" type="button">5전략+</button>
+          <button data-strategy-filter="three-axes" type="button">3계열+</button>
+          <button data-strategy-filter="actionable" type="button">실제진입</button>
+          <button data-strategy-filter="leader-rs" type="button">Leader+RS</button>
+          <button data-strategy-filter="confirm" type="button">CAFE/MTT</button>
+        </div>
+
         <section class="score-guide">
-          <strong>관찰용</strong>
-          <span>Leader TOP3/10</span>
-          <span>RS TOP10</span>
-          <span>Leader A+RS80</span>
-          <span>타이밍 TOP10</span>
-          <span>반등우선 TOP10</span>
-          <span>반등후보 TOP10</span>
-          <span>진입후보·F2·CAFE·MTT</span>
-          <small>대표 14개 OOS 전략과 R/F/B/H2/H3 신호를 현재 시장 스크리너에서 보여줍니다. 이 패널의 종목을 전부 가상매수하지 않으며, 실제 포지션은 위의 기존 진입후보 규칙만 따릅니다.</small>
+          <strong>합의 해석</strong>
+          <span><b>전략 수</b> 실제로 충족한 전략 개수</span>
+          <span><b>계열 수</b> 주도·RS·타이밍·진입·반등/자리·CAFE/MTT 중 서로 다른 논리 수</span>
+          <span><b>예: 7전략 · 4계열</b> 중첩 전략 7개지만 독립 논리는 4종류라는 뜻</span>
+          <small>대표14/전체94 모두 중앙 Strategy Registry의 동일 정의를 직접 사용합니다. TOP3와 TOP10 같은 포함관계는 전략 수에는 각각 잡히지만 계열 수에서는 한 번만 계산합니다. 이 패널은 관찰용이며 실제 가상매수는 위의 기존 진입후보 규칙만 따릅니다.</small>
         </section>
         <div id="strategyCandidateList" class="sim-card-grid"></div>
       </section>
