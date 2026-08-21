@@ -1,4 +1,5 @@
 import { rankMarketRowsV2, reboundRankingTier } from "./rebound-ranking-v2.js";
+import { simulationCategory } from "./simulation-category.js";
 import {
   FEATURED_STRATEGY_IDS,
   RANKERS,
@@ -89,6 +90,7 @@ function featureFromRow(row, market) {
   const confirmation = row?.confirmation ?? null;
   const supply = row?.supply ?? null;
   const rawFlags = row?.strategy?.flags ?? null;
+  const category = row?.strategy ? simulationCategory(row) : null;
   const price = numberOrNull(row?.price ?? row?.quote?.price);
   const leaderScore = numberOrNull(leader?.score);
   const grade = leader?.grade && leader.grade !== "계산불가" ? leader.grade : null;
@@ -126,9 +128,9 @@ function featureFromRow(row, market) {
     mtt: boolOrNull(confirmation, confirmation?.minerviniPass),
     leaderRebound: boolOrNull(confirmation, confirmation?.leaderReboundPass),
     deepRecovery: boolOrNull(confirmation, confirmation?.deepRecoveryPass),
-    actionable: row?.simCategory ? row.simCategory.actionable === true : null,
-    simCategory: row?.simCategory?.key ?? null,
-    simCategoryLabel: row?.simCategory?.label ?? null
+    actionable: category ? category.actionable === true : null,
+    simCategory: category?.key ?? null,
+    simCategoryLabel: category?.label ?? null
   };
 }
 

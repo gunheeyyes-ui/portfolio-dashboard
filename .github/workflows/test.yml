@@ -22,9 +22,16 @@ jobs:
         run: |
           node --check server.mjs
           node --check cloud-dashboard-runtime.js
+          node --check simulation-category.js
+          node --check strategy-oos-registry.js
           node --check public/simulator.js
           node --check public/simulator-strategy-candidates.js
           node --check public/strategy-candidate-engine.js
+          node --check public/simulation-category.js
           node --check public/strategy-oos-registry.js
+          node --check deploy/cloud/github-ci-gate.mjs
+          bash -n deploy/cloud/update.sh
+          bash -n deploy/cloud/backup.sh
+          bash -n deploy/cloud/auto-update.sh
       - name: Tests
         run: npm test

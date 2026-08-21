@@ -7,6 +7,10 @@ HEALTH_URL="${DASHBOARD_HEALTH_URL:-http://127.0.0.1:5177/api/health}"
 LOCK_FILE="${DASHBOARD_DEPLOY_LOCK:-/run/lock/portfolio-dashboard-update.lock}"
 BACKUP_DIR="${DASHBOARD_BACKUP_DIR:-/var/backups/portfolio-dashboard}"
 FAILED_SHA_FILE="${DASHBOARD_FAILED_SHA_FILE:-/var/lib/portfolio-dashboard/auto-deploy-failed-sha}"
+GITHUB_REPOSITORY="${DASHBOARD_GITHUB_REPOSITORY:-gunheeyyes-ui/portfolio-dashboard}"
+GITHUB_WORKFLOW_NAME="${DASHBOARD_GITHUB_WORKFLOW_NAME:-test}"
+GITHUB_API_BASE="${DASHBOARD_GITHUB_API_BASE:-https://api.github.com}"
+REQUIRE_GITHUB_CI="${DASHBOARD_REQUIRE_GITHUB_CI:-1}"
 
 if [ "${EUID:-$(id -u)}" -ne 0 ]; then
   echo "Run this updater as root (sudo)." >&2
@@ -58,6 +62,30 @@ if ! git merge-base --is-ancestor "$previous" "$target"; then
   exit 1
 fi
 
+# Production must not race ahead of GitHub CI. A direct push to main is still
+# harmless to OCI until the exact target SHA has a successful push-triggered
+# workflow named `test`. Missing/pending/failed API states are fail-closed by
+# deferring deployment; the timer will check again later.
+if [ "$REQUIRE_GITHUB_CI" != "0" ]; then
+  ci_url="$GITHUB_API_BASE/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$target&event=push&per_page=20"
+  if ! ci_payload="$(curl -fsSL --connect-timeout 5 --max-time 20 \
+    -H "Accept: application/vnd.github+json" \
+    -H "User-Agent: portfolio-dashboard-autodeploy" \
+    "$ci_url")"; then
+    echo "GitHub CI status unavailable for $target; deployment deferred."
+    exit 0
+  fi
+  if ! ci_status="$(printf '%s' "$ci_payload" | node "$APP_DIR/deploy/cloud/github-ci-gate.mjs" "$target" "$GITHUB_WORKFLOW_NAME")"; then
+    echo "GitHub CI status could not be parsed for $target; deployment deferred."
+    exit 0
+  fi
+  if [ "$ci_status" != "SUCCESS" ]; then
+    echo "GitHub CI is $ci_status for $target; deployment deferred until CI is green."
+    exit 0
+  fi
+  echo "GitHub CI passed for $target"
+fi
+
 if [ -f "$APP_DIR/deploy/cloud/backup.sh" ]; then
   backup_path="$(bash "$APP_DIR/deploy/cloud/backup.sh" "$BACKUP_DIR")"
   echo "Persistent-data backup: $backup_path"
@@ -92,6 +120,18 @@ if ! node --check server.mjs || ! node --check cloud-dashboard-runtime.js || ! n
   exit 1
 fi
 if [ -f public/simulator-strategy-candidates.js ] && ! node --check public/simulator-strategy-candidates.js; then
+  rollback
+  exit 1
+fi
+if [ -f public/strategy-candidate-engine.js ] && ! node --check public/strategy-candidate-engine.js; then
+  rollback
+  exit 1
+fi
+if [ -f public/simulation-category.js ] && ! node --check public/simulation-category.js; then
+  rollback
+  exit 1
+fi
+if [ -f public/strategy-oos-registry.js ] && ! node --check public/strategy-oos-registry.js; then
   rollback
   exit 1
 fi
