@@ -4,6 +4,8 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import {
+  BASE_STRATEGY_REGISTRY,
+  CONSENSUS_DEFINITION_VERSION,
   STRATEGY_DEFINITION_VERSION,
   STRATEGY_OOS_SCHEMA,
   STRATEGY_REGISTRY_HASH,
@@ -92,20 +94,23 @@ function canonicalGitBlobSha1(content) {
     .digest("hex");
 }
 
-test("Node and browser use the exact same strategy registry module", () => {
-  assert.strictEqual(rootRegistry, browserRegistry);
-  assert.equal(rootRegistry.length, 94);
+test("browser candidate registry stays at the exact 94 base strategies while Node OOS adds consensus cohorts", () => {
+  assert.strictEqual(BASE_STRATEGY_REGISTRY, browserRegistry);
+  assert.equal(browserRegistry.length, 94);
+  assert.equal(rootRegistry.length, 107);
   assert.equal(strategyCatalogInfo().featuredCount, 14);
   assert.equal(strategyCatalogInfo().allCount, 94);
+  assert.equal(strategyById("CONSENSUS_5S_3A")?.group, "consensus");
 });
 
-test("OOS schema locks the intended strategy-definition version and registry hash", () => {
+test("OOS schema locks base registry plus consensus-definition version", () => {
   const registryText = readFileSync(new URL("./public/strategy-oos-registry.js", import.meta.url), "utf8");
-  assert.equal(STRATEGY_DEFINITION_VERSION, 1);
+  assert.equal(STRATEGY_DEFINITION_VERSION, 2);
+  assert.equal(CONSENSUS_DEFINITION_VERSION, 1);
   assert.equal(STRATEGY_REGISTRY_HASH, canonicalGitBlobSha1(registryText));
   assert.equal(
     STRATEGY_OOS_SCHEMA,
-    `strategy-oos-1-def${STRATEGY_DEFINITION_VERSION}-${STRATEGY_REGISTRY_HASH.slice(0, 12)}`
+    `strategy-oos-1-def${STRATEGY_DEFINITION_VERSION}-${STRATEGY_REGISTRY_HASH.slice(0, 12)}-cons${CONSENSUS_DEFINITION_VERSION}`
   );
 });
 
@@ -117,7 +122,7 @@ test("nested ranking strategies count separately but collapse to one independent
   assert.deepEqual(axes.map((axis) => axis.id), ["leader"]);
 });
 
-test("a stock matching all featured dimensions reports 14 strategies across 6 independent axes", () => {
+test("a stock matching all featured dimensions reports 14 base strategies across 6 independent axes", () => {
   const payload = {
     rows: {
       KOSPI: [strongRow("000001")],
@@ -152,7 +157,7 @@ test("market-screener errors exclude the affected code like the OOS feature buil
   assert.equal(rows.some((item) => item.feature.code === "000002"), true);
 });
 
-test("candidate panel and OOS tracker select identical members for all 94 strategies", () => {
+test("candidate panel and OOS tracker keep identical membership for all 94 base strategies", () => {
   const payload = {
     rows: {
       KOSPI: [strongRow("000001"), strongRow("000002", 2)],
@@ -167,10 +172,13 @@ test("candidate panel and OOS tracker select identical members for all 94 strate
     signalDate: "2026-08-21",
     recordedAt: "2026-08-21T15:50:00+09:00"
   });
+  const baseIds = new Set(browserRegistry.map((strategy) => strategy.id));
+  const baseSelections = selections.filter((selection) => baseIds.has(selection.strategyId));
 
-  assert.equal(new Set(selections.map((selection) => selection.strategyId)).size, 94);
+  assert.equal(new Set(selections.map((selection) => selection.strategyId)).size, 107);
+  assert.equal(new Set(baseSelections.map((selection) => selection.strategyId)).size, 94);
 
-  for (const selection of selections) {
+  for (const selection of baseSelections) {
     const expected = selection.members.map((member) => member.code).sort();
     const actual = candidates
       .filter((item) => item.feature.market === selection.market)
@@ -182,5 +190,28 @@ test("candidate panel and OOS tracker select identical members for all 94 strate
       expected,
       `${selection.market} ${selection.strategyId} candidate/OOS membership drifted`
     );
+  }
+});
+
+test("consensus OOS cohorts are derived from base matches and do not inflate browser counts", () => {
+  const payload = {
+    rows: {
+      KOSPI: [strongRow("000001")],
+      KOSDAQ: []
+    },
+    errors: []
+  };
+  const candidates = buildStrategyCandidates(payload);
+  const features = buildFeatureRows(payload, { failedCodes: new Set() });
+  const selections = buildSelections(features, {
+    signalDate: "2026-08-21",
+    recordedAt: "2026-08-21T15:50:00+09:00"
+  });
+
+  assert.equal(candidates[0].matches.some((strategy) => strategy.id.startsWith("CONSENSUS_")), false);
+  for (const id of ["CONSENSUS_5S_3A", "CONSENSUS_5S_4A", "CONSENSUS_4A_LEADER_RS", "CONSENSUS_4A_ACTIONABLE", "CONSENSUS_5S_3A_ACTIONABLE"]) {
+    const selection = selections.find((row) => row.strategyId === id && row.market === "KOSPI");
+    assert.ok(selection, `${id} selection missing`);
+    assert.deepEqual(selection.members.map((member) => member.code), ["000001"]);
   }
 });
