@@ -1,6 +1,6 @@
 import {
-  BASE_STRATEGY_REGISTRY,
   RANKERS,
+  enabledStrategies,
   hasRequiredFields
 } from "./strategy-oos-registry.js";
 
@@ -13,6 +13,7 @@ export const STRATEGY_AXES = [
   { id: "confirm", label: "CAFE/MTT" }
 ];
 
+const BASE_STRATEGIES = enabledStrategies();
 const AXIS_ORDER = new Map(STRATEGY_AXES.map((axis, index) => [axis.id, index]));
 const AXIS_LABEL = new Map(STRATEGY_AXES.map((axis) => [axis.id, axis.label]));
 
@@ -72,7 +73,7 @@ export function strategyMatchesFeature(strategy, feature) {
 }
 
 export function evaluateBaseConsensus(feature) {
-  const matches = BASE_STRATEGY_REGISTRY.filter((strategy) => strategy.enabled !== false && strategyMatchesFeature(strategy, feature));
+  const matches = BASE_STRATEGIES.filter((strategy) => strategyMatchesFeature(strategy, feature));
   const axes = axesForStrategies(matches);
   const axisIds = axes.map((axis) => axis.id);
   const axisSet = new Set(axisIds);
