@@ -29,6 +29,7 @@ jobs:
           node --check public/strategy-candidate-engine.js
           node --check public/strategy-consensus.js
           node --check public/strategy-consensus-cohorts.js
+          node --check public/strategy-validation.js
           node --check public/simulation-category.js
           node --check public/strategy-oos-registry.js
           node --check backtest-v3/consensus.mjs
