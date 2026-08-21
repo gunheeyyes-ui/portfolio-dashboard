@@ -1,0 +1,12 @@
+[Unit]
+Description=Check GitHub main for Portfolio Dashboard updates
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+AccuracySec=15s
+Persistent=true
+Unit=portfolio-dashboard-autodeploy.service
+
+[Install]
+WantedBy=timers.target
