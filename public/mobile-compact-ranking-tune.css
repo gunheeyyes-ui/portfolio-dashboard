@@ -1,0 +1,47 @@
+@media (max-width: 720px) {
+  /* Short judgement copy keeps the last columns readable without changing the
+     underlying values or desktop wording. */
+  .leader-table td:nth-child(10) .badge,
+  .leader-table td:nth-child(11) .badge,
+  .scout-table td:nth-child(11) .badge {
+    font-size: 0 !important;
+  }
+
+  .leader-table td:nth-child(10) .badge::after,
+  .leader-table td:nth-child(11) .badge::after,
+  .scout-table td:nth-child(11) .badge::after {
+    font-size: 7px;
+    font-weight: 850;
+  }
+
+  .leader-table td:nth-child(10) .badge.buy::after { content: "진입"; }
+  .leader-table td:nth-child(10) .badge.hold::after { content: "관찰"; }
+  .leader-table td:nth-child(10) .badge.danger::after { content: "주의"; }
+
+  .leader-table td:nth-child(11) .badge.buy::after,
+  .scout-table td:nth-child(11) .badge.buy::after { content: "반등"; }
+  .leader-table td:nth-child(11) .badge.hold::after,
+  .leader-table td:nth-child(11) .badge.watch::after,
+  .scout-table td:nth-child(11) .badge.hold::after,
+  .scout-table td:nth-child(11) .badge.watch::after { content: "관찰"; }
+  .leader-table td:nth-child(11) .badge.danger::after,
+  .scout-table td:nth-child(11) .badge.danger::after { content: "위험"; }
+
+  /* The first compact stylesheet hides long desktop detail in this cell.
+     Restore only the liquidity value line; strategy badges/decision copy stay
+     hidden so one stock remains a single dense table row. */
+  .leader-table td:nth-child(12) .judgement-line {
+    display: block !important;
+    overflow: hidden;
+    font-size: 6px !important;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .leader-table tbody tr,
+  .scout-table tbody tr {
+    height: 42px;
+  }
+}
