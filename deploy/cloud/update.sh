@@ -49,7 +49,7 @@ if ! git merge-base --is-ancestor "$previous" "$target"; then
   exit 1
 fi
 
-if [ -x "$APP_DIR/deploy/cloud/backup.sh" ]; then
+if [ -f "$APP_DIR/deploy/cloud/backup.sh" ]; then
   backup_path="$(bash "$APP_DIR/deploy/cloud/backup.sh" "$BACKUP_DIR")"
   echo "Persistent-data backup: $backup_path"
 fi
@@ -76,12 +76,19 @@ fi
 
 git merge --ff-only "origin/$BRANCH"
 
-if ! node --check server.mjs \
-  || ! node --check cloud-dashboard-runtime.js \
-  || ! node --check public/simulator.js \
-  || { [ -f public/simulator-strategy-candidates.js ] && ! node --check public/simulator-strategy-candidates.js; } \
-  || { [ -f public/strategy-validation.js ] && ! node --check public/strategy-validation.js; } \
-  || ! npm test; then
+if ! node --check server.mjs || ! node --check cloud-dashboard-runtime.js || ! node --check public/simulator.js; then
+  rollback
+  exit 1
+fi
+if [ -f public/simulator-strategy-candidates.js ] && ! node --check public/simulator-strategy-candidates.js; then
+  rollback
+  exit 1
+fi
+if [ -f public/strategy-validation.js ] && ! node --check public/strategy-validation.js; then
+  rollback
+  exit 1
+fi
+if ! npm test; then
   rollback
   exit 1
 fi
