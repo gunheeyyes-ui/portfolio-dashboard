@@ -7,11 +7,15 @@ const js = readFileSync(new URL("./public/index-entry-review.js", import.meta.ur
 
 test("home dashboard shows the broadened entry shortlist before the market explorer", () => {
   assert.match(html, /<h2>오늘 진입후보<\/h2>/);
-  assert.match(html, /id="homeEntryCandidates"/);
+  assert.match(html, /<table class="holdings-table home-entry-table">/);
+  assert.match(html, /<tbody id="homeEntryCandidates">/);
   assert.ok(html.indexOf("homeEntryCandidates") < html.indexOf("screenerMarkets"));
-  assert.match(html, /🔥 핵심후보/);
-  assert.match(html, /⭐ 강한후보/);
-  assert.match(html, /✅ 실제진입/);
+  assert.match(html, /<th>후보<\/th>/);
+  assert.match(html, /<th>Leader<\/th>/);
+  assert.match(html, /<th>RS<\/th>/);
+  assert.match(html, /<th>전략·계열<\/th>/);
+  assert.match(html, /<th>Risk\/Stab<\/th>/);
+  assert.match(html, /<th>실제<\/th>/);
   assert.match(html, />기존 실제진입<\/button>/);
 });
 
@@ -20,6 +24,8 @@ test("home shortlist reuses the same strategy and entry-review engines as simula
   assert.match(js, /buildEntryReviewCandidates/);
   assert.match(js, /mergeEntryCandidates/);
   assert.match(js, /feature\.actionable !== true/);
-  assert.match(js, /Leader TOP10 \+ 5전략\+ \+ 3계열\+/);
-  assert.match(js, /Leader A \+ RS80\+ \+ 3계열\+/);
+  assert.match(js, /🔥 핵심/);
+  assert.match(js, /⭐ 강한/);
+  assert.match(js, /✅ 실제/);
+  assert.match(js, /rows\.map\(renderRow\)/);
 });
