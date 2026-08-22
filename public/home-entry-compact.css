@@ -74,18 +74,18 @@
   font-weight: 780;
 }
 
-/* 9-column home summary. The stock cell intentionally owns most of the width
-   because price/day-change/drawdown and confirmation badges now live beside
-   the stock name instead of consuming separate columns. */
+/* 10-column home summary. Current price / day changes stay beside the stock,
+   while the 2-year drawdown gets its own explicit comparison column. */
 .home-entry-table th:nth-child(1) { width: 7%; }
-.home-entry-table th:nth-child(2) { width: 38%; }
+.home-entry-table th:nth-child(2) { width: 34%; }
 .home-entry-table th:nth-child(3) { width: 7%; }
-.home-entry-table th:nth-child(4) { width: 8%; }
-.home-entry-table th:nth-child(5) { width: 5%; }
-.home-entry-table th:nth-child(6) { width: 12%; }
+.home-entry-table th:nth-child(4) { width: 7%; }
+.home-entry-table th:nth-child(5) { width: 8%; }
+.home-entry-table th:nth-child(6) { width: 5%; }
 .home-entry-table th:nth-child(7) { width: 11%; }
-.home-entry-table th:nth-child(8) { width: 8%; }
-.home-entry-table th:nth-child(9) { width: 4%; }
+.home-entry-table th:nth-child(8) { width: 10%; }
+.home-entry-table th:nth-child(9) { width: 7%; }
+.home-entry-table th:nth-child(10) { width: 4%; }
 
 .home-entry-badge {
   min-height: 16px;
@@ -151,6 +151,11 @@
   color: var(--text);
   font-size: 9px !important;
   font-weight: 780;
+}
+
+.home-entry-drawdown b {
+  color: var(--muted);
+  font-weight: 850;
 }
 
 .home-entry-leader b {
