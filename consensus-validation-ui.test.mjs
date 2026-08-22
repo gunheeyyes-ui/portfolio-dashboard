@@ -20,5 +20,6 @@ test("simulator exposes high-consensus filters without changing actual entry rec
   assert.match(simulatorHtml, /data-strategy-filter="leader-rs-three"/);
   assert.match(simulatorJs, /state\.filter === "five-three"/);
   assert.match(simulatorJs, /state\.filter === "four-actionable"/);
-  assert.match(simulatorHtml, /실제 가상매수는 위의 기존 진입후보 규칙만 따릅니다/);
+  assert.match(simulatorHtml, /실제 가상 포지션은 ✅ 실제진입 배지 종목만 기존 규칙대로 기록합니다/);
+  assert.match(simulatorHtml, /실제 가상매수는 기존 실제진입 규칙만 따릅니다/);
 });

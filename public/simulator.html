@@ -27,22 +27,21 @@
       </header>
 
       <section class="notice">
-        <strong>시뮬 규칙</strong>
-        <span>실제 매수 없이 후보당 100만원을 가상 진입합니다. 분할 후보는 10일, 우선 검토는 5일, 단기 특수는 3일 뒤 자동 종료합니다.</span>
+        <strong>진입후보는 넓게, 가상매수 기록은 기존 기준 그대로</strong>
+        <span>위 진입후보에는 백테스트에서 강했던 핵심·강한후보까지 함께 보여줍니다. 다만 실제 가상 포지션은 ✅ 실제진입 배지 종목만 기존 규칙대로 기록합니다.</span>
       </section>
 
       <section class="score-guide">
-        <strong>해석</strong>
-        <span><b>메인</b> 분할 후보</span>
-        <span><b>검토</b> 우선 검토</span>
-        <span><b>단기</b> 강수급 낙주</span>
-        <span><b>보유</b> 내 보유종목도 후보에 포함</span>
-        <small>하루에 한 번만 신규 기록됩니다. 새로고침은 수익률만 갱신합니다.</small>
+        <strong>진입후보 해석</strong>
+        <span><b>🔥 핵심후보</b> Leader TOP10 + 5전략+ + 3계열+</span>
+        <span><b>⭐ 강한후보</b> Leader A + RS80+ + 3계열+</span>
+        <span><b>✅ 실제진입</b> 기존의 빡빡한 actionable 진입판정 통과</span>
+        <small>정렬은 핵심+실제진입 → 핵심 → 강한+실제진입 → 강한 → 기존 실제진입 순입니다. 핵심·강한후보는 매수 확정이 아니라 우선 검토군입니다.</small>
       </section>
       <section class="score-guide">
         <strong>기록 메타데이터</strong>
         <span>Leader A</span><span>반등후보</span><span>Leader반등</span><span>CAFE</span><span>MTT</span><span>CAFE+MTT</span>
-        <small>신규 기록부터 전략별 성과를 나눠 볼 수 있게 진입 시점 값을 함께 저장합니다.</small>
+        <small>기존 실제진입 가상 포지션은 진입 시점 값을 함께 저장해 전략별 성과를 나눠 봅니다.</small>
       </section>
 
       <section class="metrics" id="simMetrics"></section>
@@ -50,8 +49,8 @@
       <section class="sim-panel">
         <div class="section-title">
           <div>
-            <h2>오늘 실제 진입후보</h2>
-            <p id="simStatus">시뮬레이션 데이터 확인 중</p>
+            <h2>오늘 진입후보</h2>
+            <p id="simStatus">실제진입 + 백테스트 합의 후보 확인 중</p>
           </div>
         </div>
         <div id="todayCandidates" class="sim-card-grid"></div>
@@ -95,7 +94,7 @@
           <span><b>전략 수</b> 실제로 충족한 기본 전략 개수</span>
           <span><b>계열 수</b> 주도·RS·타이밍·진입·반등/자리·CAFE/MTT 중 서로 다른 논리 수</span>
           <span><b>예: 7전략 · 4계열</b> 중첩 전략 7개지만 독립 논리는 4종류라는 뜻</span>
-          <small>대표14/전체94는 기본 Strategy Registry만 셉니다. 합의 자체를 또 하나의 전략으로 재귀적으로 세지 않습니다. 아래 조합 필터의 미래 성과는 실전검증의 ‘전략·계열 합의’ 그룹에서 별도로 누적합니다. 실제 가상매수는 위의 기존 진입후보 규칙만 따릅니다.</small>
+          <small>대표14/전체94는 기본 Strategy Registry만 셉니다. 합의 자체를 또 하나의 전략으로 재귀적으로 세지 않습니다. 아래 조합 필터의 미래 성과는 실전검증의 ‘전략·계열 합의’ 그룹에서 별도로 누적합니다. 실제 가상매수는 기존 실제진입 규칙만 따릅니다.</small>
         </section>
         <div id="strategyCandidateList" class="sim-card-grid"></div>
       </section>
