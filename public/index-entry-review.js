@@ -110,7 +110,8 @@ export function buildHomeEntryCandidates(payload) {
   const review = buildEntryReviewCandidates(items);
   const itemByCode = new Map(items.map((item) => [String(item.feature?.code ?? ""), item]));
   return mergeEntryCandidates(actual, review)
-    .map((row) => enrichHomeCandidate(row, itemByCode.get(String(row.code))));
+    .map((row) => enrichHomeCandidate(row, itemByCode.get(String(row.code))))
+    .filter((row) => row.coreCandidate || row.strongCandidate);
 }
 
 function syncHomeEntryHeader() {
@@ -125,8 +126,7 @@ function syncHomeEntryHeader() {
       <th>RS</th>
       <th>전략·계열</th>
       <th title="T=Ranking V2 Tier · 우=반등우선 시장 내 순위 · 후=반등후보 시장 내 순위">반등</th>
-      <th>Risk/Stab</th>
-      <th title="기존의 빡빡한 actionable 진입조건 통과 여부. 실제 주문 체결을 뜻하지 않음">기존진입</th>
+      <th class="home-entry-risk-head" title="Risk는 낮을수록 좋고 Stab은 높을수록 좋음">Risk/Stab</th>
     </tr>`;
 
   const guide = document.querySelector(".home-entry-panel .score-guide small");
@@ -135,8 +135,7 @@ function syncHomeEntryHeader() {
 
 function candidateLabel(row) {
   if (row.coreCandidate) return '<span class="strategy-badge buy home-entry-badge">🔥핵심</span>';
-  if (row.strongCandidate) return '<span class="strategy-badge buy home-entry-badge">⭐강한</span>';
-  return '<span class="strategy-badge buy home-entry-badge">✅기존</span>';
+  return '<span class="strategy-badge buy home-entry-badge">⭐강한</span>';
 }
 
 function stockBadges(row) {
@@ -180,9 +179,6 @@ function renderRow(row) {
     ? `${row.strategyCount}전략·${row.axisCount}계열`
     : "-";
   const riskStab = `${finite(row.scoutRiskScore) ? fmtInt.format(row.scoutRiskScore) : "-"}/${finite(row.scoutStabilizeScore) ? fmtInt.format(row.scoutStabilizeScore) : "-"}`;
-  const actual = row.actualEntry
-    ? `<span class="home-entry-actual" title="${escapeHtml(row.category?.label ?? "기존 실제진입 조건 통과")}">✅</span>`
-    : '<span class="muted">-</span>';
 
   return `
     <tr>
@@ -204,8 +200,7 @@ function renderRow(row) {
       <td><b>${finite(row.rs20) ? fmtInt.format(row.rs20) : "-"}</b></td>
       <td><b>${escapeHtml(consensus)}</b></td>
       <td class="home-entry-rebound">${reboundSummary(row)}</td>
-      <td><b>${escapeHtml(riskStab)}</b></td>
-      <td>${actual}</td>
+      <td class="home-entry-risk"><b>${escapeHtml(riskStab)}</b></td>
     </tr>`;
 }
 
@@ -215,26 +210,25 @@ async function loadHomeEntryCandidates() {
   if (!target || !status) return;
 
   syncHomeEntryHeader();
-  status.textContent = "🔥 핵심 · ⭐ 강한 · ✅ 기존진입 후보 계산 중";
-  target.innerHTML = '<tr><td colspan="10" class="loading">시장 200종목에서 백테스트 우선 후보를 찾고 있습니다.</td></tr>';
+  status.textContent = "🔥 핵심 · ⭐ 강한 후보 계산 중";
+  target.innerHTML = '<tr><td colspan="9" class="loading">시장 200종목에서 백테스트 우선 후보를 찾고 있습니다.</td></tr>';
 
   const response = await fetch("/api/market-screener?limit=100&market=ALL", { signal: AbortSignal.timeout(30000) });
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? "진입후보를 불러오지 못했습니다.");
   const payload = await response.json();
   const rows = buildHomeEntryCandidates(payload).slice(0, 16);
   const core = rows.filter((row) => row.coreCandidate).length;
-  const strong = rows.filter((row) => row.strongCandidate).length;
-  const actual = rows.filter((row) => row.actualEntry).length;
+  const strong = rows.filter((row) => row.strongCandidate && !row.coreCandidate).length;
 
-  status.textContent = `우선순위순 ${rows.length}종목 · 🔥 핵심 ${core} · ⭐ 강한 ${strong} · ✅ 기존진입 ${actual}`;
+  status.textContent = `우선순위순 ${rows.length}종목 · 🔥 핵심 ${core} · ⭐ 강한 ${strong}`;
   target.innerHTML = rows.length
     ? rows.map(renderRow).join("")
-    : '<tr><td colspan="10" class="loading">오늘 핵심·강한후보와 기존 진입조건을 충족한 종목이 없습니다.</td></tr>';
+    : '<tr><td colspan="9" class="loading">오늘 핵심·강한후보를 충족한 종목이 없습니다.</td></tr>';
 }
 
 loadHomeEntryCandidates().catch((error) => {
   const target = document.querySelector("#homeEntryCandidates");
   const status = document.querySelector("#homeEntryStatus");
   if (status) status.textContent = error.message;
-  if (target) target.innerHTML = `<tr><td colspan="10" class="loading">${escapeHtml(error.message)}</td></tr>`;
+  if (target) target.innerHTML = `<tr><td colspan="9" class="loading">${escapeHtml(error.message)}</td></tr>`;
 });

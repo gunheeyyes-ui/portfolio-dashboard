@@ -46,14 +46,14 @@
   min-width: 0 !important;
   max-width: 100%;
   table-layout: fixed;
-  font-size: 10.5px;
+  font-size: 12px;
 }
 
 .home-entry-table th,
 .home-entry-table td {
   min-width: 0;
-  padding: 4px 3px;
-  line-height: 1.12;
+  padding: 5px 4px;
+  line-height: 1.16;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -61,37 +61,49 @@
 
 .home-entry-table th {
   color: var(--muted);
-  font-size: 9.5px;
-  font-weight: 750;
-}
-
-.home-entry-table td {
-  font-size: 10.5px;
-}
-
-.home-entry-table td b {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 780;
 }
 
-/* 10-column home summary. Current price / day changes stay beside the stock,
-   while the 2-year drawdown gets its own explicit comparison column. */
+.home-entry-table td {
+  font-size: 12px;
+}
+
+.home-entry-table td b {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* 9-column shortlist: the duplicate existing-entry column is intentionally
+   omitted because the full existing-entry view remains directly below. */
 .home-entry-table th:nth-child(1) { width: 7%; }
-.home-entry-table th:nth-child(2) { width: 34%; }
-.home-entry-table th:nth-child(3) { width: 7%; }
-.home-entry-table th:nth-child(4) { width: 7%; }
-.home-entry-table th:nth-child(5) { width: 8%; }
+.home-entry-table th:nth-child(2) { width: 31%; }
+.home-entry-table th:nth-child(3) { width: 8%; }
+.home-entry-table th:nth-child(4) { width: 8%; }
+.home-entry-table th:nth-child(5) { width: 9%; }
 .home-entry-table th:nth-child(6) { width: 5%; }
 .home-entry-table th:nth-child(7) { width: 11%; }
-.home-entry-table th:nth-child(8) { width: 10%; }
-.home-entry-table th:nth-child(9) { width: 7%; }
-.home-entry-table th:nth-child(10) { width: 4%; }
+.home-entry-table th:nth-child(8) { width: 12%; }
+.home-entry-table th:nth-child(9) { width: 9%; }
+
+/* Give rebound and Risk/Stab a clear visual boundary instead of letting the
+   two compact headers read as one label. */
+.home-entry-table th:nth-child(8),
+.home-entry-table td:nth-child(8) {
+  padding-right: 9px;
+}
+
+.home-entry-table th:nth-child(9),
+.home-entry-table td:nth-child(9) {
+  padding-left: 10px;
+  border-left: 1px solid rgba(148, 163, 184, 0.22);
+}
 
 .home-entry-badge {
-  min-height: 16px;
-  padding: 1px 4px;
-  font-size: 8.5px;
-  letter-spacing: -0.35px;
+  min-height: 18px;
+  padding: 1px 5px;
+  font-size: 9.5px;
+  letter-spacing: -0.25px;
 }
 
 .home-entry-stock {
@@ -108,17 +120,17 @@
 }
 
 .home-stock-top {
-  gap: 4px;
+  gap: 5px;
   overflow: hidden;
 }
 
 .home-entry-stock .stock-link {
   flex: 0 1 auto;
-  max-width: 160px;
+  max-width: 170px;
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--text);
-  font-size: 10.5px;
+  font-size: 12.5px;
   font-weight: 850;
   white-space: nowrap;
 }
@@ -130,27 +142,27 @@
 }
 
 .home-stock-badge {
-  min-height: 14px;
+  min-height: 15px;
   padding: 0 3px;
   border-radius: 3px;
-  font-size: 7.5px;
-  line-height: 13px;
-  letter-spacing: -0.25px;
+  font-size: 8.2px;
+  line-height: 14px;
+  letter-spacing: -0.2px;
 }
 
 .home-stock-meta {
-  gap: 4px 7px;
+  gap: 5px 8px;
   margin-top: 2px;
   overflow: hidden;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10.5px;
   white-space: nowrap;
 }
 
 .home-stock-meta b {
   color: var(--text);
-  font-size: 9px !important;
-  font-weight: 780;
+  font-size: 10.5px !important;
+  font-weight: 800;
 }
 
 .home-entry-drawdown b {
@@ -169,7 +181,7 @@
 }
 
 .home-entry-rebound {
-  gap: 2px;
+  gap: 3px;
 }
 
 .home-rebound-tier,
@@ -177,14 +189,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 15px;
-  padding: 0 3px;
+  min-height: 17px;
+  padding: 0 4px;
   border: 1px solid #39414c;
   border-radius: 3px;
   color: var(--muted);
-  font-size: 7.8px;
+  font-size: 8.7px;
   font-weight: 850;
-  line-height: 13px;
+  line-height: 15px;
 }
 
 .home-rebound-tier.t1 {
@@ -217,40 +229,45 @@
   color: #9dcbff;
 }
 
-.home-entry-actual {
-  font-size: 10px;
+.home-entry-risk b {
+  font-weight: 850;
 }
 
 @media (max-width: 1100px) {
   .home-entry-table th,
   .home-entry-table td {
-    padding: 3px 2px;
-    font-size: 9px;
-    letter-spacing: -0.25px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    font-size: 10.5px;
+    letter-spacing: -0.2px;
+  }
+
+  .home-entry-table th {
+    font-size: 9.8px;
   }
 
   .home-entry-table td b,
   .home-entry-stock .stock-link {
-    font-size: 9px;
+    font-size: 10.5px;
   }
 
   .home-entry-stock .stock-link {
-    max-width: 120px;
+    max-width: 130px;
   }
 
   .home-stock-meta {
     gap: 3px 5px;
-    font-size: 7.8px;
+    font-size: 9px;
   }
 
   .home-stock-meta b {
-    font-size: 7.8px !important;
+    font-size: 9px !important;
   }
 
   .home-stock-badge,
   .home-rebound-tier,
   .home-rebound-rank {
-    font-size: 6.8px;
+    font-size: 7.5px;
   }
 }
 
@@ -265,14 +282,19 @@
 
   .home-entry-table th,
   .home-entry-table td {
-    padding: 3px 1px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    font-size: 8.5px;
+    letter-spacing: -0.3px;
+  }
+
+  .home-entry-table th {
     font-size: 8px;
-    letter-spacing: -0.35px;
   }
 
   .home-entry-table td b,
   .home-entry-stock .stock-link {
-    font-size: 8px;
+    font-size: 8.5px;
   }
 
   .home-entry-stock .stock-link {
@@ -290,30 +312,40 @@
   .home-stock-badge {
     min-height: 12px;
     padding: 0 2px;
-    font-size: 6.2px;
+    font-size: 6.5px;
     line-height: 11px;
   }
 
   .home-stock-meta {
     gap: 2px 4px;
-    font-size: 6.9px;
+    font-size: 7.2px;
   }
 
   .home-stock-meta b {
-    font-size: 6.9px !important;
+    font-size: 7.2px !important;
   }
 
   .home-entry-badge {
     min-height: 14px;
     padding: 1px 2px;
-    font-size: 7px;
+    font-size: 7.2px;
   }
 
   .home-rebound-tier,
   .home-rebound-rank {
     min-height: 12px;
     padding: 0 2px;
-    font-size: 6.2px;
+    font-size: 6.5px;
     line-height: 11px;
+  }
+
+  .home-entry-table th:nth-child(8),
+  .home-entry-table td:nth-child(8) {
+    padding-right: 4px;
+  }
+
+  .home-entry-table th:nth-child(9),
+  .home-entry-table td:nth-child(9) {
+    padding-left: 5px;
   }
 }
