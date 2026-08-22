@@ -1,0 +1,146 @@
+.home-entry-panel {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+}
+
+.home-entry-panel .section-title {
+  margin-bottom: 3px;
+}
+
+.home-entry-panel .section-title h2 {
+  font-size: 15px;
+}
+
+.home-entry-panel .section-title p {
+  font-size: 11px;
+}
+
+.home-entry-panel .score-guide {
+  gap: 6px;
+  margin-bottom: 5px;
+  padding: 4px 7px;
+  font-size: 11px;
+}
+
+.home-entry-panel .score-guide span {
+  padding: 2px 5px;
+}
+
+.home-entry-panel .score-guide small {
+  font-size: 10px;
+}
+
+.home-entry-table-wrap,
+.table-wrap.home-entry-table-wrap,
+.table-wrap:has(.home-entry-table) {
+  width: 100%;
+  max-width: 100%;
+  max-height: none;
+  overflow-x: hidden !important;
+  overflow-y: visible;
+}
+
+.holdings-table.home-entry-table,
+.home-entry-table {
+  width: 100%;
+  min-width: 0 !important;
+  max-width: 100%;
+  table-layout: fixed;
+  font-size: 11px;
+}
+
+.home-entry-table th,
+.home-entry-table td {
+  min-width: 0;
+  padding: 5px 4px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-entry-table th {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.home-entry-table td {
+  font-size: 11px;
+}
+
+.home-entry-table td b {
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.home-entry-table th:nth-child(1) { width: 9%; }
+.home-entry-table th:nth-child(2) { width: 19%; }
+.home-entry-table th:nth-child(3) { width: 15%; }
+.home-entry-table th:nth-child(4) { width: 7%; }
+.home-entry-table th:nth-child(5) { width: 15%; }
+.home-entry-table th:nth-child(6) { width: 12%; }
+.home-entry-table th:nth-child(7) { width: 9%; }
+.home-entry-table th:nth-child(8) { width: 8%; }
+.home-entry-table th:nth-child(9) { width: 6%; }
+
+.home-entry-badge {
+  min-height: 17px;
+  padding: 1px 4px;
+  font-size: 9px;
+  letter-spacing: -0.3px;
+}
+
+.home-entry-stock .stock-link {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+.home-entry-stock small {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.home-entry-actual {
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .home-entry-panel {
+    padding: 7px 8px;
+  }
+
+  .home-entry-panel .score-guide small {
+    display: none;
+  }
+
+  .home-entry-table th,
+  .home-entry-table td {
+    padding: 4px 2px;
+    font-size: 9px;
+    letter-spacing: -0.25px;
+  }
+
+  .home-entry-table td b,
+  .home-entry-stock .stock-link {
+    font-size: 9px;
+  }
+
+  .home-entry-stock small {
+    display: none;
+  }
+
+  .home-entry-badge {
+    min-height: 15px;
+    padding: 1px 2px;
+    font-size: 8px;
+  }
+}
