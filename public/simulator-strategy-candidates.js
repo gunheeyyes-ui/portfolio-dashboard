@@ -126,6 +126,10 @@ function filteredRows() {
       || String(a.item.feature.name ?? "").localeCompare(String(b.item.feature.name ?? "")));
 }
 
+function publishEntryReviewCandidates() {
+  window.dispatchEvent(new CustomEvent("strategy-review-candidates", { detail: state.rows }));
+}
+
 function updateControlLabels() {
   const featured = document.querySelector('[data-strategy-mode="featured"]');
   const all = document.querySelector('[data-strategy-mode="all"]');
@@ -158,6 +162,7 @@ async function load() {
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? "전략 후보군을 불러오지 못했습니다.");
   state.payload = await response.json();
   state.rows = buildStrategyCandidates(state.payload);
+  publishEntryReviewCandidates();
   updateControlLabels();
   render();
 }
@@ -196,6 +201,8 @@ document.querySelector("#strategyCandidateRefresh")?.addEventListener("click", (
 
 updateControlLabels();
 load().catch((error) => {
+  state.rows = [];
+  publishEntryReviewCandidates();
   document.querySelector("#strategyCandidateStatus").textContent = error.message;
   document.querySelector("#strategyCandidateList").innerHTML = `<article class="trade-empty"><strong>불러오기 실패</strong><span>${escapeHtml(error.message)}</span></article>`;
 });
