@@ -14,6 +14,7 @@ test("home dashboard keeps the broadened entry shortlist before the market explo
   assert.match(html, /<tbody id="homeEntryCandidates">/);
   assert.ok(html.indexOf("homeEntryCandidates") < html.indexOf("screenerMarkets"));
   assert.match(js, /종목 · 가격\/등락/);
+  assert.match(js, />낙폭\(2년\)<\/th>/);
   assert.match(js, />Leader<\/th>/);
   assert.match(js, />타이밍<\/th>/);
   assert.match(js, />반등<\/th>/);
@@ -21,18 +22,20 @@ test("home dashboard keeps the broadened entry shortlist before the market explo
   assert.match(html, /실제 주문 체결을 뜻하지 않습니다/);
 });
 
-test("home shortlist stays one-row compact and moves price context beside the stock", () => {
+test("home shortlist keeps price changes beside the stock and drawdown in its own column", () => {
   assert.match(js, /home-entry-compact\.css/);
   assert.match(js, /class="home-entry-stock"/);
   assert.match(js, /class="home-stock-meta"/);
   assert.match(js, />전 \$\{pct\(row\.changeRate\)\}<\/span>/);
   assert.match(js, />3일 \$\{pct\(row\.changeRate3d\)\}<\/span>/);
-  assert.match(js, />낙 \$\{pct\(row\.drawdownFromHighPct\)\}<\/span>/);
+  assert.doesNotMatch(js, />낙 \$\{pct\(row\.drawdownFromHighPct\)\}<\/span>/);
+  assert.match(js, /class="home-entry-drawdown"/);
+  assert.match(js, /최근 2년 고점 대비 현재가 하락률/);
   assert.doesNotMatch(js, /class="code"/);
   assert.match(css, /min-width: 0 !important/);
   assert.match(css, /overflow-x: hidden !important/);
-  assert.match(css, /th:nth-child\(9\)/);
-  assert.doesNotMatch(css, /th:nth-child\(10\)/);
+  assert.match(css, /th:nth-child\(10\)/);
+  assert.match(css, /10-column home summary/);
   assert.match(css, /white-space: nowrap/);
 });
 
@@ -43,7 +46,7 @@ test("home shortlist keeps market Leader rank for validated logic but hides dupl
   assert.match(js, /\$\{row\.leaderGrade \?\? "-"\}\$\{fmtInt\.format\(row\.leaderScore\)\}/);
   assert.doesNotMatch(js, /\$\{fmtInt\.format\(row\.leaderRank\)\}위·/);
   assert.match(js, /row\.timingScore/);
-  assert.match(js, /colspan="9"/);
+  assert.match(js, /colspan="10"/);
 });
 
 test("home stock cell exposes confirmation and StockEasy badges", () => {
