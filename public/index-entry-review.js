@@ -4,6 +4,13 @@ import {
   mergeEntryCandidates
 } from "./entry-review-candidates.js";
 
+if (!document.querySelector('link[href="/home-entry-compact.css"]')) {
+  const compactStyles = document.createElement("link");
+  compactStyles.rel = "stylesheet";
+  compactStyles.href = "/home-entry-compact.css";
+  document.head.appendChild(compactStyles);
+}
+
 const fmtNum = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 });
 const fmtInt = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 });
 
