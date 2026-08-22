@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 const html = readFileSync(new URL("./public/index.html", import.meta.url), "utf8");
 const js = readFileSync(new URL("./public/index-entry-review.js", import.meta.url), "utf8");
+const css = readFileSync(new URL("./public/home-entry-compact.css", import.meta.url), "utf8");
 
 test("home dashboard shows the broadened entry shortlist before the market explorer", () => {
   assert.match(html, /<h2>오늘 진입후보<\/h2>/);
@@ -19,13 +20,24 @@ test("home dashboard shows the broadened entry shortlist before the market explo
   assert.match(html, />기존 실제진입<\/button>/);
 });
 
+test("home shortlist stays one-row compact without code or market labels", () => {
+  assert.match(js, /home-entry-compact\.css/);
+  assert.match(js, /class="home-entry-stock"/);
+  assert.doesNotMatch(js, /class="code"/);
+  assert.doesNotMatch(js, /row\.market \|\| row\.sourceLabel/);
+  assert.match(css, /min-width: 0 !important/);
+  assert.match(css, /overflow-x: hidden !important/);
+  assert.match(css, /font-size: 11px/);
+  assert.match(css, /white-space: nowrap/);
+});
+
 test("home shortlist reuses the same strategy and entry-review engines as simulator", () => {
   assert.match(js, /buildStrategyCandidates/);
   assert.match(js, /buildEntryReviewCandidates/);
   assert.match(js, /mergeEntryCandidates/);
   assert.match(js, /feature\.actionable !== true/);
-  assert.match(js, /🔥 핵심/);
-  assert.match(js, /⭐ 강한/);
-  assert.match(js, /✅ 실제/);
+  assert.match(js, /🔥핵심/);
+  assert.match(js, /⭐강한/);
+  assert.match(js, /✅실제/);
   assert.match(js, /rows\.map\(renderRow\)/);
 });
