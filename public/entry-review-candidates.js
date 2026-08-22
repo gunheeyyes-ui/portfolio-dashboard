@@ -46,6 +46,7 @@ function reviewCandidate(item) {
     leaderScore: numberOrNull(feature.leaderScore),
     leaderGrade: feature.leaderGrade ?? null,
     leaderRank,
+    timingScore: numberOrNull(feature.combinedScore),
     rs20,
     scoutRiskScore: numberOrNull(feature.riskScore),
     scoutStabilizeScore: numberOrNull(feature.stabilizeScore),
