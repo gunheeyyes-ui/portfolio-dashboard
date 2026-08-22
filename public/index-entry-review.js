@@ -62,6 +62,7 @@ function actualRow(item) {
     leaderScore: numberOrNull(feature.leaderScore),
     leaderGrade: feature.leaderGrade ?? null,
     leaderRank: numberOrNull(feature.leaderRank),
+    timingScore: numberOrNull(feature.combinedScore),
     rs20: numberOrNull(feature.rs20),
     scoutRiskScore: numberOrNull(feature.riskScore),
     scoutStabilizeScore: numberOrNull(feature.stabilizeScore),
@@ -91,19 +92,20 @@ export function buildHomeEntryCandidates(payload) {
 function candidateLabel(row) {
   if (row.coreCandidate) return '<span class="strategy-badge buy home-entry-badge">🔥핵심</span>';
   if (row.strongCandidate) return '<span class="strategy-badge buy home-entry-badge">⭐강한</span>';
-  return '<span class="strategy-badge buy home-entry-badge">✅실제</span>';
+  return '<span class="strategy-badge buy home-entry-badge">✅기존</span>';
 }
 
 function renderRow(row) {
   const leader = finite(row.leaderScore)
-    ? `${finite(row.leaderRank) ? `#${row.leaderRank} ` : ""}${row.leaderGrade ?? "-"} ${fmtNum.format(Number(row.leaderScore))}`
+    ? `${finite(row.leaderRank) ? `${fmtInt.format(row.leaderRank)}위·` : ""}${row.leaderGrade ?? "-"}${fmtInt.format(row.leaderScore)}`
     : "-";
+  const timing = finite(row.timingScore) ? `${fmtInt.format(row.timingScore)}점` : "-";
   const consensus = finite(row.strategyCount) && finite(row.axisCount)
     ? `${row.strategyCount}전략·${row.axisCount}계열`
     : "-";
   const riskStab = `${finite(row.scoutRiskScore) ? fmtInt.format(row.scoutRiskScore) : "-"}/${finite(row.scoutStabilizeScore) ? fmtInt.format(row.scoutStabilizeScore) : "-"}`;
   const actual = row.actualEntry
-    ? `<span class="home-entry-actual" title="${escapeHtml(row.category?.label ?? "기존 실제진입")}">✅</span>`
+    ? `<span class="home-entry-actual" title="${escapeHtml(row.category?.label ?? "기존 실제진입 조건 통과")}">✅</span>`
     : '<span class="muted">-</span>';
 
   return `
@@ -114,6 +116,7 @@ function renderRow(row) {
         <small>${price(row.price)}</small>
       </td>
       <td><b>${escapeHtml(leader)}</b></td>
+      <td class="home-entry-timing"><b>${escapeHtml(timing)}</b></td>
       <td><b>${finite(row.rs20) ? fmtInt.format(row.rs20) : "-"}</b></td>
       <td><b>${escapeHtml(consensus)}</b></td>
       <td><b>${escapeHtml(riskStab)}</b></td>
@@ -128,8 +131,8 @@ async function loadHomeEntryCandidates() {
   const status = document.querySelector("#homeEntryStatus");
   if (!target || !status) return;
 
-  status.textContent = "🔥 핵심 · ⭐ 강한 · ✅ 실제진입 후보 계산 중";
-  target.innerHTML = '<tr><td colspan="9" class="loading">시장 200종목에서 백테스트 우선 후보를 찾고 있습니다.</td></tr>';
+  status.textContent = "🔥 핵심 · ⭐ 강한 · ✅ 기존진입 후보 계산 중";
+  target.innerHTML = '<tr><td colspan="10" class="loading">시장 200종목에서 백테스트 우선 후보를 찾고 있습니다.</td></tr>';
 
   const response = await fetch("/api/market-screener?limit=100&market=ALL", { signal: AbortSignal.timeout(30000) });
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? "진입후보를 불러오지 못했습니다.");
@@ -139,15 +142,15 @@ async function loadHomeEntryCandidates() {
   const strong = rows.filter((row) => row.strongCandidate).length;
   const actual = rows.filter((row) => row.actualEntry).length;
 
-  status.textContent = `우선순위순 ${rows.length}종목 · 🔥 핵심 ${core} · ⭐ 강한 ${strong} · ✅ 실제진입 ${actual}`;
+  status.textContent = `우선순위순 ${rows.length}종목 · 🔥 핵심 ${core} · ⭐ 강한 ${strong} · ✅ 기존진입 ${actual}`;
   target.innerHTML = rows.length
     ? rows.map(renderRow).join("")
-    : '<tr><td colspan="9" class="loading">오늘 핵심·강한후보와 기존 실제진입 조건을 충족한 종목이 없습니다.</td></tr>';
+    : '<tr><td colspan="10" class="loading">오늘 핵심·강한후보와 기존 진입조건을 충족한 종목이 없습니다.</td></tr>';
 }
 
 loadHomeEntryCandidates().catch((error) => {
   const target = document.querySelector("#homeEntryCandidates");
   const status = document.querySelector("#homeEntryStatus");
   if (status) status.textContent = error.message;
-  if (target) target.innerHTML = `<tr><td colspan="9" class="loading">${escapeHtml(error.message)}</td></tr>`;
+  if (target) target.innerHTML = `<tr><td colspan="10" class="loading">${escapeHtml(error.message)}</td></tr>`;
 });
