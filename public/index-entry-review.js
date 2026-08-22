@@ -118,7 +118,8 @@ function syncHomeEntryHeader() {
   if (head) head.innerHTML = `
     <tr>
       <th>후보</th>
-      <th title="종목명 옆에 현재가·전일·3일·2년 고점 대비 낙폭과 확인 배지를 함께 표시">종목 · 가격/등락</th>
+      <th title="종목명 옆에 현재가·전일·3일 등락과 확인 배지를 함께 표시">종목 · 가격/등락</th>
+      <th title="현재가가 최근 2년 고점보다 얼마나 낮은지 표시">낙폭(2년)</th>
       <th title="Leader 등급·점수. 순위는 KOSPI/KOSDAQ 시장별이라 홈에서는 중복 혼동을 피하려고 숨김">Leader</th>
       <th title="종합타이밍 = Main 70 + Scout 30">타이밍</th>
       <th>RS</th>
@@ -129,7 +130,7 @@ function syncHomeEntryHeader() {
     </tr>`;
 
   const guide = document.querySelector(".home-entry-panel .score-guide small");
-  if (guide) guide.textContent = "Leader는 등급·점수(A91)만 표시합니다. 순위는 시장별이라 홈에서는 숨깁니다. 반등의 우/후 순위는 각각 반등우선·반등후보의 시장 내 순위입니다.";
+  if (guide) guide.textContent = "낙폭은 최근 2년 고점 대비 현재가 하락률입니다. Leader는 등급·점수(A91)만 표시하고, 반등의 우/후 순위는 각각 반등우선·반등후보의 시장 내 순위입니다.";
 }
 
 function candidateLabel(row) {
@@ -195,9 +196,9 @@ function renderRow(row) {
           <b>${price(row.price)}</b>
           <span class="${pctTone(row.changeRate)}">전 ${pct(row.changeRate)}</span>
           <span class="${pctTone(row.changeRate3d)}">3일 ${pct(row.changeRate3d)}</span>
-          <span class="${pctTone(row.drawdownFromHighPct)}">낙 ${pct(row.drawdownFromHighPct)}</span>
         </div>
       </td>
+      <td class="home-entry-drawdown" title="최근 2년 고점 대비 현재가 하락률"><b>${pct(row.drawdownFromHighPct)}</b></td>
       <td class="home-entry-leader" title="${escapeHtml(leaderTitle)}"><b>${escapeHtml(leader)}</b></td>
       <td class="home-entry-timing"><b>${escapeHtml(timing)}</b></td>
       <td><b>${finite(row.rs20) ? fmtInt.format(row.rs20) : "-"}</b></td>
@@ -215,7 +216,7 @@ async function loadHomeEntryCandidates() {
 
   syncHomeEntryHeader();
   status.textContent = "🔥 핵심 · ⭐ 강한 · ✅ 기존진입 후보 계산 중";
-  target.innerHTML = '<tr><td colspan="9" class="loading">시장 200종목에서 백테스트 우선 후보를 찾고 있습니다.</td></tr>';
+  target.innerHTML = '<tr><td colspan="10" class="loading">시장 200종목에서 백테스트 우선 후보를 찾고 있습니다.</td></tr>';
 
   const response = await fetch("/api/market-screener?limit=100&market=ALL", { signal: AbortSignal.timeout(30000) });
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? "진입후보를 불러오지 못했습니다.");
@@ -228,12 +229,12 @@ async function loadHomeEntryCandidates() {
   status.textContent = `우선순위순 ${rows.length}종목 · 🔥 핵심 ${core} · ⭐ 강한 ${strong} · ✅ 기존진입 ${actual}`;
   target.innerHTML = rows.length
     ? rows.map(renderRow).join("")
-    : '<tr><td colspan="9" class="loading">오늘 핵심·강한후보와 기존 진입조건을 충족한 종목이 없습니다.</td></tr>';
+    : '<tr><td colspan="10" class="loading">오늘 핵심·강한후보와 기존 진입조건을 충족한 종목이 없습니다.</td></tr>';
 }
 
 loadHomeEntryCandidates().catch((error) => {
   const target = document.querySelector("#homeEntryCandidates");
   const status = document.querySelector("#homeEntryStatus");
   if (status) status.textContent = error.message;
-  if (target) target.innerHTML = `<tr><td colspan="9" class="loading">${escapeHtml(error.message)}</td></tr>`;
+  if (target) target.innerHTML = `<tr><td colspan="10" class="loading">${escapeHtml(error.message)}</td></tr>`;
 });
