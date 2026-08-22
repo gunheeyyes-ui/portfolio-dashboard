@@ -81,55 +81,40 @@ export function buildHomeEntryCandidates(payload) {
   return mergeEntryCandidates(actual, review);
 }
 
-function label(row) {
-  if (row.coreCandidate) return "🔥 핵심후보";
-  if (row.strongCandidate) return "⭐ 강한후보";
-  return "✅ 실제진입";
+function candidateLabel(row) {
+  if (row.coreCandidate) return '<span class="strategy-badge buy">🔥 핵심</span>';
+  if (row.strongCandidate) return '<span class="strategy-badge buy">⭐ 강한</span>';
+  return '<span class="strategy-badge buy">✅ 실제</span>';
 }
 
-function badges(row) {
-  return [
-    row.coreCandidate ? '<span class="strategy-badge buy">🔥 핵심후보</span>' : "",
-    row.strongCandidate ? '<span class="strategy-badge buy">⭐ 강한후보</span>' : "",
-    row.actualEntry ? '<span class="strategy-badge buy">✅ 실제진입</span>' : "",
-    row.cafePass ? '<span class="strategy-badge buy">CAFE</span>' : "",
-    row.minerviniPass ? '<span class="strategy-badge buy">MTT</span>' : ""
-  ].join("");
-}
-
-function renderCard(row) {
+function renderRow(row) {
   const leader = finite(row.leaderScore)
-    ? `${finite(row.leaderRank) ? `#${row.leaderRank} · ` : ""}${row.leaderGrade ?? "-"} ${fmtNum.format(Number(row.leaderScore))}`
+    ? `${finite(row.leaderRank) ? `#${row.leaderRank} ` : ""}${row.leaderGrade ?? "-"} ${fmtNum.format(Number(row.leaderScore))}`
     : "-";
   const consensus = finite(row.strategyCount) && finite(row.axisCount)
     ? `${row.strategyCount}전략 · ${row.axisCount}계열`
     : "-";
   const riskStab = `${finite(row.scoutRiskScore) ? fmtInt.format(row.scoutRiskScore) : "-"}/${finite(row.scoutStabilizeScore) ? fmtInt.format(row.scoutStabilizeScore) : "-"}`;
-  const why = row.coreCandidate
-    ? "Leader TOP10 + 5전략+ + 3계열+"
-    : row.strongCandidate
-      ? "Leader A + RS80+ + 3계열+"
-      : row.category?.label ?? "기존 실제진입";
+  const actual = row.actualEntry
+    ? `<span class="strategy-badge buy" title="${escapeHtml(row.category?.label ?? "기존 실제진입")}">✅</span>`
+    : '<span class="muted">-</span>';
+  const extra = [row.cafePass ? "CAFE" : null, row.minerviniPass ? "MTT" : null].filter(Boolean).join(" · ");
 
   return `
-    <article class="sim-card buy">
-      <div class="sim-card-head">
-        <span class="badge buy">${label(row)}</span>
-        <small>${escapeHtml(row.market || row.sourceLabel || "시장")}${row.actualEntry && row.category?.label ? ` · ${escapeHtml(row.category.label)}` : ""}</small>
-      </div>
-      <a class="stock-link sim-name" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.name)}</a>
-      <div class="cell-sub">${escapeHtml(row.code)} · ${price(row.price)} · 당일 ${pct(row.changeRate)}</div>
-      <div class="sim-mini">
-        <span>Leader <b>${escapeHtml(leader)}</b></span>
-        <span>RS20 <b>${finite(row.rs20) ? fmtInt.format(row.rs20) : "-"}</b></span>
-        <span>합의 <b>${consensus}</b></span>
-        <span>Risk/Stab <b>${riskStab}</b></span>
-        <span>낙폭 <b>${pct(row.drawdownFromHighPct)}</b></span>
-        <span>3일등락 <b>${pct(row.changeRate3d)}</b></span>
-      </div>
-      <div class="strategy-badges">${badges(row)}</div>
-      <p>${escapeHtml(why)}</p>
-    </article>`;
+    <tr>
+      <td>${candidateLabel(row)}${extra ? `<div class="cell-sub">${escapeHtml(extra)}</div>` : ""}</td>
+      <td>
+        <a class="stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.name)}</a>
+        <div class="code">${escapeHtml(row.code)} · ${escapeHtml(row.market || row.sourceLabel || "시장")} · ${price(row.price)}</div>
+      </td>
+      <td><b>${escapeHtml(leader)}</b></td>
+      <td><b>${finite(row.rs20) ? fmtInt.format(row.rs20) : "-"}</b></td>
+      <td><b>${escapeHtml(consensus)}</b></td>
+      <td><b>${escapeHtml(riskStab)}</b></td>
+      <td><b>${pct(row.drawdownFromHighPct)}</b></td>
+      <td><b>${pct(row.changeRate3d)}</b></td>
+      <td>${actual}</td>
+    </tr>`;
 }
 
 async function loadHomeEntryCandidates() {
@@ -138,7 +123,7 @@ async function loadHomeEntryCandidates() {
   if (!target || !status) return;
 
   status.textContent = "🔥 핵심 · ⭐ 강한 · ✅ 실제진입 후보 계산 중";
-  target.innerHTML = '<article class="trade-empty"><strong>계산 중</strong><span>시장 200종목에서 백테스트 우선 후보를 찾고 있습니다.</span></article>';
+  target.innerHTML = '<tr><td colspan="9" class="loading">시장 200종목에서 백테스트 우선 후보를 찾고 있습니다.</td></tr>';
 
   const response = await fetch("/api/market-screener?limit=100&market=ALL", { signal: AbortSignal.timeout(30000) });
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? "진입후보를 불러오지 못했습니다.");
@@ -150,13 +135,13 @@ async function loadHomeEntryCandidates() {
 
   status.textContent = `우선순위순 ${rows.length}종목 · 🔥 핵심 ${core} · ⭐ 강한 ${strong} · ✅ 실제진입 ${actual}`;
   target.innerHTML = rows.length
-    ? rows.map(renderCard).join("")
-    : '<article class="trade-empty"><strong>오늘 진입후보 없음</strong><span>핵심·강한후보와 기존 실제진입을 모두 확인했지만 조건 충족 종목이 없습니다.</span></article>';
+    ? rows.map(renderRow).join("")
+    : '<tr><td colspan="9" class="loading">오늘 핵심·강한후보와 기존 실제진입 조건을 충족한 종목이 없습니다.</td></tr>';
 }
 
 loadHomeEntryCandidates().catch((error) => {
   const target = document.querySelector("#homeEntryCandidates");
   const status = document.querySelector("#homeEntryStatus");
   if (status) status.textContent = error.message;
-  if (target) target.innerHTML = `<article class="trade-empty"><strong>진입후보 불러오기 실패</strong><span>${escapeHtml(error.message)}</span></article>`;
+  if (target) target.innerHTML = `<tr><td colspan="9" class="loading">${escapeHtml(error.message)}</td></tr>`;
 });
