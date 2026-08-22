@@ -46,14 +46,14 @@
   min-width: 0 !important;
   max-width: 100%;
   table-layout: fixed;
-  font-size: 11px;
+  font-size: 10.5px;
 }
 
 .home-entry-table th,
 .home-entry-table td {
   min-width: 0;
-  padding: 5px 3px;
-  line-height: 1.15;
+  padding: 4px 3px;
+  line-height: 1.12;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -61,53 +61,101 @@
 
 .home-entry-table th {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 750;
 }
 
 .home-entry-table td {
-  font-size: 11px;
+  font-size: 10.5px;
 }
 
 .home-entry-table td b {
-  font-size: 11px;
-  font-weight: 750;
+  font-size: 10.5px;
+  font-weight: 780;
 }
 
-.home-entry-table th:nth-child(1) { width: 8%; }
-.home-entry-table th:nth-child(2) { width: 18%; }
-.home-entry-table th:nth-child(3) { width: 14%; }
-.home-entry-table th:nth-child(4) { width: 9%; }
-.home-entry-table th:nth-child(5) { width: 6%; }
-.home-entry-table th:nth-child(6) { width: 14%; }
+/* 9-column home summary. The stock cell intentionally owns most of the width
+   because price/day-change/drawdown and confirmation badges now live beside
+   the stock name instead of consuming separate columns. */
+.home-entry-table th:nth-child(1) { width: 7%; }
+.home-entry-table th:nth-child(2) { width: 38%; }
+.home-entry-table th:nth-child(3) { width: 7%; }
+.home-entry-table th:nth-child(4) { width: 8%; }
+.home-entry-table th:nth-child(5) { width: 5%; }
+.home-entry-table th:nth-child(6) { width: 12%; }
 .home-entry-table th:nth-child(7) { width: 11%; }
-.home-entry-table th:nth-child(8) { width: 7%; }
-.home-entry-table th:nth-child(9) { width: 7%; }
-.home-entry-table th:nth-child(10) { width: 6%; }
+.home-entry-table th:nth-child(8) { width: 8%; }
+.home-entry-table th:nth-child(9) { width: 4%; }
 
 .home-entry-badge {
-  min-height: 17px;
+  min-height: 16px;
   padding: 1px 4px;
-  font-size: 9px;
-  letter-spacing: -0.3px;
+  font-size: 8.5px;
+  letter-spacing: -0.35px;
+}
+
+.home-entry-stock {
+  overflow: hidden;
+}
+
+.home-stock-top,
+.home-stock-meta,
+.home-stock-badges,
+.home-entry-rebound {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.home-stock-top {
+  gap: 4px;
+  overflow: hidden;
 }
 
 .home-entry-stock .stock-link {
-  display: inline-block;
-  max-width: 100%;
+  flex: 0 1 auto;
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--text);
-  font-size: 11px;
-  font-weight: 800;
-  vertical-align: middle;
+  font-size: 10.5px;
+  font-weight: 850;
+  white-space: nowrap;
 }
 
-.home-entry-stock small {
-  margin-left: 4px;
+.home-stock-badges {
+  flex: 0 1 auto;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.home-stock-badge {
+  min-height: 14px;
+  padding: 0 3px;
+  border-radius: 3px;
+  font-size: 7.5px;
+  line-height: 13px;
+  letter-spacing: -0.25px;
+}
+
+.home-stock-meta {
+  gap: 4px 7px;
+  margin-top: 2px;
+  overflow: hidden;
   color: var(--muted);
   font-size: 9px;
-  font-weight: 500;
+  white-space: nowrap;
+}
+
+.home-stock-meta b {
+  color: var(--text);
+  font-size: 9px !important;
+  font-weight: 780;
+}
+
+.home-entry-leader b {
+  color: var(--text);
+  font-weight: 900;
 }
 
 .home-entry-timing b {
@@ -115,8 +163,90 @@
   font-weight: 900;
 }
 
+.home-entry-rebound {
+  gap: 2px;
+}
+
+.home-rebound-tier,
+.home-rebound-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 15px;
+  padding: 0 3px;
+  border: 1px solid #39414c;
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: 7.8px;
+  font-weight: 850;
+  line-height: 13px;
+}
+
+.home-rebound-tier.t1 {
+  border-color: rgba(35, 196, 131, 0.55);
+  color: #78e0b1;
+}
+
+.home-rebound-tier.t2 {
+  border-color: rgba(111, 211, 164, 0.5);
+  color: #8de0ba;
+}
+
+.home-rebound-tier.t3 {
+  border-color: rgba(243, 179, 64, 0.5);
+  color: #f7d38a;
+}
+
+.home-rebound-tier.t4,
+.home-rebound-tier.t5 {
+  color: var(--muted);
+}
+
+.home-rebound-tier.t6 {
+  border-color: rgba(255, 75, 92, 0.38);
+  color: #ff9ba6;
+}
+
+.home-rebound-rank.top {
+  border-color: rgba(78, 161, 255, 0.48);
+  color: #9dcbff;
+}
+
 .home-entry-actual {
-  font-size: 11px;
+  font-size: 10px;
+}
+
+@media (max-width: 1100px) {
+  .home-entry-table th,
+  .home-entry-table td {
+    padding: 3px 2px;
+    font-size: 9px;
+    letter-spacing: -0.25px;
+  }
+
+  .home-entry-table td b,
+  .home-entry-stock .stock-link {
+    font-size: 9px;
+  }
+
+  .home-entry-stock .stock-link {
+    max-width: 120px;
+  }
+
+  .home-stock-meta {
+    gap: 3px 5px;
+    font-size: 7.8px;
+  }
+
+  .home-stock-meta b {
+    font-size: 7.8px !important;
+  }
+
+  .home-stock-badge,
+  .home-rebound-tier,
+  .home-rebound-rank {
+    font-size: 6.8px;
+  }
 }
 
 @media (max-width: 900px) {
@@ -130,23 +260,55 @@
 
   .home-entry-table th,
   .home-entry-table td {
-    padding: 4px 1.5px;
-    font-size: 8.7px;
-    letter-spacing: -0.3px;
+    padding: 3px 1px;
+    font-size: 8px;
+    letter-spacing: -0.35px;
   }
 
   .home-entry-table td b,
   .home-entry-stock .stock-link {
-    font-size: 8.8px;
+    font-size: 8px;
   }
 
-  .home-entry-stock small {
+  .home-entry-stock .stock-link {
+    max-width: 95px;
+  }
+
+  .home-stock-badges {
+    gap: 1px;
+  }
+
+  .home-stock-badge.secondary {
     display: none;
   }
 
+  .home-stock-badge {
+    min-height: 12px;
+    padding: 0 2px;
+    font-size: 6.2px;
+    line-height: 11px;
+  }
+
+  .home-stock-meta {
+    gap: 2px 4px;
+    font-size: 6.9px;
+  }
+
+  .home-stock-meta b {
+    font-size: 6.9px !important;
+  }
+
   .home-entry-badge {
-    min-height: 15px;
+    min-height: 14px;
     padding: 1px 2px;
-    font-size: 7.8px;
+    font-size: 7px;
+  }
+
+  .home-rebound-tier,
+  .home-rebound-rank {
+    min-height: 12px;
+    padding: 0 2px;
+    font-size: 6.2px;
+    line-height: 11px;
   }
 }
