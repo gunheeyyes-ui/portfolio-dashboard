@@ -82,9 +82,9 @@ export function buildHomeEntryCandidates(payload) {
 }
 
 function candidateLabel(row) {
-  if (row.coreCandidate) return '<span class="strategy-badge buy">🔥 핵심</span>';
-  if (row.strongCandidate) return '<span class="strategy-badge buy">⭐ 강한</span>';
-  return '<span class="strategy-badge buy">✅ 실제</span>';
+  if (row.coreCandidate) return '<span class="strategy-badge buy home-entry-badge">🔥핵심</span>';
+  if (row.strongCandidate) return '<span class="strategy-badge buy home-entry-badge">⭐강한</span>';
+  return '<span class="strategy-badge buy home-entry-badge">✅실제</span>';
 }
 
 function renderRow(row) {
@@ -92,20 +92,19 @@ function renderRow(row) {
     ? `${finite(row.leaderRank) ? `#${row.leaderRank} ` : ""}${row.leaderGrade ?? "-"} ${fmtNum.format(Number(row.leaderScore))}`
     : "-";
   const consensus = finite(row.strategyCount) && finite(row.axisCount)
-    ? `${row.strategyCount}전략 · ${row.axisCount}계열`
+    ? `${row.strategyCount}전략·${row.axisCount}계열`
     : "-";
   const riskStab = `${finite(row.scoutRiskScore) ? fmtInt.format(row.scoutRiskScore) : "-"}/${finite(row.scoutStabilizeScore) ? fmtInt.format(row.scoutStabilizeScore) : "-"}`;
   const actual = row.actualEntry
-    ? `<span class="strategy-badge buy" title="${escapeHtml(row.category?.label ?? "기존 실제진입")}">✅</span>`
+    ? `<span class="home-entry-actual" title="${escapeHtml(row.category?.label ?? "기존 실제진입")}">✅</span>`
     : '<span class="muted">-</span>';
-  const extra = [row.cafePass ? "CAFE" : null, row.minerviniPass ? "MTT" : null].filter(Boolean).join(" · ");
 
   return `
     <tr>
-      <td>${candidateLabel(row)}${extra ? `<div class="cell-sub">${escapeHtml(extra)}</div>` : ""}</td>
-      <td>
-        <a class="stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.name)}</a>
-        <div class="code">${escapeHtml(row.code)} · ${escapeHtml(row.market || row.sourceLabel || "시장")} · ${price(row.price)}</div>
+      <td>${candidateLabel(row)}</td>
+      <td class="home-entry-stock">
+        <a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.name)}</a>
+        <small>${price(row.price)}</small>
       </td>
       <td><b>${escapeHtml(leader)}</b></td>
       <td><b>${finite(row.rs20) ? fmtInt.format(row.rs20) : "-"}</b></td>
