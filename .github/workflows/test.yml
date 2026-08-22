@@ -26,6 +26,7 @@ jobs:
           node --check strategy-oos-registry.js
           node --check public/simulator.js
           node --check public/simulator-strategy-candidates.js
+          node --check public/entry-review-candidates.js
           node --check public/strategy-candidate-engine.js
           node --check public/strategy-consensus.js
           node --check public/strategy-consensus-cohorts.js
