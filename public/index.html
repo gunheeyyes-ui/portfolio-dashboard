@@ -40,13 +40,30 @@
         </div>
         <section class="score-guide" aria-label="오늘 진입후보 기준">
           <strong>빠른 해석</strong>
-          <span><b>🔥 핵심후보</b> Leader TOP10 + 5전략+ + 3계열+</span>
-          <span><b>⭐ 강한후보</b> Leader A + RS80+ + 3계열+</span>
-          <span><b>✅ 실제진입</b> 기존 actionable 진입조건 통과</span>
-          <small>정렬은 핵심+실제진입 → 핵심 → 강한+실제진입 → 강한 → 기존 실제진입 순입니다. 여기서 종목을 먼저 고르고 아래 표에서 세부 이유를 확인하면 됩니다.</small>
+          <span><b>🔥 핵심</b> Leader TOP10 + 5전략+ + 3계열+</span>
+          <span><b>⭐ 강한</b> Leader A + RS80+ + 3계열+</span>
+          <span><b>✅ 실제</b> 기존 actionable 진입조건 통과</span>
+          <small>한 종목당 한 줄로 비교합니다. 정렬은 핵심+실제 → 핵심 → 강한+실제 → 강한 → 기존 실제 순입니다.</small>
         </section>
-        <div id="homeEntryCandidates" class="sim-card-grid">
-          <article class="trade-empty"><strong>계산 중</strong><span>오늘 후보를 불러오고 있습니다.</span></article>
+        <div class="table-wrap home-entry-table-wrap">
+          <table class="holdings-table home-entry-table">
+            <thead>
+              <tr>
+                <th>후보</th>
+                <th>종목</th>
+                <th>Leader</th>
+                <th>RS</th>
+                <th>전략·계열</th>
+                <th>Risk/Stab</th>
+                <th>낙폭</th>
+                <th>3일</th>
+                <th>실제</th>
+              </tr>
+            </thead>
+            <tbody id="homeEntryCandidates">
+              <tr><td colspan="9" class="loading">오늘 후보를 불러오고 있습니다.</td></tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
