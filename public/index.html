@@ -12,7 +12,7 @@
         <div>
           <p class="eyebrow">Daily Portfolio Signal</p>
           <h1>오늘 종목 후보</h1>
-          <p class="page-sub">진입후보를 먼저 확인하고, 종합타이밍 → 주도주 → 반등 품질 순으로 검토합니다.</p>
+          <p class="page-sub">맨 위 진입후보만 먼저 보고, 필요할 때 종합타이밍 → 주도주 → 반등 품질을 자세히 확인합니다.</p>
         </div>
         <nav class="top-actions" aria-label="대시보드 메뉴">
           <a class="ghost-btn nav-btn active-nav" href="/"><i class="nav-full">종합순위</i><i class="nav-short">종합</i></a>
@@ -27,8 +27,27 @@
       </header>
 
       <section class="notice">
-        <strong>주의</strong>
-        <span>진입후보는 실제 진입조건을 충족한 종목입니다. 종합타이밍은 현재 진입 매력, Leader는 장기 추세 품질, Risk/Stab은 반등 안정성을 뜻합니다.</span>
+        <strong>오늘 보는 곳</strong>
+        <span>아래 진입후보는 백테스트 우선군까지 넓혀서 보여줍니다. 🔥 핵심·⭐ 강한은 우선 검토군이고, ✅ 실제진입만 기존의 빡빡한 진입조건 통과를 뜻합니다.</span>
+      </section>
+
+      <section class="sim-panel home-entry-panel">
+        <div class="section-title">
+          <div>
+            <h2>오늘 진입후보</h2>
+            <p id="homeEntryStatus">백테스트 우선 후보 확인 중</p>
+          </div>
+        </div>
+        <section class="score-guide" aria-label="오늘 진입후보 기준">
+          <strong>빠른 해석</strong>
+          <span><b>🔥 핵심후보</b> Leader TOP10 + 5전략+ + 3계열+</span>
+          <span><b>⭐ 강한후보</b> Leader A + RS80+ + 3계열+</span>
+          <span><b>✅ 실제진입</b> 기존 actionable 진입조건 통과</span>
+          <small>정렬은 핵심+실제진입 → 핵심 → 강한+실제진입 → 강한 → 기존 실제진입 순입니다. 여기서 종목을 먼저 고르고 아래 표에서 세부 이유를 확인하면 됩니다.</small>
+        </section>
+        <div id="homeEntryCandidates" class="sim-card-grid">
+          <article class="trade-empty"><strong>계산 중</strong><span>오늘 후보를 불러오고 있습니다.</span></article>
+        </div>
       </section>
 
       <section class="score-guide" aria-label="전략 기준">
@@ -36,7 +55,7 @@
         <span><b>메인 70점</b> 눌림·거래강도·외/기 연속수급·기술회복</span>
         <span><b>반등 30점</b> 하락 멈춤·낮은 위험·가격 매력</span>
         <span><b>선 제외</b> 매수보류·추격과열·위험65+·데이터 부족</span>
-        <small>종합 40점 이상만 순위를 받습니다. 1위라도 판정이 관찰이면 매수조건 미충족이며, 실제 후보는 ‘종합 최우선·종합 분할후보’입니다.</small>
+        <small>종합 40점 이상만 순위를 받습니다. 1위라도 판정이 관찰이면 기존 실제진입 조건은 미충족입니다.</small>
       </section>
 
       <section class="screener-strip">
@@ -50,9 +69,9 @@
         <div class="screener-tools">
           <input id="screenerSearch" type="search" placeholder="시장 후보 검색">
         </div>
-        <p class="mode-hint">보는 순서 <b>① 진입후보 → ② 종합타이밍 → ③ Leader → ④ Risk·Stab → ⑤ CAFE·MTT</b>. 아래 버튼은 이 표의 보기 방식이고, 위쪽 메뉴는 각각 다른 화면입니다.</p>
+        <p class="mode-hint">보는 순서 <b>① 위 오늘 진입후보 → ② 필요하면 종합타이밍 → ③ Leader → ④ Risk·Stab → ⑤ CAFE·MTT</b>. 아래 ‘기존 실제진입’은 원래의 빡빡한 진입조건만 따로 보는 필터입니다.</p>
         <div class="explorer-mode-bar" id="explorerModes" aria-label="보기 모드">
-          <button class="active" data-explorer-mode="entry" type="button" title="오늘 실제 진입조건을 충족한 종목만 남깁니다">진입후보</button>
+          <button class="active" data-explorer-mode="entry" type="button" title="기존 실제 진입조건을 충족한 종목만 남깁니다">기존 실제진입</button>
           <button data-explorer-mode="timing" type="button" title="현재 타이밍 점수(Main 70 + Scout 30) 높은 순">종합타이밍</button>
           <button data-explorer-mode="rebound" type="button" title="Ranking V2 반등 검토 우선순위 (매수등급 아님)">반등우선</button>
           <button data-explorer-mode="leader" type="button" title="주도주(Leader) 점수 높은 순">주도주순</button>
@@ -127,6 +146,7 @@
         </section>
       </section>
     </main>
+    <script type="module" src="/index-entry-review.js"></script>
     <script type="module" src="/app.js"></script>
   </body>
 </html>
