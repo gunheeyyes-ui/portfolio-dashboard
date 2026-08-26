@@ -49,7 +49,7 @@ replaceOnce(
     for (const market of ["KOSPI", "KOSDAQ"]) {
       for (const bar of indexData?.markets?.[market] ?? []) {
         const date = String(bar.date ?? "");
-        if (date >= first && date <= last) tradingDates.add(\`${date.slice(0, 4)}-\${date.slice(4, 6)}-\${date.slice(6, 8)}\`);
+        if (date >= first && date <= last) tradingDates.add(date.slice(0, 4) + "-" + date.slice(4, 6) + "-" + date.slice(6, 8));
       }
     }
   }
