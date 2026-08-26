@@ -14,12 +14,14 @@ test("strategy validation exposes a dedicated consensus-only scope", () => {
   assert.match(js, /기본 \$\{baseCount\} · 합의 \$\{consensusCount\}/);
 });
 
-test("simulator exposes high-consensus filters without changing actual entry recording", () => {
+test("simulator exposes high-consensus filters while preserving the legacy actual-entry ledger", () => {
   assert.match(simulatorHtml, /data-strategy-filter="five-three"/);
   assert.match(simulatorHtml, /data-strategy-filter="four-actionable"/);
   assert.match(simulatorHtml, /data-strategy-filter="leader-rs-three"/);
   assert.match(simulatorJs, /state\.filter === "five-three"/);
   assert.match(simulatorJs, /state\.filter === "four-actionable"/);
-  assert.match(simulatorHtml, /실제 가상 포지션은 ✅ 실제진입 배지 종목만 기존 규칙대로 기록합니다/);
+  assert.match(simulatorHtml, /기존 simulation-ledger의 신규 포지션은 ✅ 실제진입 규칙만 기록합니다/);
   assert.match(simulatorHtml, /실제 가상매수는 기존 실제진입 규칙만 따릅니다/);
+  assert.match(simulatorHtml, /Simulation V2/);
+  assert.match(simulatorHtml, /기존 simulation-ledger V1 기록은 보존됩니다/);
 });
