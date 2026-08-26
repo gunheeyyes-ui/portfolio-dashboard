@@ -514,28 +514,41 @@ export function evaluateUniverseRecord(record, history, {
  * Same-day, same-market equal-weight universe return, so a strategy is judged
  * against the market it actually traded in rather than against zero.
  */
+function attachOutcomeBenchmarks(records, readOutcome, writeOutcome) {
+  const groups = new Map();
+  for (const row of records) {
+    const outcome = readOutcome(row);
+    if (!finite(outcome?.netReturnPct)) continue;
+    const groupKey = `${row.signalDate}|${row.market}`;
+    if (!groups.has(groupKey)) groups.set(groupKey, []);
+    groups.get(groupKey).push(Number(outcome.netReturnPct));
+  }
+  for (const row of records) {
+    const outcome = readOutcome(row);
+    if (!outcome) continue;
+    const values = groups.get(`${row.signalDate}|${row.market}`) ?? [];
+    const benchmarkReturnPct = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+    writeOutcome(row, {
+      ...outcome,
+      benchmarkReturnPct,
+      excessReturnPct: finite(benchmarkReturnPct) ? Number(outcome.netReturnPct) - benchmarkReturnPct : null
+    });
+  }
+}
+
 export function attachBenchmarks(records, horizons = STRATEGY_HORIZONS) {
+  attachOutcomeBenchmarks(
+    records,
+    (row) => row.entryDayOutcome,
+    (row, outcome) => { row.entryDayOutcome = outcome; }
+  );
   for (const horizon of horizons) {
     const key = String(horizon);
-    const groups = new Map();
-    for (const row of records) {
-      const outcome = row.outcomes?.[key];
-      if (!finite(outcome?.netReturnPct)) continue;
-      const groupKey = `${row.signalDate}|${row.market}`;
-      if (!groups.has(groupKey)) groups.set(groupKey, []);
-      groups.get(groupKey).push(Number(outcome.netReturnPct));
-    }
-    for (const row of records) {
-      const outcome = row.outcomes?.[key];
-      if (!outcome) continue;
-      const values = groups.get(`${row.signalDate}|${row.market}`) ?? [];
-      const benchmarkReturnPct = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
-      row.outcomes[key] = {
-        ...outcome,
-        benchmarkReturnPct,
-        excessReturnPct: finite(benchmarkReturnPct) ? Number(outcome.netReturnPct) - benchmarkReturnPct : null
-      };
-    }
+    attachOutcomeBenchmarks(
+      records,
+      (row) => row.outcomes?.[key],
+      (row, outcome) => { row.outcomes[key] = outcome; }
+    );
   }
   return records;
 }

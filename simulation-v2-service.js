@@ -3,7 +3,7 @@ import { evaluateBaseConsensus } from "./public/strategy-consensus.js";
 export const SIM_V2_HORIZONS = [0, 1, 3, 5, 10, 20];
 export const SIM_V2_PORTFOLIO_HORIZONS = [5, 10, 20];
 export const SIM_V2_COHORTS = [
-  { id: "actual", label: "✅ 실제진입" },
+  { id: "actual", label: "✅ 진입판정" },
   { id: "core", label: "🔥 핵심후보" },
   { id: "strong", label: "⭐ 강한후보" }
 ];
@@ -224,11 +224,27 @@ function dayBasketBlock(rows, horizon) {
     returnPct: average(values)
   }));
   const returns = baskets.map((row) => row.returnPct).filter(finite).map(Number);
+  const mean = average(returns);
+  const deviation = stddev(returns);
+  const standardError = finite(deviation) && returns.length ? Number(deviation) / Math.sqrt(returns.length) : null;
+  const halfWidth95 = finite(standardError) ? 1.96 * Number(standardError) : null;
+  const confidenceLabel = returns.length >= 50
+    ? "누적 의미 있음"
+    : returns.length >= 20
+      ? "비교 가능"
+      : returns.length >= 10
+        ? "초기 참고"
+        : "표본 부족";
   return {
     n: returns.length,
-    avgReturnPct: round(average(returns)),
+    avgReturnPct: round(mean),
     medianReturnPct: round(median(returns)),
     winRatePct: returns.length ? round((returns.filter((value) => value > 0).length / returns.length) * 100, 1) : null,
+    stddevPct: round(deviation),
+    standardErrorPct: round(standardError),
+    ci95LowPct: finite(mean) && finite(halfWidth95) ? round(Number(mean) - Number(halfWidth95)) : null,
+    ci95HighPct: finite(mean) && finite(halfWidth95) ? round(Number(mean) + Number(halfWidth95)) : null,
+    confidenceLabel,
     best: baskets.filter((row) => finite(row.returnPct)).sort((a, b) => b.returnPct - a.returnPct)[0] ?? null,
     worst: baskets.filter((row) => finite(row.returnPct)).sort((a, b) => a.returnPct - b.returnPct)[0] ?? null
   };
@@ -311,6 +327,8 @@ export function simulatePortfolio(rows, {
   initialCapital = 100_000_000,
   maxPositions = 10
 } = {}) {
+  const safeInitialCapital = finite(initialCapital) && Number(initialCapital) > 0 ? Number(initialCapital) : 100_000_000;
+  const safeMaxPositions = finite(maxPositions) ? Math.max(1, Math.floor(Number(maxPositions))) : 10;
   const candidates = rows
     .filter((row) => row[cohortId] === true)
     .filter((row) => row.entryDate && finite(row.outcomesV2?.[String(horizon)]?.netReturnPct))
@@ -330,89 +348,111 @@ export function simulatePortfolio(rows, {
     exitDates.add(row.exitKey);
   }
   const dates = [...new Set([...byEntry.keys(), ...exitDates])].sort();
-  let equity = initialCapital;
+  let cash = safeInitialCapital;
   let active = [];
   let skippedDuplicate = 0;
   let skippedCapacity = 0;
+  let skippedCash = 0;
+  let peakPositions = 0;
   const trades = [];
-  const curve = [{ date: dates[0] ?? null, equity }];
+  const bookEquity = () => cash + active.reduce((sum, position) => sum + position.allocation, 0);
+  const curve = [{ date: dates[0] ?? null, equity: safeInitialCapital }];
 
   for (const date of dates) {
+    // Entries happen at the open. Positions scheduled to exit today still tie up
+    // their capital until the close, so they correctly remain in active here.
     const entries = [...(byEntry.get(date) ?? [])].sort(portfolioSort);
     for (const row of entries) {
       if (active.some((position) => position.code === row.code)) {
         skippedDuplicate += 1;
         continue;
       }
-      if (active.length >= maxPositions) {
+      if (active.length >= safeMaxPositions) {
         skippedCapacity += 1;
         continue;
       }
-      const allocation = equity / maxPositions;
+      const targetAllocation = bookEquity() / safeMaxPositions;
+      if (!finite(targetAllocation) || targetAllocation <= 0 || cash + 1e-6 < targetAllocation) {
+        skippedCash += 1;
+        continue;
+      }
+      cash -= targetAllocation;
       active.push({
         code: row.code,
         name: row.name,
         entryDate: date,
         exitDate: row.exitKey,
         returnPct: row.netReturnPct,
-        allocation
+        allocation: targetAllocation
       });
+      peakPositions = Math.max(peakPositions, active.length);
     }
 
     const closing = active.filter((position) => position.exitDate === date);
     if (closing.length) {
       for (const position of closing) {
         const pnl = position.allocation * position.returnPct / 100;
-        equity += pnl;
-        trades.push({ ...position, pnl, equityAfter: equity });
+        cash += position.allocation + pnl;
+        trades.push({ ...position, pnl });
       }
       active = active.filter((position) => position.exitDate !== date);
-      curve.push({ date, equity });
+      curve.push({ date, equity: bookEquity() });
     }
   }
 
   const returns = trades.map((trade) => trade.returnPct);
+  const endingEquity = bookEquity();
   return {
     cohortId,
     horizon,
-    initialCapital,
-    maxPositions,
+    initialCapital: safeInitialCapital,
+    maxPositions: safeMaxPositions,
     completedTrades: trades.length,
     skippedDuplicate,
     skippedCapacity,
-    endingEquity: round(equity, 0),
-    totalReturnPct: round((equity / initialCapital - 1) * 100),
-    realizedMaxDrawdownPct: round(drawdownFromCurve(curve, initialCapital)),
+    skippedCash,
+    peakPositions,
+    endingCash: round(cash, 0),
+    endingEquity: round(endingEquity, 0),
+    totalReturnPct: round((endingEquity / safeInitialCapital - 1) * 100),
+    realizedMaxDrawdownPct: round(drawdownFromCurve(curve, safeInitialCapital)),
     winRatePct: trades.length ? round((trades.filter((trade) => trade.returnPct > 0).length / trades.length) * 100, 1) : null,
     avgTradeReturnPct: round(average(returns)),
     profitFactor: round(profitFactor(returns), 2),
     curve: curve.slice(-120),
-    activeAtEnd: active.length
+    activeAtEnd: active.length,
+    activePrincipalAtEnd: round(active.reduce((sum, position) => sum + position.allocation, 0), 0)
   };
 }
 
 function healthBlock({ records, selections, invalidLines, state, indexData }) {
   const signalDates = [...new Set(records.map((row) => row.signalDate).filter(Boolean))].sort();
   const rawNoRecordDates = state?.missingSnapshotDates ?? [];
-  const recorded = new Set(signalDates);
   const first = compactDate(signalDates[0]);
   const last = compactDate(signalDates.at(-1));
-  const tradingDates = new Set();
-  if (first && last) {
-    for (const market of ["KOSPI", "KOSDAQ"]) {
-      for (const bar of indexData?.markets?.[market] ?? []) {
-        const date = String(bar.date ?? "");
-        if (date >= first && date <= last) tradingDates.add(date.slice(0, 4) + "-" + date.slice(4, 6) + "-" + date.slice(6, 8));
-      }
-    }
-  }
-  const confirmedMissing = [...tradingDates].filter((date) => !recorded.has(date)).sort();
-  const nonTradingNoRecordDates = rawNoRecordDates.filter((date) => !confirmedMissing.includes(date));
+  const indexCoverage = Object.fromEntries(["KOSPI", "KOSDAQ"].map((market) => {
+    const rows = indexData?.markets?.[market] ?? [];
+    const firstDate = rows[0]?.date ?? null;
+    const lastDate = rows.at(-1)?.date ?? null;
+    const coversRange = Boolean(first && last && firstDate && lastDate && firstDate <= first && lastDate >= last);
+    return [market, { firstDate, lastDate, coversRange }];
+  }));
+  const calendarSourceMarket = ["KOSPI", "KOSDAQ"].find((market) => indexCoverage[market].coversRange) ?? null;
+  const calendarRows = calendarSourceMarket ? indexData?.markets?.[calendarSourceMarket] ?? [] : [];
+  const tradingDates = new Set(calendarRows.map((row) => String(row.date)));
+  const confirmedMissing = calendarSourceMarket
+    ? rawNoRecordDates.filter((date) => tradingDates.has(compactDate(date)))
+    : [];
+  const nonTradingNoRecordDates = calendarSourceMarket
+    ? rawNoRecordDates.filter((date) => !tradingDates.has(compactDate(date)))
+    : [];
+  const unverifiedNoRecordDates = calendarSourceMarket ? [] : [...rawNoRecordDates];
+  const indexBenchmarkReady = ["KOSPI", "KOSDAQ"].every((market) => indexCoverage[market].coversRange);
   const frozen = records.filter((row) => row.frozenConsensus).length;
   const entryDay = records.filter((row) => row.entryDayOutcome).length;
   const indexLast = Object.fromEntries(["KOSPI", "KOSDAQ"].map((market) => [market, indexData?.markets?.[market]?.at(-1)?.date ?? null]));
   let status = "good";
-  if (invalidLines > 0 || confirmedMissing.length > 0) status = "warn";
+  if (invalidLines > 0 || confirmedMissing.length > 0 || unverifiedNoRecordDates.length > 0 || (signalDates.length && !indexBenchmarkReady)) status = "warn";
   if (!signalDates.length) status = "empty";
   return {
     status,
@@ -425,6 +465,10 @@ function healthBlock({ records, selections, invalidLines, state, indexData }) {
     missingSnapshotDates: confirmedMissing,
     rawWeekdayNoRecordDates: rawNoRecordDates,
     nonTradingNoRecordDates,
+    unverifiedNoRecordDates,
+    calendarSourceMarket,
+    indexBenchmarkReady,
+    indexCoverage,
     lastSnapshotAt: state?.lastSnapshotAt ?? null,
     lastEvaluatedAt: state?.lastEvaluatedAt ?? null,
     frozenConsensusRecords: frozen,
