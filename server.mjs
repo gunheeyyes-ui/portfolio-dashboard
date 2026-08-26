@@ -1009,7 +1009,7 @@ async function fetchMarketIndexHistory(market, force = false) {
   const startDate = yyyymmdd(start);
   let cursorEnd = yyyymmdd(end);
   const byDate = new Map();
-  for (let page = 0; page < 10; page += 1) {
+  for (let page = 0; page < 15; page += 1) {
     const data = await kisGet(
       "/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice",
       {

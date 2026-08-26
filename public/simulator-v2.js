@@ -1,5 +1,5 @@
 const COHORTS = [
-  { id: "actual", label: "✅ 실제진입" },
+  { id: "actual", label: "✅ 진입판정" },
   { id: "core", label: "🔥 핵심후보" },
   { id: "strong", label: "⭐ 강한후보" }
 ];
@@ -59,7 +59,7 @@ function ensureEnhancedPanels() {
   metrics.insertAdjacentHTML("afterend", `
     <section class="notice" id="simV2Health"></section>
     <section class="sim-panel">
-      <div class="section-title"><div><h2>실제운용 포트폴리오 시뮬레이션</h2><p>동일 종목 중복진입 금지 · 최대 10종목 · 1억원 기준. 실현손익 기준 MDD이며 기존 OOS 신호 자체는 변경하지 않습니다.</p></div></div>
+      <div class="section-title"><div><h2>실제운용 포트폴리오 시뮬레이션</h2><p>동일 종목 중복진입 금지 · 최대 10종목 · 1억원 기준. ✅ 진입판정은 ACTIONABLE_ALL 규칙 전체이며 아래 V1 실제체결 장부와는 별도입니다. 실현손익 기준 MDD입니다.</p></div></div>
       <div class="table-wrap"><table class="sim-table"><thead><tr><th>후보군</th><th>5D</th><th>10D</th><th>20D</th></tr></thead><tbody id="simV2Portfolio"></tbody></table></div>
     </section>
     <section class="sim-panel">
@@ -115,7 +115,7 @@ function renderMetrics(model) {
     ["V2 전체 누적 신호", `${model.meta?.totalCandidateRows ?? 0}건`, `전체 OOS 통계 · 화면 ${state.rows.length}건`, "watch-text"],
     ["🔥 핵심", `${model.cohorts?.core?.trades ?? 0}건`, `독립 신호일 ${model.cohorts?.core?.signalDays ?? 0} · 5D ${pct(model.cohorts?.core?.horizons?.["5"]?.trades?.avgReturnPct)}`, tone(model.cohorts?.core?.horizons?.["5"]?.trades?.avgReturnPct)],
     ["⭐ 강한", `${model.cohorts?.strong?.trades ?? 0}건`, `독립 신호일 ${model.cohorts?.strong?.signalDays ?? 0} · 5D ${pct(model.cohorts?.strong?.horizons?.["5"]?.trades?.avgReturnPct)}`, tone(model.cohorts?.strong?.horizons?.["5"]?.trades?.avgReturnPct)],
-    ["데이터 건강", health.status === "good" ? "정상" : health.status === "warn" ? "확인필요" : "대기", `누락 ${health.missingSnapshotDates?.length ?? 0}일 · 동결 ${pct(health.frozenConsensusCoveragePct)}`, health.status === "good" ? "positive" : "watch-text"]
+    ["데이터 건강", health.status === "good" ? "정상" : health.status === "warn" ? "확인필요" : "대기", `확정누락 ${health.missingSnapshotDates?.length ?? 0}일 · 미검증 ${health.unverifiedNoRecordDates?.length ?? 0}일 · 동결 ${pct(health.frozenConsensusCoveragePct)}`, health.status === "good" ? "positive" : "watch-text"]
   ];
   document.querySelector("#simV2Metrics").innerHTML = metrics.map(([label, value, sub, cls = ""]) => `
     <article class="metric"><div class="label">${label}</div><div class="value ${cls}">${value}</div><div class="sub">${sub}</div></article>
@@ -125,6 +125,7 @@ function renderMetrics(model) {
 function renderHealth(model) {
   const health = model.health ?? {};
   const missing = health.missingSnapshotDates ?? [];
+  const unverified = health.unverifiedNoRecordDates ?? [];
   const indexDates = health.indexLastDate ?? {};
   const node = document.querySelector("#simV2Health");
   if (!node) return;
@@ -132,8 +133,8 @@ function renderHealth(model) {
   node.innerHTML = `
     <strong>${ok ? "🟢 자동수집 상태 정상" : health.status === "empty" ? "⚪ OOS 기록 대기" : "🟠 자동수집 상태 확인 필요"}</strong>
     <span>최근 신호 ${health.lastSignalDate ?? "-"} · 마지막 스냅샷 ${health.lastSnapshotAt ? new Date(health.lastSnapshotAt).toLocaleString("ko-KR") : "-"} · 마지막 성과평가 ${health.lastEvaluatedAt ? new Date(health.lastEvaluatedAt).toLocaleString("ko-KR") : "-"}</span>
-    <span>스냅샷 누락 ${missing.length}일${missing.length ? ` (${missing.slice(-5).join(", ")})` : ""} · 오류라인 ${health.invalidLines ?? 0} · 전략/계열 동결 ${pct(health.frozenConsensusCoveragePct)} · 0D 보강 ${pct(health.entryDayCoveragePct)}</span>
-    <span>실제지수 저장 KOSPI ${indexDates.KOSPI ?? "-"} · KOSDAQ ${indexDates.KOSDAQ ?? "-"} · 유니버스 ${Object.keys(model.meta?.universeVersions ?? {}).join(" / ") || "legacy"}</span>`;
+    <span>스냅샷 확정누락 ${missing.length}일${missing.length ? ` (${missing.slice(-5).join(", ")})` : ""} · 미검증 ${unverified.length}일${unverified.length ? ` (${unverified.slice(-5).join(", ")})` : ""} · 오류라인 ${health.invalidLines ?? 0} · 전략/계열 동결 ${pct(health.frozenConsensusCoveragePct)} · 0D 보강 ${pct(health.entryDayCoveragePct)}</span>
+    <span>실제지수 저장 KOSPI ${indexDates.KOSPI ?? "-"} · KOSDAQ ${indexDates.KOSDAQ ?? "-"} · 지수검증 ${health.indexBenchmarkReady ? "정상" : "대기/불완전"} · 유니버스 ${Object.keys(model.meta?.universeVersions ?? {}).join(" / ") || "legacy"}</span>`;
 }
 
 function renderCohortSummary(model) {
@@ -155,7 +156,7 @@ function renderPortfolio(model) {
   body.innerHTML = COHORTS.map((cohort) => {
     const cells = PORTFOLIO_HORIZONS.map((horizon) => {
       const p = model.portfolio?.[cohort.id]?.[String(horizon)] ?? {};
-      return `<td><b class="${tone(p.totalReturnPct)}">${pct(p.totalReturnPct)}</b><div class="cell-sub">MDD ${pct(p.realizedMaxDrawdownPct)} · ${p.completedTrades ?? 0}건</div><div class="cell-sub">중복skip ${p.skippedDuplicate ?? 0} · 용량skip ${p.skippedCapacity ?? 0}</div></td>`;
+      return `<td><b class="${tone(p.totalReturnPct)}">${pct(p.totalReturnPct)}</b><div class="cell-sub">MDD ${pct(p.realizedMaxDrawdownPct)} · ${p.completedTrades ?? 0}건</div><div class="cell-sub">중복skip ${p.skippedDuplicate ?? 0} · 용량skip ${p.skippedCapacity ?? 0} · 현금skip ${p.skippedCash ?? 0}</div><div class="cell-sub">최대 동시 ${p.peakPositions ?? 0}종목</div></td>`;
     }).join("");
     return `<tr><td><b>${cohort.label}</b><div class="cell-sub">초기 1억원 · 최대 10종목</div></td>${cells}</tr>`;
   }).join("");
@@ -176,7 +177,7 @@ function renderRobustness(model) {
       <td><b class="${tone(trade.stress?.["0.2"]?.avgReturnPct)}">${pct(trade.stress?.["0.2"]?.avgReturnPct)}</b><div class="cell-sub">승 ${pct(trade.stress?.["0.2"]?.winRatePct)}</div></td>
       <td><b class="${tone(trade.stress?.["0.5"]?.avgReturnPct)}">${pct(trade.stress?.["0.5"]?.avgReturnPct)}</b><div class="cell-sub">승 ${pct(trade.stress?.["0.5"]?.winRatePct)}</div></td>
       <td><b class="${tone(trade.avgIndexExcessReturnPct)}">${pct(trade.avgIndexExcessReturnPct)}</b><div class="cell-sub">KOSPI/KOSDAQ 실제지수</div></td>
-      <td><b class="${tone(days.avgReturnPct)}">${pct(days.avgReturnPct)}</b><div class="cell-sub">독립 신호일 d=${days.n ?? 0}</div></td>
+      <td><b class="${tone(days.avgReturnPct)}">${pct(days.avgReturnPct)}</b><div class="cell-sub">신호일 d=${days.n ?? 0} · ${days.confidenceLabel ?? "-"}</div><div class="cell-sub">95% CI ${pct(days.ci95LowPct)} ~ ${pct(days.ci95HighPct)}</div></td>
     </tr>`;
   }).join("");
 }

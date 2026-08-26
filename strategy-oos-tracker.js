@@ -514,28 +514,41 @@ export function evaluateUniverseRecord(record, history, {
  * Same-day, same-market equal-weight universe return, so a strategy is judged
  * against the market it actually traded in rather than against zero.
  */
+function attachOutcomeBenchmarks(records, readOutcome, writeOutcome) {
+  const groups = new Map();
+  for (const row of records) {
+    const outcome = readOutcome(row);
+    if (!finite(outcome?.netReturnPct)) continue;
+    const groupKey = `${row.signalDate}|${row.market}`;
+    if (!groups.has(groupKey)) groups.set(groupKey, []);
+    groups.get(groupKey).push(Number(outcome.netReturnPct));
+  }
+  for (const row of records) {
+    const outcome = readOutcome(row);
+    if (!outcome) continue;
+    const values = groups.get(`${row.signalDate}|${row.market}`) ?? [];
+    const benchmarkReturnPct = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+    writeOutcome(row, {
+      ...outcome,
+      benchmarkReturnPct,
+      excessReturnPct: finite(benchmarkReturnPct) ? Number(outcome.netReturnPct) - benchmarkReturnPct : null
+    });
+  }
+}
+
 export function attachBenchmarks(records, horizons = STRATEGY_HORIZONS) {
+  attachOutcomeBenchmarks(
+    records,
+    (row) => row.entryDayOutcome,
+    (row, outcome) => { row.entryDayOutcome = outcome; }
+  );
   for (const horizon of horizons) {
     const key = String(horizon);
-    const groups = new Map();
-    for (const row of records) {
-      const outcome = row.outcomes?.[key];
-      if (!finite(outcome?.netReturnPct)) continue;
-      const groupKey = `${row.signalDate}|${row.market}`;
-      if (!groups.has(groupKey)) groups.set(groupKey, []);
-      groups.get(groupKey).push(Number(outcome.netReturnPct));
-    }
-    for (const row of records) {
-      const outcome = row.outcomes?.[key];
-      if (!outcome) continue;
-      const values = groups.get(`${row.signalDate}|${row.market}`) ?? [];
-      const benchmarkReturnPct = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
-      row.outcomes[key] = {
-        ...outcome,
-        benchmarkReturnPct,
-        excessReturnPct: finite(benchmarkReturnPct) ? Number(outcome.netReturnPct) - benchmarkReturnPct : null
-      };
-    }
+    attachOutcomeBenchmarks(
+      records,
+      (row) => row.outcomes?.[key],
+      (row, outcome) => { row.outcomes[key] = outcome; }
+    );
   }
   return records;
 }
@@ -992,7 +1005,13 @@ export function createStrategyOosTracker({
       || !finite(row.entryOpen)
     ));
     const localUpgradeNeeded = loaded.records.some((row) => !row.frozenConsensus && row.factors);
-    if (!historyNeeded.length && !localUpgradeNeeded) return { updated: 0, total: loaded.records.length };
+    const entryDayBenchmarkUpgradeCount = loaded.records.filter((row) => (
+      finite(row.entryDayOutcome?.netReturnPct)
+      && !finite(row.entryDayOutcome?.benchmarkReturnPct)
+    )).length;
+    if (!historyNeeded.length && !localUpgradeNeeded && !entryDayBenchmarkUpgradeCount) {
+      return { updated: 0, total: loaded.records.length, entryDayBenchmarkUpgraded: 0 };
+    }
     const historySet = new Set(historyNeeded);
     const codes = [...new Set(historyNeeded.map((row) => row.code))];
     const histories = new Map();
@@ -1011,11 +1030,15 @@ export function createStrategyOosTracker({
       return next;
     });
     attachBenchmarks(records, horizons);
-    if (updated || loaded.invalidLines) writeJsonl(historyFile, records);
+    if (updated || loaded.invalidLines || entryDayBenchmarkUpgradeCount) writeJsonl(historyFile, records);
     const state = { ...readState(), lastEvaluatedAt: evaluatedAt };
     writeState(state);
     writeSummary(records, loaded.selections, 0, state);
-    return { updated, total: records.length };
+    return {
+      updated: Math.max(updated, entryDayBenchmarkUpgradeCount),
+      total: records.length,
+      entryDayBenchmarkUpgraded: entryDayBenchmarkUpgradeCount
+    };
   }
 
   // Serves one market's rows, not all three: the cached file holds ALL/KOSPI/
