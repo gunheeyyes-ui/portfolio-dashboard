@@ -4,6 +4,8 @@ import {
   hasRequiredFields
 } from "./strategy-oos-registry.js";
 
+export const CONSENSUS_DEFINITION_VERSION = "base-strategy-consensus-v1-20260826";
+
 export const STRATEGY_AXES = [
   { id: "leader", label: "주도" },
   { id: "rs", label: "RS" },
@@ -89,5 +91,18 @@ export function evaluateBaseConsensus(feature) {
     strategyHasConfirmAxis: axisSet.has("confirm"),
     matches,
     axes
+  };
+}
+
+export function freezeBaseConsensus(feature) {
+  const consensus = evaluateBaseConsensus(feature);
+  return {
+    version: CONSENSUS_DEFINITION_VERSION,
+    strategyCount: consensus.strategyMatchCount,
+    axisCount: consensus.strategyAxisCount,
+    strategyIds: consensus.matches.map((strategy) => strategy.id),
+    strategyNames: consensus.matches.map((strategy) => strategy.displayName),
+    axisIds: consensus.axes.map((axis) => axis.id),
+    axisLabels: consensus.axes.map((axis) => axis.label)
   };
 }
