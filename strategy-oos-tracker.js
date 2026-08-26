@@ -1005,7 +1005,13 @@ export function createStrategyOosTracker({
       || !finite(row.entryOpen)
     ));
     const localUpgradeNeeded = loaded.records.some((row) => !row.frozenConsensus && row.factors);
-    if (!historyNeeded.length && !localUpgradeNeeded) return { updated: 0, total: loaded.records.length };
+    const entryDayBenchmarkUpgradeCount = loaded.records.filter((row) => (
+      finite(row.entryDayOutcome?.netReturnPct)
+      && !finite(row.entryDayOutcome?.benchmarkReturnPct)
+    )).length;
+    if (!historyNeeded.length && !localUpgradeNeeded && !entryDayBenchmarkUpgradeCount) {
+      return { updated: 0, total: loaded.records.length, entryDayBenchmarkUpgraded: 0 };
+    }
     const historySet = new Set(historyNeeded);
     const codes = [...new Set(historyNeeded.map((row) => row.code))];
     const histories = new Map();
@@ -1024,11 +1030,15 @@ export function createStrategyOosTracker({
       return next;
     });
     attachBenchmarks(records, horizons);
-    if (updated || loaded.invalidLines) writeJsonl(historyFile, records);
+    if (updated || loaded.invalidLines || entryDayBenchmarkUpgradeCount) writeJsonl(historyFile, records);
     const state = { ...readState(), lastEvaluatedAt: evaluatedAt };
     writeState(state);
     writeSummary(records, loaded.selections, 0, state);
-    return { updated, total: records.length };
+    return {
+      updated: Math.max(updated, entryDayBenchmarkUpgradeCount),
+      total: records.length,
+      entryDayBenchmarkUpgraded: entryDayBenchmarkUpgradeCount
+    };
   }
 
   // Serves one market's rows, not all three: the cached file holds ALL/KOSPI/
