@@ -102,8 +102,8 @@ replaceOnce(
 
 replaceOnce(
   "public/simulator-v2.js",
-  '    } : `<tr><td colspan="15" class="loading">아직 OOS 기반 Simulation V2 기록이 없습니다.</td></tr>`;',
-  '    } : `<tr><td colspan="14" class="loading">아직 OOS 기반 Simulation V2 기록이 없습니다.</td></tr>`;'
+  '  }).join("") : `<tr><td colspan="15" class="loading">아직 OOS 기반 Simulation V2 기록이 없습니다.</td></tr>`;',
+  '  }).join("") : `<tr><td colspan="14" class="loading">아직 OOS 기반 Simulation V2 기록이 없습니다.</td></tr>`;'
 );
 replaceOnce(
   "public/simulator-v2.js",
