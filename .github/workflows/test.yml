@@ -24,6 +24,9 @@ jobs:
           node --check cloud-dashboard-runtime.js
           node --check simulation-category.js
           node --check strategy-oos-registry.js
+          node --check strategy-oos-tracker.js
+          node --check market-index-tracker.js
+          node --check simulation-v2-service.js
           node --check public/simulator.js
           node --check public/simulator-v2.js
           node --check public/simulation-v2.js
