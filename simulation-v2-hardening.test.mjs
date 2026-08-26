@@ -144,8 +144,11 @@ test("market regime and health diagnostics are deterministic", () => {
   const data = indexData();
   const regime = marketRegimeForDate("KOSPI", "2026-08-20", data);
   assert.ok(["bull", "neutral", "bear", "high-vol"].includes(regime.key));
-  const records = [record("000001")];
-  const selections = [selection("ACTIONABLE_ALL", ["000001"])];
+  const records = [
+    record("000001", { signalDate: "2026-08-18" }),
+    record("000002", { signalDate: "2026-08-20" })
+  ];
+  const selections = [selection("ACTIONABLE_ALL", ["000001"], "2026-08-18"), selection("ACTIONABLE_ALL", ["000002"], "2026-08-20")];
   const model = buildSimulationV2ServerModel({
     records,
     selections,

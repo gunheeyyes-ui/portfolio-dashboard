@@ -393,12 +393,26 @@ export function simulatePortfolio(rows, {
 
 function healthBlock({ records, selections, invalidLines, state, indexData }) {
   const signalDates = [...new Set(records.map((row) => row.signalDate).filter(Boolean))].sort();
-  const missing = state?.missingSnapshotDates ?? [];
+  const rawNoRecordDates = state?.missingSnapshotDates ?? [];
+  const recorded = new Set(signalDates);
+  const first = compactDate(signalDates[0]);
+  const last = compactDate(signalDates.at(-1));
+  const tradingDates = new Set();
+  if (first && last) {
+    for (const market of ["KOSPI", "KOSDAQ"]) {
+      for (const bar of indexData?.markets?.[market] ?? []) {
+        const date = String(bar.date ?? "");
+        if (date >= first && date <= last) tradingDates.add(date.slice(0, 4) + "-" + date.slice(4, 6) + "-" + date.slice(6, 8));
+      }
+    }
+  }
+  const confirmedMissing = [...tradingDates].filter((date) => !recorded.has(date)).sort();
+  const nonTradingNoRecordDates = rawNoRecordDates.filter((date) => !confirmedMissing.includes(date));
   const frozen = records.filter((row) => row.frozenConsensus).length;
   const entryDay = records.filter((row) => row.entryDayOutcome).length;
   const indexLast = Object.fromEntries(["KOSPI", "KOSDAQ"].map((market) => [market, indexData?.markets?.[market]?.at(-1)?.date ?? null]));
   let status = "good";
-  if (invalidLines > 0 || missing.length > 0) status = "warn";
+  if (invalidLines > 0 || confirmedMissing.length > 0) status = "warn";
   if (!signalDates.length) status = "empty";
   return {
     status,
@@ -408,7 +422,9 @@ function healthBlock({ records, selections, invalidLines, state, indexData }) {
     recordCount: records.length,
     selectionCount: selections.length,
     invalidLines,
-    missingSnapshotDates: missing,
+    missingSnapshotDates: confirmedMissing,
+    rawWeekdayNoRecordDates: rawNoRecordDates,
+    nonTradingNoRecordDates,
     lastSnapshotAt: state?.lastSnapshotAt ?? null,
     lastEvaluatedAt: state?.lastEvaluatedAt ?? null,
     frozenConsensusRecords: frozen,

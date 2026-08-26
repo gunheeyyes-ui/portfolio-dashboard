@@ -237,7 +237,7 @@ function renderRecentRows(model) {
       <td><b>${excursion.horizon === null ? "-" : horizonLabel(excursion.horizon)}</b><div class="cell-sub">MFE ${pct(excursion.mfePct)} · MAE ${pct(excursion.maePct)}</div></td>
       <td><b class="${tone(fiveIndex)}">${pct(fiveIndex)}</b><div class="cell-sub">유니버스대비 ${pct(row.outcomesV2?.["5"]?.excessReturnPct)}</div></td>
     </tr>`;
-  }).join("") : `<tr><td colspan="15" class="loading">아직 OOS 기반 Simulation V2 기록이 없습니다.</td></tr>`;
+  }).join("") : `<tr><td colspan="14" class="loading">아직 OOS 기반 Simulation V2 기록이 없습니다.</td></tr>`;
 
   const more = document.querySelector("#simV2More");
   if (more) {
@@ -268,7 +268,7 @@ function renderFailure(error) {
   const status = document.querySelector("#simV2Status");
   if (status) status.textContent = `Simulation V2 불러오기 실패: ${error.message}`;
   const body = document.querySelector("#simV2Rows");
-  if (body) body.innerHTML = `<tr><td colspan="15" class="loading">${error.message}</td></tr>`;
+  if (body) body.innerHTML = `<tr><td colspan="14" class="loading">${error.message}</td></tr>`;
 }
 
 document.querySelector("#refreshBtn")?.addEventListener("click", () => loadV2().catch(renderFailure));

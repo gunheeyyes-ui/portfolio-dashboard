@@ -1002,7 +1002,10 @@ async function fetchMarketIndexHistory(market, force = false) {
   if (cached) return cached;
   const end = new Date();
   const start = new Date();
-  start.setDate(end.getDate() - 365 * 5);
+  const existingCount = marketIndexTracker.read().markets?.[market]?.length ?? 0;
+  // First bootstrap pulls a multi-year regime/benchmark seed. Daily EOD refreshes
+  // only need the recent window; mergeMany keeps the older persisted bars forever.
+  start.setDate(end.getDate() - (existingCount ? 220 : 365 * 5));
   const startDate = yyyymmdd(start);
   let cursorEnd = yyyymmdd(end);
   const byDate = new Map();
