@@ -6,7 +6,7 @@
 
 import { evaluateBaseConsensus } from "./strategy-consensus.js";
 
-export const CONSENSUS_DEFINITION_VERSION = 1;
+export const CONSENSUS_DEFINITION_VERSION = 2;
 
 export const CONSENSUS_STRATEGY_GROUP = {
   id: "consensus",
@@ -38,6 +38,26 @@ function stats(feature) {
 const hasLeaderRs = (f) => f.strategyHasLeaderAxis === true && f.strategyHasRsAxis === true;
 
 export const CONSENSUS_STRATEGIES = [
+  condition({
+    id: "CONSENSUS_CORE",
+    displayName: "🔥 핵심후보",
+    requires: ["leaderRank"],
+    selector: (f) => {
+      const s = stats(f);
+      return Number(f.leaderRank) <= 10 && s.strategyMatchCount >= 5 && s.strategyAxisCount >= 3;
+    },
+    description: "홈·시뮬레이터와 동일: Leader TOP10 + 기본전략 5개 이상 + 독립 3계열 이상"
+  }),
+  condition({
+    id: "CONSENSUS_STRONG",
+    displayName: "⭐ 강한후보",
+    requires: ["leaderGrade", "rs20"],
+    selector: (f) => {
+      const s = stats(f);
+      return f.leaderGrade === "A" && Number(f.rs20) >= 80 && s.strategyAxisCount >= 3;
+    },
+    description: "홈·시뮬레이터와 동일: Leader A + RS20 80 이상 + 독립 3계열 이상"
+  }),
   condition({
     id: "CONSENSUS_STRATEGY_3_PLUS",
     displayName: "전략 3개+",
@@ -137,6 +157,8 @@ export const CONSENSUS_STRATEGIES = [
 ];
 
 export const CONSENSUS_FEATURED_STRATEGY_IDS = [
+  "CONSENSUS_CORE",
+  "CONSENSUS_STRONG",
   "CONSENSUS_5S_3A",
   "CONSENSUS_5S_4A",
   "CONSENSUS_4A_LEADER_RS",
