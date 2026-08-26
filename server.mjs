@@ -13,6 +13,8 @@ import { createStrategyOosTracker, safeStrategyTask } from "./strategy-oos-track
 import { rankMarketRowsV2 } from "./public/rebound-ranking-v2.js";
 import { buildRelativeStrength20 } from "./relative-strength.js";
 import { createStockEasyCache } from "./stockeasy.js";
+import { createMarketIndexTracker, MARKET_INDEX_CODES } from "./market-index-tracker.js";
+import { buildSimulationV2ServerModel } from "./simulation-v2-service.js";
 import {
   CLOUD_SNAPSHOT_SCHEMA,
   createCloudSnapshotManager,
@@ -63,6 +65,9 @@ const strategyOosTracker = createStrategyOosTracker({
   summaryFile: STRATEGY_OOS_SUMMARY_FILE,
   stateFile: STRATEGY_OOS_STATE_FILE
 });
+const MARKET_INDEX_HISTORY_FILE = path.join(DASHBOARD_DATA_DIR, "market-index-history.json");
+const marketIndexTracker = createMarketIndexTracker({ file: MARKET_INDEX_HISTORY_FILE });
+let marketIndexMaintenanceRunning = false;
 // Supplemental, display-only external-strategy badges. Fail-soft: a
 // StockEasy outage must never affect KIS data, Ranking V2, or page render.
 const stockEasyCache = createStockEasyCache({
@@ -151,6 +156,7 @@ function scheduleStrategyOosMaintenance({ payload = null, historyByCode = null, 
         selections: outcome.value.addedSelections
       });
     }
+    scheduleMarketIndexMaintenance({ force: true });
   }
   if (strategyMaintenanceRunning || !process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET) return;
   strategyMaintenanceRunning = true;
@@ -986,6 +992,76 @@ async function fetchHistory(code, force = false) {
     volume: toNumber(row.acml_vol)
   })).filter((row) => row.date && Number.isFinite(row.close)).reverse();
   return cacheSet(`history:${code}`, rows);
+}
+
+async function fetchMarketIndexHistory(market, force = false) {
+  const code = MARKET_INDEX_CODES[market];
+  if (!code) return [];
+  const cacheKey = `market-index-history:${market}`;
+  const cached = force ? null : cacheGet(cacheKey, 1000 * 60 * 60 * 6);
+  if (cached) return cached;
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 365 * 5);
+  const startDate = yyyymmdd(start);
+  let cursorEnd = yyyymmdd(end);
+  const byDate = new Map();
+  for (let page = 0; page < 10; page += 1) {
+    const data = await kisGet(
+      "/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice",
+      {
+        FID_COND_MRKT_DIV_CODE: "U",
+        FID_INPUT_ISCD: code,
+        FID_INPUT_DATE_1: startDate,
+        FID_INPUT_DATE_2: cursorEnd,
+        FID_PERIOD_DIV_CODE: "D"
+      },
+      "FHKUP03500100"
+    );
+    const chunk = data.output2 ?? [];
+    if (!chunk.length) break;
+    for (const row of chunk) {
+      const date = String(row.stck_bsop_date ?? "");
+      if (!/^\d{8}$/.test(date)) continue;
+      const close = toNumber(row.bstp_nmix_prpr);
+      if (!Number.isFinite(close)) continue;
+      byDate.set(date, {
+        date,
+        open: toNumber(row.bstp_nmix_oprc),
+        high: toNumber(row.bstp_nmix_hgpr),
+        low: toNumber(row.bstp_nmix_lwpr),
+        close,
+        volume: toNumber(row.acml_vol)
+      });
+    }
+    const oldest = chunk.at(-1)?.stck_bsop_date;
+    if (!oldest || oldest <= startDate || chunk.length < 100) break;
+    const parsed = parseYmd(oldest);
+    if (!parsed) break;
+    cursorEnd = yyyymmdd(addDays(parsed, -1));
+  }
+  return cacheSet(cacheKey, [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)));
+}
+
+function scheduleMarketIndexMaintenance({ force = false } = {}) {
+  if (marketIndexMaintenanceRunning || !process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET) return;
+  marketIndexMaintenanceRunning = true;
+  setTimeout(async () => {
+    try {
+      const KOSPI = await withRetry(() => fetchMarketIndexHistory("KOSPI", force), 2);
+      const KOSDAQ = await withRetry(() => fetchMarketIndexHistory("KOSDAQ", force), 2);
+      const merged = marketIndexTracker.mergeMany({ KOSPI, KOSDAQ });
+      structuredLog("MARKET_INDEX_UPDATED", {
+        kospi: merged.markets.KOSPI.length,
+        kosdaq: merged.markets.KOSDAQ.length,
+        updatedAt: merged.updatedAt
+      });
+    } catch (error) {
+      structuredLog("MARKET_INDEX_UPDATE_FAILED", { message: error?.message ?? String(error) });
+    } finally {
+      marketIndexMaintenanceRunning = false;
+    }
+  }, 0);
 }
 
 function buildBacktestPriceFileIndex() {
@@ -2638,7 +2714,8 @@ function buildCloudEnvelope({ marketScreener, portfolioSnapshot, dataMode, start
 
 async function performCloudFullRefresh({ previousSnapshot, startedAt, reason }) {
   const before = kisMetricsSnapshot();
-  const marketScreener = await buildMarketScreener(100, true, "ALL");
+  const screenerLimit = Math.min(150, Math.max(60, Number(process.env.CLOUD_SCREENER_LIMIT || 100)));
+  const marketScreener = await buildMarketScreener(screenerLimit, true, "ALL");
   const portfolioSnapshot = await buildSnapshot(true, true);
   assertFullRefreshQuality(marketScreener, portfolioSnapshot);
   const tradingDate = marketScreener.marketDataAsOf;
@@ -3024,6 +3101,31 @@ const server = http.createServer(async (req, res) => {
       } else json(res, 200, await buildStrategyDashboard(limit, force, market));
       return;
     }
+    if (url.pathname === "/api/simulation-v2") {
+      if (process.env.KIS_APP_KEY && process.env.KIS_APP_SECRET) scheduleMarketIndexMaintenance();
+      const loaded = strategyOosTracker.readAll();
+      const state = strategyOosTracker.readState();
+      const cohort = String(url.searchParams.get("cohort") || "ALL");
+      const regime = String(url.searchParams.get("regime") || "ALL");
+      const offset = Math.max(0, Number(url.searchParams.get("offset") || 0));
+      const limit = Math.min(500, Math.max(1, Number(url.searchParams.get("limit") || 100)));
+      const initialCapital = Math.max(1_000_000, Number(url.searchParams.get("capital") || 100_000_000));
+      const maxPositions = Math.min(50, Math.max(1, Number(url.searchParams.get("maxPositions") || 10)));
+      json(res, 200, buildSimulationV2ServerModel({
+        records: loaded.records,
+        selections: loaded.selections,
+        invalidLines: loaded.invalidLines,
+        state,
+        indexData: marketIndexTracker.read(),
+        cohort,
+        regime,
+        offset,
+        limit,
+        initialCapital,
+        maxPositions
+      }));
+      return;
+    }
     if (url.pathname === "/api/simulation") {
       if (!process.env.KIS_APP_KEY || !process.env.KIS_APP_SECRET) {
         json(res, 400, { error: "KIS keys are required" });
@@ -3046,6 +3148,7 @@ server.listen(PORT, HOST, () => {
   if (CLOUD_MODE) startCloudScheduler();
   if (existsSync(RANKING_LIVE_HISTORY_FILE)) scheduleRankingLiveMaintenance();
   if (existsSync(STRATEGY_OOS_HISTORY_FILE)) scheduleStrategyOosMaintenance();
+  scheduleMarketIndexMaintenance();
   // Fire-and-forget: never awaited, never blocks server startup or any request.
   stockEasyCache.ensureFresh();
   setInterval(() => stockEasyCache.ensureFresh(), 5 * 60 * 1000);

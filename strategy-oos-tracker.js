@@ -29,6 +29,7 @@ import {
   writeFileSync
 } from "node:fs";
 import path from "node:path";
+import { freezeBaseConsensus } from "./public/strategy-consensus.js";
 import { rankMarketRowsV2, reboundRankingTier } from "./public/rebound-ranking-v2.js";
 import { simulationCategory } from "./simulation-category.js";
 import {
@@ -335,7 +336,7 @@ export function buildSelections({ byMarket, rankedTotals }, { signalDate, record
   return selections;
 }
 
-export function buildUniverseRecords({ byMarket }, { signalDate, recordedAt }) {
+export function buildUniverseRecords({ byMarket }, { signalDate, recordedAt, universeMeta = null }) {
   const records = [];
   for (const market of MARKETS) {
     for (const feature of byMarket[market] ?? []) {
@@ -349,8 +350,12 @@ export function buildUniverseRecords({ byMarket }, { signalDate, recordedAt }) {
         name,
         signalPrice,
         factors,
+        frozenConsensus: freezeBaseConsensus(factors),
+        universeMeta,
         entryDate: null,
         entryOpen: null,
+        entryGapPct: null,
+        entryDayOutcome: null,
         outcomes: {},
         live: null,
         status: "PENDING"
@@ -418,9 +423,35 @@ export function evaluateUniverseRecord(record, history, {
 
   let changed = false;
   const next = { ...record, outcomes: { ...(record.outcomes ?? {}) } };
+  if (!next.frozenConsensus && next.factors) {
+    next.frozenConsensus = freezeBaseConsensus(next.factors);
+    changed = true;
+  }
   if (!next.entryDate || !finite(next.entryOpen)) {
     next.entryDate = entry.date;
     next.entryOpen = entry.open;
+    changed = true;
+  }
+  if (!finite(next.entryGapPct) && finite(next.signalPrice) && Number(next.signalPrice) > 0) {
+    next.entryGapPct = (entry.open / Number(next.signalPrice) - 1) * 100;
+    changed = true;
+  }
+  if (!next.entryDayOutcome && finite(entry.close)) {
+    const grossReturnPct = (entry.close / entry.open - 1) * 100;
+    const high = finite(entry.high) ? Number(entry.high) : Number(entry.close);
+    const low = finite(entry.low) ? Number(entry.low) : Number(entry.close);
+    next.entryDayOutcome = {
+      targetTradingDate: entry.date,
+      evaluatedAt,
+      exitPrice: entry.close,
+      grossReturnPct,
+      netReturnPct: grossReturnPct - costPct,
+      returnPct: grossReturnPct - costPct,
+      mfePct: (high / entry.open - 1) * 100,
+      maePct: (low / entry.open - 1) * 100,
+      benchmarkReturnPct: null,
+      excessReturnPct: null
+    };
     changed = true;
   }
 
@@ -878,7 +909,15 @@ export function createStrategyOosTracker({
     const failedCodes = new Set(errors.map((error) => String(error?.code ?? "")).filter(Boolean));
     const features = buildFeatureRows(payload, { failedCodes });
     const recordedAt = now().toISOString();
-    const universeRecords = buildUniverseRecords(features, { signalDate, recordedAt });
+    const baseLimit = Math.max(1, Number(payload?.limit ?? 100));
+    const volumeExtra = Math.min(30, baseLimit);
+    const universeMeta = {
+      version: `screener-v1-mcap${baseLimit}-vol${volumeExtra}`,
+      baseLimit,
+      volumeExtra,
+      marketCounts: Object.fromEntries(MARKETS.map((market) => [market, (features.byMarket[market] ?? []).length]))
+    };
+    const universeRecords = buildUniverseRecords(features, { signalDate, recordedAt, universeMeta });
     const selections = buildSelections(features, { signalDate, recordedAt });
 
     if (dryRun) {
@@ -917,7 +956,8 @@ export function createStrategyOosTracker({
           universeCount: universeRecords.length,
           marketCounts: Object.fromEntries(MARKETS.map((market) => [market, (features.byMarket[market] ?? []).length])),
           droppedRows: features.diagnostics,
-          kisErrors: errors.length
+          kisErrors: errors.length,
+          universeMeta
         }
       }
     };
@@ -944,10 +984,17 @@ export function createStrategyOosTracker({
     const loaded = readAll();
     if (!loaded.records.length) return { updated: 0, total: 0 };
     const today = seoulParts(now()).date;
-    const pending = loaded.records.filter((row) => row.status !== "COMPLETE" && row.signalDate < today);
-    if (!pending.length) return { updated: 0, total: loaded.records.length };
-    const pendingSet = new Set(pending);
-    const codes = [...new Set(pending.map((row) => row.code))];
+    const historyNeeded = loaded.records.filter((row) => row.signalDate < today && (
+      row.status !== "COMPLETE"
+      || !row.entryDayOutcome
+      || !finite(row.entryGapPct)
+      || !row.entryDate
+      || !finite(row.entryOpen)
+    ));
+    const localUpgradeNeeded = loaded.records.some((row) => !row.frozenConsensus && row.factors);
+    if (!historyNeeded.length && !localUpgradeNeeded) return { updated: 0, total: loaded.records.length };
+    const historySet = new Set(historyNeeded);
+    const codes = [...new Set(historyNeeded.map((row) => row.code))];
     const histories = new Map();
     for (let index = 0; index < codes.length; index += 3) {
       const batch = codes.slice(index, index + 3);
@@ -957,8 +1004,9 @@ export function createStrategyOosTracker({
     const evaluatedAt = now().toISOString();
     let updated = 0;
     const records = loaded.records.map((row) => {
-      if (!pendingSet.has(row)) return row;
-      const next = evaluateUniverseRecord(row, histories.get(row.code), { evaluatedAt, costPct, horizons });
+      let next = row;
+      if (!next.frozenConsensus && next.factors) next = { ...next, frozenConsensus: freezeBaseConsensus(next.factors) };
+      if (historySet.has(row)) next = evaluateUniverseRecord(next, histories.get(row.code), { evaluatedAt, costPct, horizons });
       if (next !== row) updated += 1;
       return next;
     });
