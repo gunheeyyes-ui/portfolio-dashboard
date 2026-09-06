@@ -33,6 +33,7 @@ jobs:
           node --check market-index-tracker.js
           node --check simulation-v2-service.js
           node --check public/home-ai-review.js
+          node --check public/home-ai-review-inline.js
           node --check public/home-candidate-freshness.js
           node --check public/index-entry-review.js
           node --check public/index-entry-review-core.js
