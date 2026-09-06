@@ -9,6 +9,7 @@ import {
   sanitizeReviewRequest
 } from "./ai-review-service.js";
 import { createAiReviewStore } from "./ai-review-store.js";
+import { buildCandidateFreshnessFromFiles } from "./candidate-freshness-service.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const originalCreateServer = http.createServer;
@@ -79,7 +80,7 @@ async function readJsonBody(req, maxBytes = 64 * 1024) {
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > maxBytes) throw new Error("AI_REVIEW_REQUEST_TOO_LARGE");
+    if (size > maxBytes) throw new Error("REQUEST_TOO_LARGE");
     chunks.push(chunk);
   }
   const text = Buffer.concat(chunks).toString("utf8");
@@ -108,6 +109,28 @@ function isRecordEligible(request, now = new Date()) {
     && request.signalDate === kst.date
     && request.marketDataAsOf === request.signalDate
     && kst.minuteOfDay >= 15 * 60 + 30;
+}
+
+async function handleCandidateFreshness(req, res) {
+  if (!isAuthorized(req)) return unauthorized(res);
+  let body;
+  try {
+    body = await readJsonBody(req);
+  } catch (error) {
+    return sendJson(res, 400, { error: error.message || "INVALID_JSON" });
+  }
+  try {
+    const cfg = config();
+    const result = buildCandidateFreshnessFromFiles({
+      historyFile: path.join(cfg.dataDir, "strategy-oos-history.jsonl"),
+      selectionFile: path.join(cfg.dataDir, "strategy-oos-selections.jsonl"),
+      signalDate: body.signalDate,
+      candidates: Array.isArray(body.candidates) ? body.candidates : []
+    });
+    return sendJson(res, 200, result);
+  } catch (error) {
+    return sendJson(res, 400, { error: error?.message || "CANDIDATE_FRESHNESS_FAILED" });
+  }
 }
 
 async function handleReview(req, res) {
@@ -185,9 +208,15 @@ async function handleReview(req, res) {
   }
 }
 
-async function handleAiRoute(req, res, listener) {
+async function handleExtensionRoute(req, res, listener) {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
-  if (!url.pathname.startsWith("/api/ai-review")) return listener(req, res);
+  const isAiRoute = url.pathname.startsWith("/api/ai-review");
+  const isFreshnessRoute = url.pathname === "/api/candidate-freshness";
+  if (!isAiRoute && !isFreshnessRoute) return listener(req, res);
+
+  if (isFreshnessRoute && req.method === "POST") {
+    return handleCandidateFreshness(req, res);
+  }
 
   if (url.pathname === "/api/ai-review/status" && req.method === "GET") {
     if (!isAuthorized(req)) return unauthorized(res);
@@ -223,8 +252,8 @@ http.createServer = function patchedCreateServer(...args) {
   if (listenerIndex < 0) return originalCreateServer.apply(this, args);
   const listener = args[listenerIndex];
   args[listenerIndex] = (req, res) => {
-    Promise.resolve(handleAiRoute(req, res, listener)).catch((error) => {
-      if (!res.headersSent) sendJson(res, 500, { error: error?.message || "AI_REVIEW_HOOK_FAILED" });
+    Promise.resolve(handleExtensionRoute(req, res, listener)).catch((error) => {
+      if (!res.headersSent) sendJson(res, 500, { error: error?.message || "DASHBOARD_EXTENSION_HOOK_FAILED" });
       else res.destroy(error);
     });
   };
