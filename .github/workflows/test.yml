@@ -25,6 +25,7 @@ jobs:
           node --check ai-review-service.js
           node --check ai-review-store.js
           node --check ai-review-http-hook.mjs
+          node --check candidate-freshness-service.js
           node --check cloud-dashboard-runtime.js
           node --check simulation-category.js
           node --check strategy-oos-registry.js
@@ -32,6 +33,7 @@ jobs:
           node --check market-index-tracker.js
           node --check simulation-v2-service.js
           node --check public/home-ai-review.js
+          node --check public/home-candidate-freshness.js
           node --check public/index-entry-review.js
           node --check public/index-entry-review-core.js
           node --check public/simulator.js
