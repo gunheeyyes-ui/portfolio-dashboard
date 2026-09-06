@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
 
 export const AI_REVIEW_SCHEMA_VERSION = "ai-review-v1";
+export const AI_REVIEW_MAX_TOTAL_CANDIDATES = 16;
+export const AI_REVIEW_CHUNK_SIZE = 5;
 export const AI_VERDICTS = [
   "STRONG_POSITIVE",
   "POSITIVE",
@@ -16,7 +18,7 @@ const REVIEW_SCHEMA = {
     reviews: {
       type: "array",
       minItems: 1,
-      maxItems: 5,
+      maxItems: AI_REVIEW_CHUNK_SIZE,
       items: {
         type: "object",
         additionalProperties: false,
@@ -67,6 +69,12 @@ function cleanBool(value) {
   return value === true;
 }
 
+function boundedInt(value, fallback, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(number)));
+}
+
 export function sanitizeCandidate(candidate = {}) {
   const code = String(candidate.code ?? "").trim();
   if (!/^\d{6}$/.test(code)) throw new Error(`INVALID_CANDIDATE_CODE:${code || "EMPTY"}`);
@@ -113,9 +121,10 @@ export function sanitizeCandidate(candidate = {}) {
   };
 }
 
-export function sanitizeReviewRequest(payload = {}, maxCandidates = 5) {
+export function sanitizeReviewRequest(payload = {}, maxCandidates = AI_REVIEW_MAX_TOTAL_CANDIDATES) {
+  const candidateLimit = boundedInt(maxCandidates, AI_REVIEW_MAX_TOTAL_CANDIDATES, 1, AI_REVIEW_MAX_TOTAL_CANDIDATES);
   const candidates = Array.isArray(payload.candidates)
-    ? payload.candidates.slice(0, Math.max(1, Math.min(5, maxCandidates))).map(sanitizeCandidate)
+    ? payload.candidates.slice(0, candidateLimit).map(sanitizeCandidate)
     : [];
   if (!candidates.length) throw new Error("NO_AI_REVIEW_CANDIDATES");
   const duplicateCodes = candidates.map((item) => item.code).filter((code, index, all) => all.indexOf(code) !== index);
@@ -186,18 +195,29 @@ function validateReviews(result, request) {
   return result.reviews;
 }
 
-export async function requestLunaReviews({
+function chunkRequest(request, batchSize) {
+  const size = boundedInt(batchSize, AI_REVIEW_CHUNK_SIZE, 1, AI_REVIEW_CHUNK_SIZE);
+  const chunks = [];
+  for (let index = 0; index < request.candidates.length; index += size) {
+    chunks.push({ ...request, candidates: request.candidates.slice(index, index + size) });
+  }
+  return chunks;
+}
+
+function aggregateUsage(results, field) {
+  const values = results.map((result) => result.usage?.[field]).filter(finite).map(Number);
+  return values.length ? values.reduce((sum, value) => sum + value, 0) : null;
+}
+
+async function requestLunaReviewChunk({
   request,
   apiKey,
-  model = "gpt-5.6-luna",
-  reasoningEffort = "low",
-  fetchImpl = globalThis.fetch,
-  timeoutMs = 60_000,
-  maxOutputTokens = 3200
+  model,
+  reasoningEffort,
+  fetchImpl,
+  timeoutMs,
+  maxOutputTokens
 }) {
-  if (!apiKey) throw new Error("OPENAI_API_KEY_MISSING");
-  if (typeof fetchImpl !== "function") throw new Error("FETCH_UNAVAILABLE");
-
   const response = await fetchImpl("https://api.openai.com/v1/responses", {
     method: "POST",
     signal: AbortSignal.timeout(timeoutMs),
@@ -246,6 +266,48 @@ export async function requestLunaReviews({
       inputTokens: data.usage?.input_tokens ?? null,
       outputTokens: data.usage?.output_tokens ?? null,
       totalTokens: data.usage?.total_tokens ?? null
+    }
+  };
+}
+
+export async function requestLunaReviews({
+  request,
+  apiKey,
+  model = "gpt-5.6-luna",
+  reasoningEffort = "low",
+  fetchImpl = globalThis.fetch,
+  timeoutMs = 60_000,
+  maxOutputTokens = 3200,
+  batchSize = AI_REVIEW_CHUNK_SIZE
+}) {
+  if (!apiKey) throw new Error("OPENAI_API_KEY_MISSING");
+  if (typeof fetchImpl !== "function") throw new Error("FETCH_UNAVAILABLE");
+
+  const requests = chunkRequest(request, batchSize);
+  const results = await Promise.all(requests.map((chunk) => requestLunaReviewChunk({
+    request: chunk,
+    apiKey,
+    model,
+    reasoningEffort,
+    fetchImpl,
+    timeoutMs,
+    maxOutputTokens
+  })));
+
+  const reviewByCode = new Map(results.flatMap((result) => result.reviews).map((review) => [review.code, review]));
+  const reviews = request.candidates.map((candidate) => reviewByCode.get(candidate.code)).filter(Boolean);
+  if (reviews.length !== request.candidates.length) throw new Error("AI_REVIEW_INCOMPLETE_CODES");
+
+  return {
+    model: results[0]?.model || model,
+    responseId: results.length === 1 ? results[0]?.responseId || null : null,
+    responseIds: results.map((result) => result.responseId).filter(Boolean),
+    subBatches: results.length,
+    reviews,
+    usage: {
+      inputTokens: aggregateUsage(results, "inputTokens"),
+      outputTokens: aggregateUsage(results, "outputTokens"),
+      totalTokens: aggregateUsage(results, "totalTokens")
     }
   };
 }
