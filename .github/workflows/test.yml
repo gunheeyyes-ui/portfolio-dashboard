@@ -21,18 +21,24 @@ jobs:
       - name: Syntax checks
         run: |
           node --check server.mjs
+          node --check server-core.mjs
+          node --check ai-review-service.js
+          node --check ai-review-store.js
+          node --check ai-review-http-hook.mjs
           node --check cloud-dashboard-runtime.js
           node --check simulation-category.js
           node --check strategy-oos-registry.js
           node --check strategy-oos-tracker.js
           node --check market-index-tracker.js
           node --check simulation-v2-service.js
+          node --check public/home-ai-review.js
+          node --check public/index-entry-review.js
+          node --check public/index-entry-review-core.js
           node --check public/simulator.js
           node --check public/simulator-v2.js
           node --check public/simulation-v2.js
           node --check public/simulator-strategy-candidates.js
           node --check public/entry-review-candidates.js
-          node --check public/index-entry-review.js
           node --check public/strategy-candidate-engine.js
           node --check public/strategy-consensus.js
           node --check public/strategy-consensus-cohorts.js
