@@ -3,10 +3,28 @@
   display: none !important;
 }
 
+.home-entry-table tbody td:first-child {
+  min-width: 176px;
+  white-space: nowrap;
+}
+
+.home-entry-table tbody td:first-child > .home-entry-badge,
+.home-entry-table tbody td:first-child > .ai-review-inline-wrap,
+.home-entry-table tbody td:first-child > .home-freshness-wrap {
+  vertical-align: middle;
+}
+
 .ai-review-inline-wrap {
-  display: flex;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  margin-top: 4px;
+  margin: 0 0 0 4px;
+}
+
+.home-entry-table tbody td:first-child > .home-freshness-wrap {
+  display: inline-flex !important;
+  align-items: center;
+  margin: 0 0 0 4px !important;
 }
 
 .ai-review-inline-wrap .ai-review-btn {
