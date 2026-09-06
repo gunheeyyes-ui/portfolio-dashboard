@@ -7,7 +7,7 @@ const serverCore = readFileSync(new URL("./server-core.mjs", import.meta.url), "
 const homeBootstrap = readFileSync(new URL("./public/index-entry-review.js", import.meta.url), "utf8");
 const homeCore = readFileSync(new URL("./public/index-entry-review-core.js", import.meta.url), "utf8");
 
-test("server bootstrap preloads only the AI hook before the preserved dashboard core", () => {
+test("server bootstrap preloads only the extension hook before the preserved dashboard core", () => {
   assert.match(serverBootstrap, /import "\.\/ai-review-http-hook\.mjs"/);
   assert.match(serverBootstrap, /await import\("\.\/server-core\.mjs"\)/);
   assert.match(serverCore, /url\.pathname === "\/api\/simulation-v2"/);
@@ -15,7 +15,8 @@ test("server bootstrap preloads only the AI hook before the preserved dashboard 
   assert.doesNotMatch(serverBootstrap, /rankMarketRowsV2\(/);
 });
 
-test("home bootstrap observes AI review without moving candidate-selection logic out of preserved core", () => {
+test("home bootstrap observes freshness and AI review without moving candidate-selection logic out of preserved core", () => {
+  assert.match(homeBootstrap, /import "\.\/home-candidate-freshness\.js"/);
   assert.match(homeBootstrap, /import "\.\/home-ai-review\.js"/);
   assert.match(homeBootstrap, /await import\("\.\/index-entry-review-core\.js"\)/);
   assert.match(homeCore, /buildStrategyCandidates/);
