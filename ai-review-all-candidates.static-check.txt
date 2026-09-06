@@ -1,8 +1,0 @@
-Display-only/AI-extension implementation invariants for this change:
-- Home candidate selection remains in public/index-entry-review-core.js unchanged.
-- Server core remains in server-core.mjs unchanged.
-- One visible shortlist request may contain up to 16 candidates.
-- Luna Structured Outputs remain capped at 5 candidates per sub-call.
-- A 16-name set is split 5+5+5+1 and recombined in original order.
-- Cache/OOS still treat the visible shortlist as one review set keyed by signal date + code order.
-- Ranking, strategy registry, Simulation V1/V2, Ranking OOS and Strategy OOS are not modified.
