@@ -74,7 +74,7 @@ test("정렬은 핵심+실제진입 → 핵심 → 강한+실제진입 → 강�
 });
 
 test("넓힌 화면 후보가 기존 simulator 가상매수 actionable 판정을 바꾸지 않는다", () => {
-  const server = readFileSync(new URL("./server.mjs", import.meta.url), "utf8");
+  const server = readFileSync(new URL("./server-core.mjs", import.meta.url), "utf8");
   assert.match(server, /const actionableToday = collected\.candidates\s*\.filter\(\(candidate\) => candidate\.category\.actionable\)/);
   assert.match(server, /opened = actionableToday/);
 });
