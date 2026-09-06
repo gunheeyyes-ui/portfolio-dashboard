@@ -27,7 +27,8 @@ function config() {
     apiKey: process.env.OPENAI_API_KEY || "",
     model: process.env.AI_REVIEW_MODEL || "gpt-5.6-luna",
     reasoningEffort: process.env.AI_REVIEW_REASONING_EFFORT || "low",
-    maxCandidates: envInt("AI_REVIEW_MAX_CANDIDATES", 5, 1, 5),
+    maxCandidates: envInt("AI_REVIEW_MAX_TOTAL_CANDIDATES", 16, 1, 16),
+    batchSize: envInt("AI_REVIEW_MAX_CANDIDATES", 5, 1, 5),
     maxDailyBatches: envInt("AI_REVIEW_MAX_DAILY_BATCHES", 3, 1, 12),
     timeoutMs: envInt("AI_REVIEW_TIMEOUT_MS", 60_000, 5_000, 120_000),
     dataDir: path.resolve(process.env.DASHBOARD_DATA_DIR || path.join(__dirname, "data"))
@@ -181,7 +182,8 @@ async function handleReview(req, res) {
       apiKey: cfg.apiKey,
       model: cfg.model,
       reasoningEffort: cfg.reasoningEffort,
-      timeoutMs: cfg.timeoutMs
+      timeoutMs: cfg.timeoutMs,
+      batchSize: cfg.batchSize
     });
     const createdAt = new Date().toISOString();
     const candidateByCode = Object.fromEntries(request.candidates.map((item) => [item.code, item]));
@@ -196,6 +198,7 @@ async function handleReview(req, res) {
       inputHash,
       reviews: result.reviews,
       usage: result.usage,
+      subBatches: result.subBatches,
       candidateByCode,
       recordEligible: isRecordEligible(request)
     };
@@ -226,6 +229,7 @@ async function handleExtensionRoute(req, res, listener) {
       model: cfg.model,
       reasoningEffort: cfg.reasoningEffort,
       maxCandidates: cfg.maxCandidates,
+      batchSize: cfg.batchSize,
       maxDailyBatches: cfg.maxDailyBatches,
       oosTracking: true
     });
