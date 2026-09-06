@@ -1,0 +1,26 @@
+.home-freshness-wrap { display: block; margin-top: 4px; }
+.home-freshness-badge {
+  display: inline-block;
+  padding: 2px 5px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 1.25;
+  font-weight: 800;
+  white-space: nowrap;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+.home-freshness-badge.new { color: #075985; background: #f0f9ff; border-color: #bae6fd; }
+.home-freshness-badge.maintain { color: #475569; background: #f8fafc; border-color: #cbd5e1; }
+.home-freshness-badge.reentry { color: #92400e; background: #fffbeb; border-color: #fde68a; }
+.home-freshness-badge.unknown { color: #64748b; background: #f8fafc; }
+.home-leader-trend {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.home-leader-trend.up { color: #047857; }
+.home-leader-trend.down { color: #b91c1c; }
+.home-leader-trend.flat { color: #64748b; }
