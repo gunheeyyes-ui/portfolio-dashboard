@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 
-const server = readFileSync(new URL("./server.mjs", import.meta.url), "utf8");
+const server = readFileSync(new URL("./server-core.mjs", import.meta.url), "utf8");
 const tracker = readFileSync(new URL("./strategy-oos-tracker.js", import.meta.url), "utf8");
 const frontend = readFileSync(new URL("./public/simulator-v2.js", import.meta.url), "utf8");
 
