@@ -27,6 +27,58 @@
       </header>
 
       <section class="notice">
+        <strong>Shadow Auto V1 — 실제 자동매매를 했다고 가정한 전진형 가상주문</strong>
+        <span id="paperAutoStatus">가상 자동매매 장부를 불러오는 중입니다.</span>
+      </section>
+
+      <section class="score-guide">
+        <strong>동결 운용규칙</strong>
+        <span><b>매수</b> ✅ 실제진입(ACTIONABLE_ALL) 신호만, 다음 거래일 시가</span>
+        <span><b>비중</b> 가상자금 1억원 · 종목당 1천만원 · 최대 10종목</span>
+        <span><b>청산</b> 진입 후 3거래일 종가</span>
+        <span><b>비용</b> 기존 왕복 0.23% + 추가 슬리피지 0.20%</span>
+        <small>2026-09-07 장마감 이후 규칙을 동결했습니다. 이전 날짜는 소급 적용하지 않고, 이후 OOS 원자료만 사용합니다. 레버리지·공매도·실제 KIS 주문은 전혀 실행하지 않으며 AI 판정도 주문을 바꾸지 않고 관찰만 합니다.</small>
+      </section>
+
+      <section class="metrics" id="paperAutoMetrics"></section>
+
+      <section class="sim-panel">
+        <div class="section-title">
+          <div>
+            <h2>Shadow Auto 보유 · 주문대기</h2>
+            <p>실제 자동주문과 같은 순서로 신호일 EOD → 다음 거래일 시가 체결을 가정합니다.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="sim-table">
+            <thead><tr><th>종목</th><th>진입</th><th>수량/원금</th><th>현재가</th><th>가상손익</th><th>경과/청산</th><th>당시 합의</th></tr></thead>
+            <tbody id="paperAutoOpen"><tr><td colspan="7" class="loading">불러오는 중...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="table-wrap" style="margin-top:12px">
+          <table class="sim-table">
+            <thead><tr><th>신호일</th><th>종목</th><th>신호가</th><th>당시 합의</th><th>상태</th></tr></thead>
+            <tbody id="paperAutoQueued"><tr><td colspan="5" class="loading">불러오는 중...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="sim-panel">
+        <div class="section-title">
+          <div>
+            <h2>Shadow Auto 종료 거래</h2>
+            <p>3거래일 종가 청산을 완료한 가상 주문의 실제 OOS 결과입니다.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="sim-table">
+            <thead><tr><th>종목</th><th>진입→청산</th><th>가격</th><th>수량</th><th>순수익</th><th>손익금</th><th>당시 합의</th></tr></thead>
+            <tbody id="paperAutoClosed"><tr><td colspan="7" class="loading">불러오는 중...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="notice">
         <strong>Simulation V2 — 손댈 필요 없이 자동으로 쌓이는 실전형 가상매매</strong>
         <span>장마감 OOS 스냅샷 전체 이력을 사용합니다. ✅ 실제진입 · 🔥 핵심후보 · ⭐ 강한후보를 동시에 추적하고, 다음 거래일 시가 진입 후 0D·1·3·5·10·20 거래일 순수익, MFE/MAE, 지수대비 초과수익, 비용 스트레스와 실제운용 포트폴리오까지 비교합니다.</span>
       </section>
@@ -221,6 +273,7 @@
         </div>
       </section>
     </main>
+    <script type="module" src="/paper-auto.js"></script>
     <script type="module" src="/simulator-v2.js"></script>
     <script type="module" src="/simulator.js"></script>
     <script type="module" src="/simulator-strategy-candidates.js"></script>
