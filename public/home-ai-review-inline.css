@@ -8,6 +8,10 @@
   white-space: nowrap;
 }
 
+.home-entry-table tbody td:first-child.home-entry-core-compact > .home-entry-badge {
+  display: none !important;
+}
+
 .home-entry-table tbody td:first-child > .home-entry-badge,
 .home-entry-table tbody td:first-child > .ai-review-inline-wrap,
 .home-entry-table tbody td:first-child > .home-freshness-wrap {
@@ -19,6 +23,10 @@
   align-items: center;
   justify-content: center;
   margin: 0 0 0 4px;
+}
+
+.home-entry-table tbody td:first-child.home-entry-core-compact > .ai-review-inline-wrap {
+  margin-left: 0;
 }
 
 .home-entry-table tbody td:first-child > .home-freshness-wrap {
@@ -42,10 +50,10 @@
 }
 
 @media (max-width: 900px) {
-  /* Mobile uses a fixed 9-column table. Give the candidate cell enough real
-     width for candidate + AI + freshness instead of clipping the latter two. */
-  .home-entry-table th:nth-child(1) { width: 22%; }
-  .home-entry-table th:nth-child(2) { width: 23%; }
+  /* Core is already summarized above the table, so row-level core badges are
+     hidden and the saved width goes back to the stock column. */
+  .home-entry-table th:nth-child(1) { width: 20%; }
+  .home-entry-table th:nth-child(2) { width: 25%; }
   .home-entry-table th:nth-child(3) { width: 7%; }
   .home-entry-table th:nth-child(4) { width: 8%; }
   .home-entry-table th:nth-child(5) { width: 8%; }
@@ -63,11 +71,15 @@
   }
 
   .ai-review-inline-wrap {
-    margin-left: 2px;
+    margin-left: 1px;
+  }
+
+  .home-entry-table tbody td:first-child.home-entry-core-compact > .ai-review-inline-wrap {
+    margin-left: 0;
   }
 
   .home-entry-table tbody td:first-child > .home-freshness-wrap {
-    margin-left: 2px !important;
+    margin-left: 1px !important;
   }
 
   .ai-review-inline-wrap .ai-review-btn {
