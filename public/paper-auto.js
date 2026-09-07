@@ -25,8 +25,25 @@ function emptyRow(colspan, text) {
   return `<tr><td colspan="${colspan}" class="loading">${text}</td></tr>`;
 }
 
+function displayAccounts(model) {
+  return model.comparisonAccounts ?? model.accounts ?? [];
+}
+
 function allRows(model, field) {
-  return (model.accounts ?? []).flatMap((account) => (account[field] ?? []).map((row) => ({ ...row, accountId: account.id, accountLabel: account.label })));
+  return displayAccounts(model).flatMap((account) => (account[field] ?? []).map((row) => ({
+    ...row,
+    accountId: account.id,
+    accountLabel: account.label,
+    exitVariant: account.exitVariant
+  })));
+}
+
+function exitReasonText(row) {
+  if (row.exitReason === "TAKE_PROFIT") return "익절 +8%";
+  if (row.exitReason === "STOP_LOSS") return "손절 -5%";
+  if (row.exitReason === "STOP_LOSS_AMBIGUOUS") return "손절 -5%*";
+  if (row.exitReason === "TIME_EXIT") return "3D 종가";
+  return "—";
 }
 
 function renderMetrics(model) {
@@ -34,12 +51,13 @@ function renderMetrics(model) {
   if (!target) return;
   const policy = model.arenaPolicy ?? {};
   const slip = policy.slippageByLiquidity ?? {};
+  const accounts = displayAccounts(model);
   const items = [
-    ["가상계좌", `${model.accounts?.length ?? 0}개`],
+    ["비교계좌", `${accounts.length}개`],
+    ["구성", `${model.accounts?.length ?? 0}후보군 × ${model.exitVariants?.length ?? 1}청산`],
     ["계좌당 자금", money(policy.initialCapitalPerAccount)],
     ["종목당", money(policy.positionBudget)],
     ["최대보유", `${policy.maxPositions ?? 10}종목`],
-    ["보유기간", `${policy.holdTradingDays ?? 3}거래일`],
     ["기본비용", percent(policy.trackerRoundTripCostPct)],
     ["추가 슬리피지", `${percent(slip.highPct)}~${percent(slip.lowPct)}`],
     ["실주문", "없음"]
@@ -54,11 +72,14 @@ function renderMetrics(model) {
 function renderAccounts(model) {
   const target = document.querySelector("#paperAutoAccounts");
   if (!target) return;
-  const accounts = model.accounts ?? [];
+  const accounts = displayAccounts(model);
   target.innerHTML = accounts.length ? accounts.map((account) => {
     const s = account.summary ?? {};
+    const exits = account.exitVariant === "sl5tp8"
+      ? `<div class="cell-sub">손절 ${s.stopLossExits ?? 0} · 익절 ${s.takeProfitExits ?? 0} · 3D ${s.timeExits ?? 0}</div>`
+      : "";
     return `<tr>
-      <td><b>${account.label}</b><div class="cell-sub">${account.description ?? ""}</div></td>
+      <td><b>${account.label}</b><div class="cell-sub">${account.description ?? ""}</div>${exits}</td>
       <td><b>${money(s.equity)}</b></td>
       <td class="${signClass(s.totalReturnPct)}"><b>${percent(s.totalReturnPct)}</b></td>
       <td>${s.signalCount ?? 0}</td>
@@ -108,17 +129,17 @@ function renderClosed(model) {
   const target = document.querySelector("#paperAutoClosed");
   if (!target) return;
   const rows = allRows(model, "closed").sort((a, b) => String(b.exitDate).localeCompare(String(a.exitDate)));
-  target.innerHTML = rows.length ? rows.slice(0, 100).map((row) => `
+  target.innerHTML = rows.length ? rows.slice(0, 160).map((row) => `
     <tr>
       <td><b>${row.accountLabel}</b></td>
       <td><b>${row.name || row.code}</b><br><small>${row.code}</small></td>
-      <td>${dateText(row.entryDate)} → ${dateText(row.exitDate)}</td>
+      <td>${dateText(row.entryDate)} → ${dateText(row.exitDate)}<br><small>${exitReasonText(row)}</small></td>
       <td>${currency.format(row.entryPrice)} → ${Number.isFinite(Number(row.exitPrice)) ? currency.format(row.exitPrice) : "—"}</td>
       <td>${currency.format(row.quantity)}주</td>
       <td class="${signClass(row.paperReturnPct)}"><b>${percent(row.paperReturnPct)}</b><br><small>${money(row.pnl)}</small></td>
       <td>${percent(row.executionSlippagePct)}<br><small>총 ${percent(row.effectiveFrictionPct)}</small></td>
       <td>${row.strategyCount}전략 · ${row.axisCount}계열</td>
-    </tr>`).join("") : emptyRow(8, "아직 3거래일 청산이 완료된 거래가 없습니다.");
+    </tr>`).join("") : emptyRow(8, "아직 청산이 완료된 거래가 없습니다.");
 }
 
 function renderStatus(model) {
@@ -126,7 +147,8 @@ function renderStatus(model) {
   if (!target) return;
   const p = model.arenaPolicy ?? {};
   const s = p.slippageByLiquidity ?? {};
-  target.textContent = `${p.startSignalDate} 신호부터 · ${model.accounts?.length ?? 0}개 독립 1억원 계좌 · 다음날 시가 매수 · ${p.holdTradingDays}거래일 종가 청산 · 기본 왕복비용 ${p.trackerRoundTripCostPct}% + 유동성별 추가 슬리피지 ${s.highPct}%/${s.midPct}%/${s.lowPct}% · 실주문 없음`;
+  const st = p.stopTakeExperiment ?? {};
+  target.textContent = `${p.startSignalDate} 신호부터 · ${model.accounts?.length ?? 0}개 후보군을 3D 고정 vs SL ${st.stopLossPct}% / TP +${st.takeProfitPct}%로 병렬 비교 · 각 1억원 · 다음날 시가 매수 · 기본 왕복비용 ${p.trackerRoundTripCostPct}% + 유동성별 추가 슬리피지 ${s.highPct}%/${s.midPct}%/${s.lowPct}% · 실주문 없음`;
 }
 
 async function loadPaperAuto() {
