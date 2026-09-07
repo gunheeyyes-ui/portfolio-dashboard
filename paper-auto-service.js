@@ -53,6 +53,9 @@ function axisCount(row) {
 }
 
 function prioritySort(a, b) {
+  const paperA = finite(a?.paperPriority) ? Number(a.paperPriority) : 999999;
+  const paperB = finite(b?.paperPriority) ? Number(b.paperPriority) : 999999;
+  if (paperA !== paperB) return paperA - paperB;
   return strategyCount(b) - strategyCount(a)
     || axisCount(b) - axisCount(a)
     || (Number(a?.factors?.leaderRank ?? 9999) - Number(b?.factors?.leaderRank ?? 9999))
@@ -87,14 +90,26 @@ function selectedRecordKeys(selections, policy) {
   return result;
 }
 
-function paperReturnPct(sourceReturnPct, policy) {
-  return finite(sourceReturnPct) ? Number(sourceReturnPct) - Number(policy.extraExecutionSlippagePct || 0) : null;
+export function executionSlippagePct(row, policy = PAPER_AUTO_POLICY) {
+  const tiers = policy?.slippageByLiquidity;
+  if (tiers) {
+    const liquidity = finite(row?.factors?.liquidityScore) ? Number(row.factors.liquidityScore) : null;
+    if (liquidity !== null && liquidity >= Number(tiers.highThreshold ?? 70)) return Number(tiers.highPct ?? 0.10);
+    if (liquidity !== null && liquidity >= Number(tiers.midThreshold ?? 45)) return Number(tiers.midPct ?? 0.20);
+    return Number(tiers.lowPct ?? 0.35);
+  }
+  return Number(policy?.extraExecutionSlippagePct || 0);
+}
+
+function paperReturnPct(sourceReturnPct, row, policy) {
+  return finite(sourceReturnPct) ? Number(sourceReturnPct) - executionSlippagePct(row, policy) : null;
 }
 
 function openPositionView(position, policy) {
   const row = position.row;
   const sourceReturnPct = finite(row?.live?.currentReturnPct) ? Number(row.live.currentReturnPct) : 0;
-  const currentReturnPct = paperReturnPct(sourceReturnPct, policy);
+  const slipPct = executionSlippagePct(row, policy);
+  const currentReturnPct = paperReturnPct(sourceReturnPct, row, policy);
   const marketValue = position.principal * (1 + currentReturnPct / 100);
   return {
     signalDate: row.signalDate,
@@ -109,6 +124,8 @@ function openPositionView(position, policy) {
     tradingDaysElapsed: finite(row?.live?.tradingDaysElapsed) ? Number(row.live.tradingDaysElapsed) : null,
     sourceNetReturnPct: round(sourceReturnPct),
     paperReturnPct: round(currentReturnPct),
+    executionSlippagePct: round(slipPct),
+    effectiveFrictionPct: round(Number(policy.trackerRoundTripCostPct || 0) + slipPct),
     marketValue: round(marketValue, 0),
     unrealizedPnl: round(marketValue - position.principal, 0),
     strategyCount: strategyCount(row),
@@ -170,12 +187,14 @@ export function buildPaperAutoModel({ records = [], selections = [], policy = PA
         continue;
       }
       const entryPrice = Number(row.entryOpen);
-      const quantity = Math.floor(Number(policy.positionBudget) / entryPrice);
+      const slipPct = executionSlippagePct(row, policy);
+      const entryFillPrice = policy?.slippageByLiquidity ? entryPrice * (1 + slipPct / 200) : entryPrice;
+      const quantity = Math.floor(Number(policy.positionBudget) / entryFillPrice);
       if (quantity < 1) {
         skipped.push({ signalDate: row.signalDate, entryDate: row.entryDate, code: row.code, name: row.name, reason: "BUDGET_TOO_SMALL" });
         continue;
       }
-      const principal = quantity * entryPrice;
+      const principal = quantity * entryFillPrice;
       if (cash + 1e-6 < principal) {
         skipped.push({ signalDate: row.signalDate, entryDate: row.entryDate, code: row.code, name: row.name, reason: "INSUFFICIENT_CASH" });
         continue;
@@ -192,7 +211,8 @@ export function buildPaperAutoModel({ records = [], selections = [], policy = PA
       for (const position of closing) {
         const exit = position.row.outcomes[String(policy.holdTradingDays)];
         const sourceNetReturnPct = Number(exit.netReturnPct);
-        const effectiveReturnPct = paperReturnPct(sourceNetReturnPct, policy);
+        const slipPct = executionSlippagePct(position.row, policy);
+        const effectiveReturnPct = paperReturnPct(sourceNetReturnPct, position.row, policy);
         const proceeds = position.principal * (1 + effectiveReturnPct / 100);
         const pnl = proceeds - position.principal;
         cash += proceeds;
@@ -203,8 +223,12 @@ export function buildPaperAutoModel({ records = [], selections = [], policy = PA
           name: position.row.name,
           entryDate: position.row.entryDate,
           entryPrice: Number(position.row.entryOpen),
+          entryFillPrice: round(policy?.slippageByLiquidity ? Number(position.row.entryOpen) * (1 + slipPct / 200) : Number(position.row.entryOpen)),
           exitDate: String(exit.targetTradingDate),
           exitPrice: finite(exit.exitPrice) ? Number(exit.exitPrice) : null,
+          exitFillPrice: finite(exit.exitPrice) ? round(Number(exit.exitPrice) * (1 - slipPct / 200)) : null,
+          executionSlippagePct: round(slipPct),
+          effectiveFrictionPct: round(Number(policy.trackerRoundTripCostPct || 0) + slipPct),
           quantity: position.quantity,
           principal: round(position.principal, 0),
           sourceNetReturnPct: round(sourceNetReturnPct),
@@ -227,6 +251,7 @@ export function buildPaperAutoModel({ records = [], selections = [], policy = PA
   const realizedPnl = closed.reduce((sum, trade) => sum + Number(trade.pnl || 0), 0);
   const unrealizedPnl = open.reduce((sum, position) => sum + Number(position.unrealizedPnl || 0), 0);
   const closedReturns = closed.map((trade) => trade.paperReturnPct).filter(finite).map(Number);
+  const allSlip = [...closed.map((trade) => trade.executionSlippagePct), ...open.map((position) => position.executionSlippagePct)].filter(finite).map(Number);
 
   return {
     schemaVersion: "paper-auto-v1",
@@ -247,7 +272,9 @@ export function buildPaperAutoModel({ records = [], selections = [], policy = PA
       winRatePct: closedReturns.length ? round((closedReturns.filter((value) => value > 0).length / closedReturns.length) * 100, 1) : null,
       averageTradeReturnPct: round(average(closedReturns)),
       profitFactor: round(profitFactor(closedReturns), 2),
-      maxDrawdownPct: round(drawdownFromCurve(curve, Number(policy.initialCapital)))
+      maxDrawdownPct: round(drawdownFromCurve(curve, Number(policy.initialCapital))),
+      averageExecutionSlippagePct: round(average(allSlip)),
+      averageEffectiveFrictionPct: round((Number(policy.trackerRoundTripCostPct || 0)) + (average(allSlip) ?? Number(policy.extraExecutionSlippagePct || 0)))
     },
     queued,
     open: open.sort((a, b) => String(b.entryDate).localeCompare(String(a.entryDate)) || String(a.code).localeCompare(String(b.code))),
