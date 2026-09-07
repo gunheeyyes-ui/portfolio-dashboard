@@ -27,17 +27,17 @@
       </header>
 
       <section class="notice">
-        <strong>Shadow Auto V1 — 실제 자동매매를 했다고 가정한 전진형 가상주문</strong>
-        <span id="paperAutoStatus">가상 자동매매 장부를 불러오는 중입니다.</span>
+        <strong>Shadow Auto Arena V2 — 실제 자동매매를 했다고 가정한 전진형 가상주문</strong>
+        <span id="paperAutoStatus">가상 자동매매 계좌들을 불러오는 중입니다.</span>
       </section>
 
       <section class="score-guide">
         <strong>동결 운용규칙</strong>
-        <span><b>매수</b> ✅ 실제진입(ACTIONABLE_ALL) 신호만, 다음 거래일 시가</span>
-        <span><b>비중</b> 가상자금 1억원 · 종목당 1천만원 · 최대 10종목</span>
-        <span><b>청산</b> 진입 후 3거래일 종가</span>
-        <span><b>비용</b> 기존 왕복 0.23% + 추가 슬리피지 0.20%</span>
-        <small>2026-09-07 장마감 이후 규칙을 동결했습니다. 이전 날짜는 소급 적용하지 않고, 이후 OOS 원자료만 사용합니다. 레버리지·공매도·실제 KIS 주문은 전혀 실행하지 않으며 AI 판정도 주문을 바꾸지 않고 관찰만 합니다.</small>
+        <span><b>10개 독립계좌</b> 실제진입 · 핵심 · 강한 · 종합타이밍 · 반등우선 · 주도주 · 반등후보 · 전략후보 · CAFE · MTT</span>
+        <span><b>매수</b> 당일 장마감 신호를 고정하고 다음 거래일 실제 시가 기준 · 계좌당 1억원 · 종목당 1천만원 · 최대 10종목</span>
+        <span><b>청산</b> 진입 후 3거래일 종가 · 동일 종목 중복보유 금지 · 현금/보유한도 초과 주문은 skip</span>
+        <span><b>비용</b> 기존 왕복비용 0.23% + 유동성별 추가 슬리피지 0.10% / 0.20% / 0.35%</span>
+        <small>2026-09-07 신호부터 forward-only입니다. 다음날 갭은 실제 entryOpen으로 반영하고 정수주·현금·보유한도도 적용합니다. 호가잔량·부분체결·상하한가 대기열은 현재 OOS 데이터에 실제 호가창이 없어 직접 재현하지 못하므로 유동성 기반 슬리피지로 보수적으로 대체합니다. 기존 Ranking·Simulation·전략 OOS 산식은 변경하지 않으며 AI는 주문에 개입하지 않습니다.</small>
       </section>
 
       <section class="metrics" id="paperAutoMetrics"></section>
@@ -45,20 +45,35 @@
       <section class="sim-panel">
         <div class="section-title">
           <div>
-            <h2>Shadow Auto 보유 · 주문대기</h2>
-            <p>실제 자동주문과 같은 순서로 신호일 EOD → 다음 거래일 시가 체결을 가정합니다.</p>
+            <h2>Shadow Auto 계좌 비교</h2>
+            <p>각 후보군을 서로 독립된 1억원 계좌로 운용해 누적수익·승률·PF·MDD를 같은 조건에서 비교합니다.</p>
           </div>
         </div>
         <div class="table-wrap">
           <table class="sim-table">
-            <thead><tr><th>종목</th><th>진입</th><th>수량/원금</th><th>현재가</th><th>가상손익</th><th>경과/청산</th><th>당시 합의</th></tr></thead>
-            <tbody id="paperAutoOpen"><tr><td colspan="7" class="loading">불러오는 중...</td></tr></tbody>
+            <thead><tr><th>계좌</th><th>가상자산</th><th>누적수익</th><th>신호</th><th>보유</th><th>완료</th><th>승률</th><th>PF</th><th>MDD</th><th>평균마찰</th></tr></thead>
+            <tbody id="paperAutoAccounts"><tr><td colspan="10" class="loading">불러오는 중...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="sim-panel">
+        <div class="section-title">
+          <div>
+            <h2>Shadow Auto 보유 · 주문대기</h2>
+            <p>각 독립계좌에서 신호일 EOD → 다음 거래일 시가 체결 순서로 처리합니다.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="sim-table">
+            <thead><tr><th>계좌</th><th>종목</th><th>진입</th><th>수량/원금</th><th>현재가</th><th>가상손익</th><th>슬리피지/총마찰</th><th>경과/청산</th></tr></thead>
+            <tbody id="paperAutoOpen"><tr><td colspan="8" class="loading">불러오는 중...</td></tr></tbody>
           </table>
         </div>
         <div class="table-wrap" style="margin-top:12px">
           <table class="sim-table">
-            <thead><tr><th>신호일</th><th>종목</th><th>신호가</th><th>당시 합의</th><th>상태</th></tr></thead>
-            <tbody id="paperAutoQueued"><tr><td colspan="5" class="loading">불러오는 중...</td></tr></tbody>
+            <thead><tr><th>계좌</th><th>신호일</th><th>종목</th><th>신호가</th><th>당시 합의</th><th>상태</th></tr></thead>
+            <tbody id="paperAutoQueued"><tr><td colspan="6" class="loading">불러오는 중...</td></tr></tbody>
           </table>
         </div>
       </section>
@@ -67,13 +82,13 @@
         <div class="section-title">
           <div>
             <h2>Shadow Auto 종료 거래</h2>
-            <p>3거래일 종가 청산을 완료한 가상 주문의 실제 OOS 결과입니다.</p>
+            <p>3거래일 종가 청산을 완료한 가상 주문의 forward OOS 결과입니다.</p>
           </div>
         </div>
         <div class="table-wrap">
           <table class="sim-table">
-            <thead><tr><th>종목</th><th>진입→청산</th><th>가격</th><th>수량</th><th>순수익</th><th>손익금</th><th>당시 합의</th></tr></thead>
-            <tbody id="paperAutoClosed"><tr><td colspan="7" class="loading">불러오는 중...</td></tr></tbody>
+            <thead><tr><th>계좌</th><th>종목</th><th>진입→청산</th><th>가격</th><th>수량</th><th>순수익/손익</th><th>슬리피지/총마찰</th><th>당시 합의</th></tr></thead>
+            <tbody id="paperAutoClosed"><tr><td colspan="8" class="loading">불러오는 중...</td></tr></tbody>
           </table>
         </div>
       </section>

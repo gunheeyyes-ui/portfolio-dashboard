@@ -3,7 +3,7 @@ import path from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { buildPaperAutoModel } from "./paper-auto-service.js";
+import { buildPaperAutoArena } from "./paper-auto-arena.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const originalCreateServer = http.createServer;
@@ -66,7 +66,7 @@ function handlePaperAuto(req, res) {
     const dir = dataDir();
     const records = readJsonl(path.join(dir, "strategy-oos-history.jsonl"));
     const selections = readJsonl(path.join(dir, "strategy-oos-selections.jsonl"));
-    return sendJson(res, 200, buildPaperAutoModel({ records, selections }));
+    return sendJson(res, 200, buildPaperAutoArena({ records, selections }));
   } catch (error) {
     console.error(`[paper-auto] ${error?.stack || error}`);
     return sendJson(res, 500, { error: error?.message || "PAPER_AUTO_FAILED" });
