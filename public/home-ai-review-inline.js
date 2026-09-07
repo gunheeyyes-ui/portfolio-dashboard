@@ -35,6 +35,12 @@ function desiredInlineMarkup(aiCell) {
   return holder.innerHTML;
 }
 
+function syncCandidateBadgeVisibility(candidateCell) {
+  const badge = candidateCell?.querySelector(":scope > .home-entry-badge");
+  const isCore = Boolean(badge?.textContent?.includes("핵심"));
+  candidateCell?.classList.toggle("home-entry-core-compact", isCore);
+}
+
 function syncInlineAi() {
   const loadingCell = document.querySelector("#homeEntryCandidates tr:not(:has(a.stock-link)) td[colspan]");
   if (loadingCell && loadingCell.colSpan !== 9) loadingCell.colSpan = 9;
@@ -43,6 +49,8 @@ function syncInlineAi() {
     const candidateCell = row.children[0];
     const aiCell = row.querySelector(".ai-review-cell");
     if (!candidateCell || !aiCell) continue;
+
+    syncCandidateBadgeVisibility(candidateCell);
 
     const markup = desiredInlineMarkup(aiCell);
     const signature = markup || "__none__";
