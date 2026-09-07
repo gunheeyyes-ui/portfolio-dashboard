@@ -46,6 +46,25 @@ function exitReasonText(row) {
   return "—";
 }
 
+function renderExperimentCopy(model) {
+  const p = model.arenaPolicy ?? {};
+  const st = p.stopTakeExperiment ?? {};
+  const metrics = document.querySelector("#paperAutoMetrics");
+  const guide = metrics?.previousElementSibling;
+  if (guide?.classList?.contains("score-guide")) {
+    const spans = guide.querySelectorAll("span");
+    if (spans[0]) spans[0].innerHTML = `<b>${displayAccounts(model).length}개 비교계좌</b> ${model.accounts?.length ?? 0}개 후보군 × 3D 고정/SL5·TP8`;
+    if (spans[2]) spans[2].innerHTML = `<b>청산 A/B</b> 기준군은 ${p.holdTradingDays ?? 3}거래일 종가 · 실험군은 ${st.stopLossPct}% 손절 / +${st.takeProfitPct}% 익절 / 미도달 시 ${p.holdTradingDays ?? 3}D 종가`;
+    const small = guide.querySelector("small");
+    if (small) small.textContent = "2026-09-07 신호부터 forward-only입니다. 손절·익절은 저장된 OOS MFE/MAE 구간으로 판정하며 한 구간 안에서 -5%와 +8%가 모두 관측되면 장중 선후를 알 수 없어 보수적으로 손절 우선 처리합니다. 다음날 실제 시가·갭·정수주·현금·보유한도·유동성별 슬리피지를 반영하고 기존 Ranking·Simulation·전략 OOS 산식은 변경하지 않습니다.";
+  }
+
+  const closedBody = document.querySelector("#paperAutoClosed");
+  const closedPanel = closedBody?.closest?.(".sim-panel");
+  const closedDescription = closedPanel?.querySelector?.(".section-title p");
+  if (closedDescription) closedDescription.textContent = "3D 고정청산과 -5% 손절/+8% 익절 가상계좌의 forward OOS 종료 거래를 함께 비교합니다. *표시는 같은 저장 구간에서 손절·익절이 모두 관측돼 보수적으로 손절을 먼저 적용한 경우입니다.";
+}
+
 function renderMetrics(model) {
   const target = document.querySelector("#paperAutoMetrics");
   if (!target) return;
@@ -157,6 +176,7 @@ async function loadPaperAuto() {
     const response = await fetch("/api/paper-auto", { signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const model = await response.json();
+    renderExperimentCopy(model);
     renderMetrics(model);
     renderAccounts(model);
     renderStatus(model);
