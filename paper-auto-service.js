@@ -9,7 +9,11 @@ export const PAPER_AUTO_POLICY = Object.freeze({
   positionBudget: 10_000_000,
   entryRule: "signal EOD -> next trading-day open",
   exitRule: "entry + 3 trading days close",
+  exitMode: "fixed-hold",
   holdTradingDays: 3,
+  stopLossPct: null,
+  takeProfitPct: null,
+  sameWindowTieBreak: "stop-first",
   trackerRoundTripCostPct: 0.23,
   extraExecutionSlippagePct: 0.20,
   effectiveFrictionPct: 0.43,
@@ -105,6 +109,73 @@ function paperReturnPct(sourceReturnPct, row, policy) {
   return finite(sourceReturnPct) ? Number(sourceReturnPct) - executionSlippagePct(row, policy) : null;
 }
 
+function fixedHoldExit(row, policy) {
+  const horizon = String(policy.holdTradingDays);
+  const outcome = row?.outcomes?.[horizon];
+  if (!outcome?.targetTradingDate || !finite(outcome.netReturnPct)) return null;
+  return {
+    reason: "TIME_EXIT",
+    targetTradingDate: String(outcome.targetTradingDate),
+    sourceNetReturnPct: Number(outcome.netReturnPct),
+    grossReturnPct: finite(outcome.grossReturnPct) ? Number(outcome.grossReturnPct) : null,
+    exitPrice: finite(outcome.exitPrice) ? Number(outcome.exitPrice) : null,
+    triggerWindowHorizon: Number(policy.holdTradingDays),
+    ambiguousBothHit: false
+  };
+}
+
+function stopTakeStages(row, policy) {
+  const stages = [];
+  if (row?.entryDayOutcome) {
+    stages.push({ horizon: 0, outcome: row.entryDayOutcome, targetTradingDate: row.entryDayOutcome.targetTradingDate || row.entryDate });
+  }
+  const numeric = Object.entries(row?.outcomes ?? {})
+    .map(([horizon, outcome]) => ({ horizon: Number(horizon), outcome, targetTradingDate: outcome?.targetTradingDate }))
+    .filter((stage) => Number.isFinite(stage.horizon) && stage.horizon > 0 && stage.horizon <= Number(policy.holdTradingDays))
+    .sort((a, b) => a.horizon - b.horizon);
+  stages.push(...numeric);
+  return stages;
+}
+
+export function resolvePaperExit(row, policy = PAPER_AUTO_POLICY) {
+  if (policy?.exitMode !== "stop-take") return fixedHoldExit(row, policy);
+
+  const stopLossPct = finite(policy.stopLossPct) ? Number(policy.stopLossPct) : null;
+  const takeProfitPct = finite(policy.takeProfitPct) ? Number(policy.takeProfitPct) : null;
+  if (stopLossPct === null || takeProfitPct === null) return fixedHoldExit(row, policy);
+
+  for (const stage of stopTakeStages(row, policy)) {
+    const outcome = stage.outcome ?? {};
+    const hitStop = finite(outcome.maePct) && Number(outcome.maePct) <= stopLossPct;
+    const hitTake = finite(outcome.mfePct) && Number(outcome.mfePct) >= takeProfitPct;
+    if (!hitStop && !hitTake) continue;
+
+    const both = hitStop && hitTake;
+    const stopFirst = both ? policy.sameWindowTieBreak !== "take-first" : hitStop;
+    const grossReturnPct = stopFirst ? stopLossPct : takeProfitPct;
+    const reason = stopFirst ? (both ? "STOP_LOSS_AMBIGUOUS" : "STOP_LOSS") : "TAKE_PROFIT";
+    const entryOpen = finite(row?.entryOpen) ? Number(row.entryOpen) : null;
+    return {
+      reason,
+      targetTradingDate: String(stage.targetTradingDate || row.entryDate || ""),
+      sourceNetReturnPct: grossReturnPct - Number(policy.trackerRoundTripCostPct || 0),
+      grossReturnPct,
+      exitPrice: entryOpen !== null ? entryOpen * (1 + grossReturnPct / 100) : null,
+      triggerWindowHorizon: stage.horizon,
+      ambiguousBothHit: both
+    };
+  }
+
+  return fixedHoldExit(row, policy);
+}
+
+function plannedExitText(policy) {
+  if (policy?.exitMode === "stop-take") {
+    return `SL ${policy.stopLossPct}% / TP +${policy.takeProfitPct}% / 최대 ${policy.holdTradingDays}D`;
+  }
+  return `${policy.holdTradingDays}거래일 종가`;
+}
+
 function openPositionView(position, policy) {
   const row = position.row;
   const sourceReturnPct = finite(row?.live?.currentReturnPct) ? Number(row.live.currentReturnPct) : 0;
@@ -132,7 +203,7 @@ function openPositionView(position, policy) {
     axisCount: axisCount(row),
     leaderRank: finite(row?.factors?.leaderRank) ? Number(row.factors.leaderRank) : null,
     rs20: finite(row?.factors?.rs20) ? Number(row.factors.rs20) : null,
-    plannedExit: `${policy.holdTradingDays}거래일 종가`
+    plannedExit: plannedExitText(policy)
   };
 }
 
@@ -158,14 +229,13 @@ export function buildPaperAutoModel({ records = [], selections = [], policy = PA
 
   const fillable = rows
     .filter((row) => row.entryDate && finite(row.entryOpen) && Number(row.entryOpen) > 0)
-    .map((row) => ({ ...row, entryKey: String(row.entryDate) }));
+    .map((row) => ({ ...row, entryKey: String(row.entryDate), paperResolvedExit: resolvePaperExit(row, policy) }));
   const byEntry = new Map();
   const exitDates = new Set();
   for (const row of fillable) {
     if (!byEntry.has(row.entryKey)) byEntry.set(row.entryKey, []);
     byEntry.get(row.entryKey).push(row);
-    const exit = row?.outcomes?.[String(policy.holdTradingDays)];
-    if (exit?.targetTradingDate) exitDates.add(String(exit.targetTradingDate));
+    if (row.paperResolvedExit?.targetTradingDate) exitDates.add(String(row.paperResolvedExit.targetTradingDate));
   }
 
   const dates = [...new Set([...byEntry.keys(), ...exitDates])].sort();
@@ -200,17 +270,14 @@ export function buildPaperAutoModel({ records = [], selections = [], policy = PA
         continue;
       }
       cash -= principal;
-      active.push({ row, quantity, principal });
+      active.push({ row, quantity, principal, resolvedExit: row.paperResolvedExit });
     }
 
-    const closing = active.filter((position) => {
-      const exit = position.row?.outcomes?.[String(policy.holdTradingDays)];
-      return String(exit?.targetTradingDate ?? "") === date;
-    });
+    const closing = active.filter((position) => String(position.resolvedExit?.targetTradingDate ?? "") === date);
     if (closing.length) {
       for (const position of closing) {
-        const exit = position.row.outcomes[String(policy.holdTradingDays)];
-        const sourceNetReturnPct = Number(exit.netReturnPct);
+        const exit = position.resolvedExit;
+        const sourceNetReturnPct = Number(exit.sourceNetReturnPct);
         const slipPct = executionSlippagePct(position.row, policy);
         const effectiveReturnPct = paperReturnPct(sourceNetReturnPct, position.row, policy);
         const proceeds = position.principal * (1 + effectiveReturnPct / 100);
@@ -225,8 +292,11 @@ export function buildPaperAutoModel({ records = [], selections = [], policy = PA
           entryPrice: Number(position.row.entryOpen),
           entryFillPrice: round(policy?.slippageByLiquidity ? Number(position.row.entryOpen) * (1 + slipPct / 200) : Number(position.row.entryOpen)),
           exitDate: String(exit.targetTradingDate),
-          exitPrice: finite(exit.exitPrice) ? Number(exit.exitPrice) : null,
+          exitPrice: finite(exit.exitPrice) ? round(Number(exit.exitPrice)) : null,
           exitFillPrice: finite(exit.exitPrice) ? round(Number(exit.exitPrice) * (1 - slipPct / 200)) : null,
+          exitReason: exit.reason,
+          triggerWindowHorizon: exit.triggerWindowHorizon,
+          ambiguousTrigger: exit.ambiguousBothHit === true,
           executionSlippagePct: round(slipPct),
           effectiveFrictionPct: round(Number(policy.trackerRoundTripCostPct || 0) + slipPct),
           quantity: position.quantity,
@@ -263,6 +333,10 @@ export function buildPaperAutoModel({ records = [], selections = [], policy = PA
       openPositions: open.length,
       closedTrades: closed.length,
       skippedOrders: skipped.length,
+      stopLossExits: closed.filter((trade) => String(trade.exitReason).startsWith("STOP_LOSS")).length,
+      takeProfitExits: closed.filter((trade) => trade.exitReason === "TAKE_PROFIT").length,
+      timeExits: closed.filter((trade) => trade.exitReason === "TIME_EXIT").length,
+      ambiguousStopFirstExits: closed.filter((trade) => trade.exitReason === "STOP_LOSS_AMBIGUOUS").length,
       initialCapital: Number(policy.initialCapital),
       cash: round(cash, 0),
       equity: round(equity, 0),
@@ -285,6 +359,11 @@ export function buildPaperAutoModel({ records = [], selections = [], policy = PA
       selectedKeys: selectedKeys.length,
       missingRecordKeys,
       noBackfillBefore: policy.startSignalDate,
+      exitMode: policy.exitMode,
+      stopLossPct: policy.stopLossPct,
+      takeProfitPct: policy.takeProfitPct,
+      sameWindowTieBreak: policy.sameWindowTieBreak,
+      intradaySequenceKnown: false,
       aiAffectsOrders: false,
       realOrderApiUsed: false
     }
