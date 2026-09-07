@@ -17,6 +17,11 @@ export const PAPER_AUTO_ARENA_POLICY = Object.freeze({
     midPct: 0.20,
     lowPct: 0.35
   }),
+  stopTakeExperiment: Object.freeze({
+    stopLossPct: -5,
+    takeProfitPct: 8,
+    sameWindowTieBreak: "stop-first"
+  }),
   entryRule: "signal EOD -> next trading-day open",
   exitRule: "entry + 3 trading days close",
   aiRole: "observe-only",
@@ -36,6 +41,11 @@ export const PAPER_AUTO_ACCOUNTS = Object.freeze([
   { id: "strategy", label: "전략후보", kind: "derived", selector: "strategy-page", order: "strategy-page", description: "전략후보 화면의 확인 배지 후보" },
   { id: "cafe", label: "CAFE", kind: "selection", strategyId: "CAFE", order: "timing", description: "CAFE 통과 종목" },
   { id: "mtt", label: "MTT", kind: "selection", strategyId: "MTT", order: "timing", description: "MTT 통과 종목" }
+]);
+
+export const PAPER_AUTO_EXIT_VARIANTS = Object.freeze([
+  Object.freeze({ id: "fixed3d", label: "3D 고정", exitMode: "fixed-hold" }),
+  Object.freeze({ id: "sl5tp8", label: "SL5/TP8", exitMode: "stop-take", stopLossPct: -5, takeProfitPct: 8, sameWindowTieBreak: "stop-first" })
 ]);
 
 function finite(value) {
@@ -182,17 +192,26 @@ function prepareAccountInput(records, selections, account, arenaPolicy) {
   return { preparedRecords, syntheticSelections };
 }
 
-function accountPolicy(account, arenaPolicy) {
+function accountPolicy(account, arenaPolicy, variant) {
+  const stopTake = arenaPolicy.stopTakeExperiment ?? {};
+  const isStopTake = variant.exitMode === "stop-take";
   return {
     ...PAPER_AUTO_POLICY,
-    id: `paper-auto-v2-${account.id}-3d-20260907`,
-    label: account.label,
+    id: `paper-auto-v2-${account.id}-${variant.id}-20260907`,
+    label: isStopTake ? `${account.label} · ${variant.label}` : account.label,
     startSignalDate: arenaPolicy.startSignalDate,
     sourceStrategyId: `PAPER_${account.id.toUpperCase()}`,
     initialCapital: arenaPolicy.initialCapitalPerAccount,
     maxPositions: arenaPolicy.maxPositions,
     positionBudget: arenaPolicy.positionBudget,
     holdTradingDays: arenaPolicy.holdTradingDays,
+    exitMode: variant.exitMode,
+    exitRule: isStopTake
+      ? `stop ${variant.stopLossPct ?? stopTake.stopLossPct}% / take +${variant.takeProfitPct ?? stopTake.takeProfitPct}% / max ${arenaPolicy.holdTradingDays}D close`
+      : `entry + ${arenaPolicy.holdTradingDays} trading days close`,
+    stopLossPct: isStopTake ? Number(variant.stopLossPct ?? stopTake.stopLossPct) : null,
+    takeProfitPct: isStopTake ? Number(variant.takeProfitPct ?? stopTake.takeProfitPct) : null,
+    sameWindowTieBreak: isStopTake ? (variant.sameWindowTieBreak ?? stopTake.sameWindowTieBreak ?? "stop-first") : "stop-first",
     trackerRoundTripCostPct: arenaPolicy.trackerRoundTripCostPct,
     slippageByLiquidity: arenaPolicy.slippageByLiquidity,
     extraExecutionSlippagePct: arenaPolicy.slippageByLiquidity.midPct,
@@ -202,32 +221,51 @@ function accountPolicy(account, arenaPolicy) {
   };
 }
 
-export function buildPaperAutoArena({ records = [], selections = [], arenaPolicy = PAPER_AUTO_ARENA_POLICY } = {}) {
-  const accounts = PAPER_AUTO_ACCOUNTS.map((account) => {
-    const { preparedRecords, syntheticSelections } = prepareAccountInput(records, selections, account, arenaPolicy);
-    const model = buildPaperAutoModel({
-      records: preparedRecords,
-      selections: syntheticSelections,
-      policy: accountPolicy(account, arenaPolicy)
-    });
-    return {
-      id: account.id,
-      label: account.label,
-      description: account.description,
-      source: account.kind === "selection" ? account.strategyId : account.selector,
-      ...model
-    };
+function buildAccountVariant(account, variant, preparedRecords, syntheticSelections, arenaPolicy) {
+  const model = buildPaperAutoModel({
+    records: preparedRecords,
+    selections: syntheticSelections,
+    policy: accountPolicy(account, arenaPolicy, variant)
   });
+  const isBaseline = variant.id === "fixed3d";
+  return {
+    id: isBaseline ? account.id : `${account.id}-${variant.id}`,
+    baseId: account.id,
+    exitVariant: variant.id,
+    label: isBaseline ? account.label : `${account.label} · ${variant.label}`,
+    description: `${account.description} · ${isBaseline ? "3D 고정청산" : "-5% 손절 / +8% 익절"}`,
+    source: account.kind === "selection" ? account.strategyId : account.selector,
+    ...model
+  };
+}
 
-  const ranked = [...accounts].sort((a, b) => Number(b.summary?.totalReturnPct ?? 0) - Number(a.summary?.totalReturnPct ?? 0));
+export function buildPaperAutoArena({ records = [], selections = [], arenaPolicy = PAPER_AUTO_ARENA_POLICY } = {}) {
+  const preparedByAccount = new Map(PAPER_AUTO_ACCOUNTS.map((account) => [account.id, prepareAccountInput(records, selections, account, arenaPolicy)]));
+  const comparisonAccounts = PAPER_AUTO_ACCOUNTS.flatMap((account) => {
+    const prepared = preparedByAccount.get(account.id);
+    return PAPER_AUTO_EXIT_VARIANTS.map((variant) => buildAccountVariant(
+      account,
+      variant,
+      prepared.preparedRecords,
+      prepared.syntheticSelections,
+      arenaPolicy
+    ));
+  });
+  const accounts = comparisonAccounts.filter((account) => account.exitVariant === "fixed3d");
+
+  const ranked = [...comparisonAccounts].sort((a, b) => Number(b.summary?.totalReturnPct ?? 0) - Number(a.summary?.totalReturnPct ?? 0));
   return {
     schemaVersion: "paper-auto-arena-v2",
     generatedAt: new Date().toISOString(),
     arenaPolicy,
     accounts,
+    comparisonAccounts,
+    exitVariants: PAPER_AUTO_EXIT_VARIANTS,
     leaderboard: ranked.map((account, index) => ({
       rank: index + 1,
       id: account.id,
+      baseId: account.baseId,
+      exitVariant: account.exitVariant,
       label: account.label,
       totalReturnPct: account.summary.totalReturnPct,
       equity: account.summary.equity,
@@ -238,12 +276,21 @@ export function buildPaperAutoArena({ records = [], selections = [], arenaPolicy
       realOrderApiUsed: false,
       aiAffectsOrders: false,
       accountCount: accounts.length,
+      comparisonAccountCount: comparisonAccounts.length,
+      exitVariantCount: PAPER_AUTO_EXIT_VARIANTS.length,
       noBackfillBefore: arenaPolicy.startSignalDate,
       nextOpenGapIncluded: true,
       wholeShareSizing: true,
       cashAndCapacityEnforced: true,
       duplicateOpenBlocked: true,
-      unmodeledMicrostructure: ["limit-up/down queue", "partial fills", "order-book depth beyond liquidity-score slippage proxy"]
+      stopTakeUsesStoredExcursionWindows: true,
+      sameWindowBothHitPolicy: "stop-first",
+      unmodeledMicrostructure: [
+        "limit-up/down queue",
+        "partial fills",
+        "order-book depth beyond liquidity-score slippage proxy",
+        "exact intraday ordering when stop and take are both touched inside one stored OOS window"
+      ]
     }
   };
 }
