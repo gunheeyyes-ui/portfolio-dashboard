@@ -1,3 +1,5 @@
+import "./market-integrity-ui.js";
+
 const currency = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 });
 const pct = new Intl.NumberFormat("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -97,8 +99,11 @@ function renderAccounts(model) {
     const exits = account.exitVariant === "sl5tp8"
       ? `<div class="cell-sub">손절 ${s.stopLossExits ?? 0} · 익절 ${s.takeProfitExits ?? 0} · 3D ${s.timeExits ?? 0}</div>`
       : "";
+    const integrity = s.marketStatusBlockedOrders || s.integrityQuarantinedClosedTrades
+      ? `<div class="cell-sub">사전차단 ${s.marketStatusBlockedOrders ?? 0} · 정합성격리 ${s.integrityQuarantinedClosedTrades ?? 0} · 비교수익 ${percent(s.comparableReturnPct)}</div>`
+      : "";
     return `<tr>
-      <td><b>${account.label}</b><div class="cell-sub">${account.description ?? ""}</div>${exits}</td>
+      <td><b>${account.label}</b><div class="cell-sub">${account.description ?? ""}</div>${exits}${integrity}</td>
       <td><b>${money(s.equity)}</b></td>
       <td class="${signClass(s.totalReturnPct)}"><b>${percent(s.totalReturnPct)}</b></td>
       <td>${s.signalCount ?? 0}</td>
@@ -167,7 +172,8 @@ function renderStatus(model) {
   const p = model.arenaPolicy ?? {};
   const s = p.slippageByLiquidity ?? {};
   const st = p.stopTakeExperiment ?? {};
-  target.textContent = `${p.startSignalDate} 신호부터 · ${model.accounts?.length ?? 0}개 후보군을 3D 고정 vs SL ${st.stopLossPct}% / TP +${st.takeProfitPct}%로 병렬 비교 · 각 1억원 · 다음날 시가 매수 · 기본 왕복비용 ${p.trackerRoundTripCostPct}% + 유동성별 추가 슬리피지 ${s.highPct}%/${s.midPct}%/${s.lowPct}% · 실주문 없음`;
+  const blocked = (model.accounts ?? []).reduce((sum, account) => sum + Number(account.summary?.marketStatusBlockedOrders ?? 0), 0);
+  target.textContent = `${p.startSignalDate} 신호부터 · ${model.accounts?.length ?? 0}개 후보군을 3D 고정 vs SL ${st.stopLossPct}% / TP +${st.takeProfitPct}%로 병렬 비교 · 각 1억원 · 다음날 시가 매수 · 기본 왕복비용 ${p.trackerRoundTripCostPct}% + 유동성별 추가 슬리피지 ${s.highPct}%/${s.midPct}%/${s.lowPct}% · 특수시장 사전차단 ${blocked}건 · 실주문 없음`;
 }
 
 async function loadPaperAuto() {

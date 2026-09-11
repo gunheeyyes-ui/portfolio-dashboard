@@ -1,0 +1,1 @@
+Market integrity is an isolated observation/execution-safety layer. It preserves all raw OOS and paper-trading records, blocks only pre-entry statuses known before a future paper fill, and exposes a separate comparable view for suspected corporate-action/reference-price discontinuities.

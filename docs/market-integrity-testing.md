@@ -1,0 +1,1 @@
+Tests cover special-status pre-entry blocks, hard price discontinuity quarantine, no future-horizon leakage, and raw-versus-comparable Simulation integrity results.
