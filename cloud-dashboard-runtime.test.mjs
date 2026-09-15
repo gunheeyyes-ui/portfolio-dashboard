@@ -7,6 +7,7 @@ import {
   CLOUD_SNAPSHOT_SCHEMA,
   createCloudSnapshotManager,
   createSnapshotStore,
+  marketRefreshQualityIssue,
   scheduledRefreshKind
 } from "./cloud-dashboard-runtime.js";
 
@@ -34,6 +35,27 @@ function tempStore(options = {}) {
     store: createSnapshotStore({ snapshotFile, stateFile, ...options })
   };
 }
+
+function marketPayload(kospiCount, kosdaqCount, liveRatio = 1) {
+  const rows = (count) => Array.from({ length: count }, (_, index) => ({
+    code: String(index),
+    price: 1000,
+    live: index < Math.floor(count * liveRatio)
+  }));
+  return { rows: { KOSPI: rows(kospiCount), KOSDAQ: rows(kosdaqCount) } };
+}
+
+test("market quality rejects partial universe before OOS snapshot", () => {
+  assert.match(marketRefreshQualityIssue(marketPayload(29, 30)), /Incomplete market refresh/);
+});
+
+test("market quality rejects weak live quote coverage", () => {
+  assert.match(marketRefreshQualityIssue(marketPayload(80, 80, 0.8)), /Incomplete quote coverage/);
+});
+
+test("market quality accepts complete live universe", () => {
+  assert.equal(marketRefreshQualityIssue(marketPayload(80, 80, 0.95)), null);
+});
 
 test("snapshot persists and loads as last-known-good", () => {
   const item = tempStore();

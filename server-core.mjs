@@ -19,6 +19,7 @@ import {
   CLOUD_SNAPSHOT_SCHEMA,
   createCloudSnapshotManager,
   createSnapshotStore,
+  marketRefreshQualityIssue,
   kstParts,
   scheduledRefreshKind
 } from "./cloud-dashboard-runtime.js";
@@ -1657,8 +1658,20 @@ async function buildMarketScreener(limit = 100, force = false, marketFilter = "A
     }
   };
   const cachedPayload = cacheSet(cacheKey, payload);
-  if (normalizedMarket === "ALL") scheduleRankingLiveMaintenance({ payload, historyByCode, record: true });
-  if (normalizedMarket === "ALL") scheduleStrategyOosMaintenance({ payload, historyByCode, record: true });
+  if (normalizedMarket === "ALL") {
+    const qualityIssue = marketRefreshQualityIssue(payload, {
+      minMarketRows: process.env.CLOUD_MIN_MARKET_ROWS || 80,
+      minLiveRatio: process.env.CLOUD_MIN_LIVE_RATIO || 0.9
+    });
+    if (qualityIssue) {
+      structuredLog("OOS_SNAPSHOT_SKIPPED_QUALITY", { reason: qualityIssue, signalDate });
+      scheduleRankingLiveMaintenance();
+      scheduleStrategyOosMaintenance();
+    } else {
+      scheduleRankingLiveMaintenance({ payload, historyByCode, record: true });
+      scheduleStrategyOosMaintenance({ payload, historyByCode, record: true });
+    }
+  }
   return cachedPayload;
 }
 
@@ -2670,18 +2683,11 @@ function cloudMarketPayload(snapshot, market = "ALL") {
 }
 
 function assertFullRefreshQuality(marketScreener, portfolioSnapshot) {
-  const kospi = marketScreener?.rows?.KOSPI ?? [];
-  const kosdaq = marketScreener?.rows?.KOSDAQ ?? [];
-  const minimum = Math.max(10, Number(process.env.CLOUD_MIN_MARKET_ROWS || 80));
-  if (kospi.length < minimum || kosdaq.length < minimum) {
-    throw new Error(`Incomplete market refresh: KOSPI ${kospi.length}, KOSDAQ ${kosdaq.length}`);
-  }
-  const allRows = [...kospi, ...kosdaq];
-  const liveRows = allRows.filter((row) => row.live && Number(row.price) > 0).length;
-  const minimumLiveRatio = Math.min(1, Math.max(0.5, Number(process.env.CLOUD_MIN_LIVE_RATIO || 0.9)));
-  if (!allRows.length || liveRows / allRows.length < minimumLiveRatio) {
-    throw new Error(`Incomplete quote coverage: ${liveRows}/${allRows.length}`);
-  }
+  const qualityIssue = marketRefreshQualityIssue(marketScreener, {
+    minMarketRows: process.env.CLOUD_MIN_MARKET_ROWS || 80,
+    minLiveRatio: process.env.CLOUD_MIN_LIVE_RATIO || 0.9
+  });
+  if (qualityIssue) throw new Error(qualityIssue);
   if (!Array.isArray(portfolioSnapshot?.rows) || !portfolioSnapshot.rows.length) {
     throw new Error("Portfolio refresh returned no rows");
   }

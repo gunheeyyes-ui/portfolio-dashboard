@@ -18,6 +18,22 @@ function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
+export function marketRefreshQualityIssue(marketScreener, { minMarketRows = 80, minLiveRatio = 0.9 } = {}) {
+  const kospi = marketScreener?.rows?.KOSPI ?? [];
+  const kosdaq = marketScreener?.rows?.KOSDAQ ?? [];
+  const minimum = Math.max(10, Number(minMarketRows || 80));
+  if (kospi.length < minimum || kosdaq.length < minimum) {
+    return `Incomplete market refresh: KOSPI ${kospi.length}, KOSDAQ ${kosdaq.length}`;
+  }
+  const allRows = [...kospi, ...kosdaq];
+  const liveRows = allRows.filter((row) => row.live && Number(row.price) > 0).length;
+  const minimumLiveRatio = Math.min(1, Math.max(0.5, Number(minLiveRatio || 0.9)));
+  if (!allRows.length || liveRows / allRows.length < minimumLiveRatio) {
+    return `Incomplete quote coverage: ${liveRows}/${allRows.length}`;
+  }
+  return null;
+}
+
 export function validateCloudSnapshot(snapshot) {
   if (!snapshot || typeof snapshot !== "object") throw new Error("snapshot must be an object");
   if (snapshot.schemaVersion !== CLOUD_SNAPSHOT_SCHEMA) throw new Error("unsupported snapshot schema");
