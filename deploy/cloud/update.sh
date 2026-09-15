@@ -119,6 +119,10 @@ if ! node --check server.mjs || ! node --check cloud-dashboard-runtime.js || ! n
   rollback
   exit 1
 fi
+if [ -f deploy/cloud/oos-quality-cleanup.mjs ] && ! node --check deploy/cloud/oos-quality-cleanup.mjs; then
+  rollback
+  exit 1
+fi
 if [ -f public/simulator-strategy-candidates.js ] && ! node --check public/simulator-strategy-candidates.js; then
   rollback
   exit 1
@@ -144,7 +148,31 @@ if ! npm test; then
   exit 1
 fi
 
-systemctl restart portfolio-dashboard
+# The 2026-09-15 refresh exposed a historical ordering bug where an incomplete
+# market payload could be frozen into OOS before the cloud quality gate rejected
+# the refresh. The new recorder guard prevents recurrence. This migration only
+# removes that date when the persisted diagnostics themselves prove that one or
+# both markets were below the same minimum-row threshold. It is idempotent and
+# makes its own per-file backup in addition to the deployment backup above.
+if [ -f deploy/cloud/oos-quality-cleanup.mjs ]; then
+  if ! systemctl stop portfolio-dashboard; then
+    rollback
+    exit 1
+  fi
+  if ! DASHBOARD_DATA_DIR="${DASHBOARD_DATA_DIR:-/var/lib/portfolio-dashboard}" \
+    OOS_QUARANTINE_DATE="${OOS_QUARANTINE_DATE:-2026-09-15}" \
+    node deploy/cloud/oos-quality-cleanup.mjs; then
+    rollback
+    exit 1
+  fi
+  if ! systemctl start portfolio-dashboard; then
+    rollback
+    exit 1
+  fi
+else
+  systemctl restart portfolio-dashboard
+fi
+
 for _ in $(seq 1 30); do
   if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then
     rm -f "$FAILED_SHA_FILE"
