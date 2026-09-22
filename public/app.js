@@ -1,4 +1,5 @@
 import { rankMarketRowsV2, reboundRankingTier, compareReboundRankingV2 } from "./rebound-ranking-v2.js";
+import { buildEntryTransitionLookup } from "./entry-transition.js";
 
 const state = {
   snapshot: null,
@@ -8,14 +9,15 @@ const state = {
   holdingSort: "priority-desc",
   screenerSort: null,
   screenerFetchCount: 0,
-  // The page opens on the entry candidates: "what actually met today's entry
-  // conditions" is the first question, not the Ranking V2 review order.
-  // Mode is not persisted anywhere, so a reload always returns here.
-  explorerMode: "entry",
+  // The page opens on entry transitions, not the whole persistent actionable set.
+  // Mode is not persisted anywhere; applyDefaultExplorerMode selects the most relevant state after load.
+  explorerMode: "entry-new",
   explorerModeTouched: false,
   screenerQuery: "",
   screenerLoading: false,
   backgroundRefresh: null,
+  entryHistory: [],
+  entryHistoryLoaded: false,
   live: true
 };
 
@@ -155,7 +157,7 @@ const TIER_LABEL = {
 // the DOM for desktop and the tooltip keeps the meaning available either way.
 // Tier is a property of the stock, not of the sort, so it stays visible in
 // 진입후보 too — the row there is still a Ranking V2 tier, just filtered.
-const TIER_MODES = new Set(["rebound", "entry"]);
+const TIER_MODES = new Set(["rebound", "entry-all", "entry-new", "entry-maintain", "entry-reentry"]);
 
 function rankTierClass(row) {
   if (!TIER_MODES.has(state.explorerMode)) return "";
@@ -304,6 +306,32 @@ async function pollBackgroundRefresh(refreshId) {
   }
 }
 
+async function loadEntryTransitionHistory() {
+  try {
+    const response = await fetch("/api/entry-transition-history");
+    if (!response.ok) throw new Error("진입 이력을 불러오지 못했습니다.");
+    const payload = await response.json();
+    state.entryHistory = payload.selections ?? [];
+    state.entryHistoryLoaded = true;
+  } catch {
+    state.entryHistory = [];
+    state.entryHistoryLoaded = false;
+  }
+}
+
+function applyEntryTransitions() {
+  const signalDate = state.screener?.marketDataAsOf ?? null;
+  if (!signalDate) return;
+  const lookup = buildEntryTransitionLookup(state.entryHistory, signalDate);
+  for (const market of ["KOSPI", "KOSDAQ"]) {
+    for (const row of state.screener?.rows?.[market] ?? []) {
+      row.entryTransition = row.simCategory?.actionable
+        ? lookup.classify(market, row.code)
+        : null;
+    }
+  }
+}
+
 async function loadMarketScreener(force = false) {
   state.screenerFetchCount += 1;
   state.screenerLoading = true;
@@ -328,6 +356,8 @@ async function loadMarketScreener(force = false) {
         ...payload.summary
       }
     };
+    await loadEntryTransitionHistory();
+    applyEntryTransitions();
   } catch (error) {
     state.screener = {
       ...(state.screener ?? {}),
@@ -342,13 +372,22 @@ async function loadMarketScreener(force = false) {
   }
 }
 
-// 진입후보가 하나라도 있으면 그것부터, 없으면 관찰용 반등우선으로 연다.
+// 오늘 처음 발생한 진입신호를 먼저 보여주고, 없으면 재진입→유지 순으로 연다.
 // 사용자가 직접 모드를 고른 뒤에는 다시 건드리지 않는다.
 function applyDefaultExplorerMode() {
   if (state.explorerModeTouched) return;
-  const hasEntry = ["KOSPI", "KOSDAQ"].some((market) =>
-    (state.screener?.rows?.[market] ?? []).some((row) => row.simCategory?.actionable));
-  const nextMode = hasEntry ? "entry" : "rebound";
+  const rows = ["KOSPI", "KOSDAQ"].flatMap((market) => state.screener?.rows?.[market] ?? []);
+  const actionable = rows.filter((row) => row.simCategory?.actionable);
+  const has = (key) => actionable.some((row) => row.entryTransition?.key === key);
+  const nextMode = has("new")
+    ? "entry-new"
+    : has("reentry")
+      ? "entry-reentry"
+      : has("maintain")
+        ? "entry-maintain"
+        : actionable.length
+          ? "entry-all"
+          : "rebound";
   if (state.explorerMode === nextMode) return;
   state.explorerMode = nextMode;
   state.screenerSort = null;
@@ -858,12 +897,19 @@ const SE_BADGE_TOOLTIP = {
 // the other has some must not claim there is nothing today — only the
 // genuinely empty case gets the full "we do not relax conditions" wording.
 function explorerEmptyMessage(market) {
-  if (state.explorerMode !== "entry") return "조건에 맞는 종목이 없습니다.";
+  const entryModes = new Set(["entry-all", "entry-new", "entry-maintain", "entry-reentry"]);
+  if (!entryModes.has(state.explorerMode)) return "조건에 맞는 종목이 없습니다.";
+  const labels = {
+    "entry-new": "신규 진입신호",
+    "entry-maintain": "진입조건 유지",
+    "entry-reentry": "재진입 신호",
+    "entry-all": "진입조건 충족"
+  };
   const otherMarket = market === "KOSPI" ? "KOSDAQ" : "KOSPI";
   const otherHasEntries = market ? explorerRows(otherMarket).length > 0 : false;
-  if (otherHasEntries) return `${market} 진입조건 충족 종목이 없습니다.`;
-  return "오늘 진입조건 충족 종목이 없습니다."
-    + "<small>조건을 억지로 완화하지 않습니다. 종합타이밍 또는 반등우선에서 관찰 후보를 확인할 수 있습니다.</small>";
+  if (otherHasEntries) return `${market} ${labels[state.explorerMode]} 종목이 없습니다.`;
+  return `오늘 ${labels[state.explorerMode]} 종목이 없습니다.`
+    + "<small>조건을 억지로 완화하지 않습니다. 다른 진입 상태나 종합타이밍·반등우선을 확인할 수 있습니다.</small>";
 }
 
 // The simulator's entry verdict, shown first because it answers "would we
@@ -878,6 +924,10 @@ function explorerBadges(row) {
   const confirmation = row.confirmation ?? {};
   const stockEasy = row.stockEasy ?? {};
   const sim = row.simCategory ?? null;
+  const transition = row.entryTransition ?? null;
+  const transitionBadge = sim?.actionable && transition && transition.key !== "unknown"
+    ? `<span class="strategy-badge ${transition.key === "new" ? "buy" : transition.key === "reentry" ? "se" : "hold"}" title="직전 확정일 ${transition.previousSignalDate ?? "-"} 대비">${transition.label}</span>`
+    : "";
   const simBadge = sim?.actionable && SIM_BADGE[sim.key]
     ? `<span class="strategy-badge sim-entry" title="${SIM_BADGE[sim.key].tip}">${SIM_BADGE[sim.key].short}</span>`
     : "";
@@ -888,7 +938,7 @@ function explorerBadges(row) {
     stockEasy.sePeak ? "SE-PEAK" : null,
     stockEasy.seValue ? "SE-VALUE" : null
   ].filter(Boolean);
-  return simBadge + labels
+  return transitionBadge + simBadge + labels
     .map((label) => {
       const tone = label.startsWith("SE-") ? "se" : "buy";
       const title = SE_BADGE_TOOLTIP[label] ? ` title="${SE_BADGE_TOOLTIP[label]}"` : "";
@@ -902,7 +952,10 @@ function explorerModeRows(market) {
   let rows = explorerMarketRows(market).filter((row) => !query || row.name.toLowerCase().includes(query) || row.code.includes(query));
   if (state.explorerMode === "cafe") rows = rows.filter((row) => row.confirmation?.cafePass);
   if (state.explorerMode === "mtt") rows = rows.filter((row) => row.confirmation?.minerviniPass);
-  if (state.explorerMode === "entry") rows = rows.filter((row) => row.simCategory?.actionable);
+  if (state.explorerMode === "entry-all") rows = rows.filter((row) => row.simCategory?.actionable);
+  if (state.explorerMode === "entry-new") rows = rows.filter((row) => row.simCategory?.actionable && row.entryTransition?.key === "new");
+  if (state.explorerMode === "entry-maintain") rows = rows.filter((row) => row.simCategory?.actionable && row.entryTransition?.key === "maintain");
+  if (state.explorerMode === "entry-reentry") rows = rows.filter((row) => row.simCategory?.actionable && row.entryTransition?.key === "reentry");
   return rows;
 }
 
@@ -1054,10 +1107,19 @@ function renderUnifiedExplorer() {
   const allCount = (state.screener?.rows?.KOSPI?.length ?? 0) + (state.screener?.rows?.KOSDAQ?.length ?? 0);
   const errorText = state.screener?.errors?.length ? ` · 일부 실패 ${state.screener.errors.length}건` : "";
   const cloud = state.screener?.cloud;
-  const modeText = cloud?.dataMode === "INTRADAY_PARTIAL" ? " · 장중 시세/확정랭킹 혼합" : (cloud?.dataMode === "EOD_FULL" ? " · 장마감 확정" : "");
+  const modeText = cloud?.dataMode === "INTRADAY_PARTIAL" ? " · 장중 시세만 갱신 · 진입판정은 확정값" : (cloud?.dataMode === "EOD_FULL" ? " · 장마감 확정" : "");
   const refreshText = state.backgroundRefresh?.status === "running" || cloud?.refreshStatus === "running" ? " · 백그라운드 갱신 중" : "";
   const staleText = cloud?.lastError && cloud?.refreshStatus === "error" ? " · 최근 갱신 실패, 기존 정상 데이터 표시 중" : "";
-  document.querySelector("#screenerStatus").textContent = `KOSPI ${counts.KOSPI} · KOSDAQ ${counts.KOSDAQ} 표시 · 두 시장 ${allCount}종목 준비됨 · ${asOf}${modeText}${refreshText}${staleText}${errorText}`;
+  const allRows = ["KOSPI", "KOSDAQ"].flatMap((market) => state.screener?.rows?.[market] ?? []);
+  const actionableRows = allRows.filter((row) => row.simCategory?.actionable);
+  const transitionCount = (key) => actionableRows.filter((row) => row.entryTransition?.key === key).length;
+  const unknownCount = actionableRows.filter((row) => !row.entryTransition || row.entryTransition.key === "unknown").length;
+  const signalDate = state.screener?.marketDataAsOf ?? "-";
+  const entryText = state.entryHistoryLoaded
+    ? ` · 진입판정 ${signalDate} 종가: 신규 ${transitionCount("new")} · 유지 ${transitionCount("maintain")} · 재진입 ${transitionCount("reentry")}`
+    : ` · 진입판정 ${signalDate} 종가 · 이력 비교 준비 안 됨`;
+  const unknownText = unknownCount ? ` · 이력미확인 ${unknownCount}` : "";
+  document.querySelector("#screenerStatus").textContent = `KOSPI ${counts.KOSPI} · KOSDAQ ${counts.KOSDAQ} 표시 · 두 시장 ${allCount}종목 준비됨 · ${asOf}${modeText}${entryText}${unknownText}${refreshText}${staleText}${errorText}`;
   document.querySelector("#screenerStatus").dataset.fetchCount = String(state.screenerFetchCount);
 }
 

@@ -34,6 +34,10 @@ jobs:
           node --check strategy-oos-tracker.js
           node --check market-index-tracker.js
           node --check simulation-v2-service.js
+          node --check entry-transition.js
+          node --check entry-transition-http-hook.mjs
+          node --check public/entry-transition.js
+          node --check public/app.js
           node --check public/home-ai-review.js
           node --check public/home-ai-review-inline.js
           node --check public/home-candidate-freshness.js
