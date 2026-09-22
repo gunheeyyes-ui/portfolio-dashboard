@@ -29,7 +29,7 @@
 
       <section class="notice">
         <strong>오늘 보는 곳</strong>
-        <span>🔥 핵심·⭐ 강한은 백테스트 우선 검토군입니다. 기존의 빡빡한 실제진입 조건은 아래 ‘기존 실제진입’ 보기에서 따로 확인합니다.</span>
+        <span>🔥 핵심·⭐ 강한은 백테스트 우선 검토군입니다. 아래 시장 탐색에서는 기존 진입조건을 직전 확정 거래일과 비교해 ‘신규·유지·재진입’으로 나눠 봅니다.</span>
       </section>
 
       <section class="sim-panel home-entry-panel">
@@ -86,9 +86,12 @@
         <div class="screener-tools">
           <input id="screenerSearch" type="search" placeholder="시장 후보 검색">
         </div>
-        <p class="mode-hint">보는 순서 <b>① 위 오늘 진입후보 → ② 필요하면 종합타이밍 → ③ Leader → ④ Risk·Stab → ⑤ CAFE·MTT</b>. 아래 ‘기존 실제진입’은 원래의 빡빡한 진입조건만 따로 보는 필터입니다.</p>
+        <p class="mode-hint">보는 순서 <b>① 오늘 신규 → ② 재진입 → ③ 유지 → ④ 종합타이밍 → ⑤ Leader·Risk·Stab</b>. 신규·유지·재진입은 직전 장마감 확정 진입판정과 비교합니다.</p>
         <div class="explorer-mode-bar" id="explorerModes" aria-label="보기 모드">
-          <button class="active" data-explorer-mode="entry" type="button" title="기존 실제 진입조건을 충족한 종목만 남깁니다">기존 실제진입</button>
+          <button class="active" data-explorer-mode="entry-new" type="button" title="직전 확정 거래일에는 진입조건이 아니었고 이번 확정일에 처음 충족">오늘 신규</button>
+          <button data-explorer-mode="entry-reentry" type="button" title="과거 진입이력은 있으나 직전 확정일에는 빠졌다가 다시 충족">재진입</button>
+          <button data-explorer-mode="entry-maintain" type="button" title="직전 확정 거래일부터 진입조건을 연속 충족">진입 유지</button>
+          <button data-explorer-mode="entry-all" type="button" title="현재 확정일에 진입조건을 충족한 전체 종목">전체 진입</button>
           <button data-explorer-mode="timing" type="button" title="현재 타이밍 점수(Main 70 + Scout 30) 높은 순">종합타이밍</button>
           <button data-explorer-mode="rebound" type="button" title="Ranking V2 반등 검토 우선순위 (매수등급 아님)">반등우선</button>
           <button data-explorer-mode="leader" type="button" title="주도주(Leader) 점수 높은 순">주도주순</button>
@@ -96,7 +99,7 @@
           <button data-explorer-mode="mtt" type="button" title="MTT(미네르비니) 전략을 통과한 종목만">MTT</button>
         </div>
         <div class="explorer-legend">
-          <span class="legend-tier">순위색 = <b class="legend-tier-chip t1">T1 최우선</b> · <b class="legend-tier-chip t2">T2 하락정지</b> · <b class="legend-tier-chip t3">T3 저위험</b> · <b class="legend-tier-chip t6">T6 제외</b></span><span>낙폭 = 2년 고점 대비</span><span>Risk↓ 낮을수록 좋음</span><span>Stab↑ 높을수록 좋음</span><span>RS = 20일 상대강도(참고용)</span><span>타이밍 = 기존 Main 70 + Scout 30</span>
+          <span class="legend-tier">순위색 = <b class="legend-tier-chip t1">T1 최우선</b> · <b class="legend-tier-chip t2">T2 하락정지</b> · <b class="legend-tier-chip t3">T3 저위험</b> · <b class="legend-tier-chip t6">T6 제외</b></span><span>신규/유지/재진입 = 직전 확정 거래일 대비</span><span>낙폭 = 2년 고점 대비</span><span>Risk↓ 낮을수록 좋음</span><span>Stab↑ 높을수록 좋음</span><span>RS = 20일 상대강도(참고용)</span><span>타이밍 = 기존 Main 70 + Scout 30</span>
         </div>
         <div id="screenerMarkets" class="market-ranking-list">
           <div class="loading explorer-loading">시장 후보 불러오는 중...</div>
