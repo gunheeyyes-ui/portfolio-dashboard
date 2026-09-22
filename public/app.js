@@ -9,10 +9,9 @@ const state = {
   holdingSort: "priority-desc",
   screenerSort: null,
   screenerFetchCount: 0,
-  // The page opens on the entry candidates: "what actually met today's entry
-  // conditions" is the first question, not the Ranking V2 review order.
-  // Mode is not persisted anywhere, so a reload always returns here.
-  explorerMode: "entry",
+  // The page opens on entry transitions, not the whole persistent actionable set.
+  // Mode is not persisted anywhere; applyDefaultExplorerMode selects the most relevant state after load.
+  explorerMode: "entry-new",
   explorerModeTouched: false,
   screenerQuery: "",
   screenerLoading: false,
