@@ -35,6 +35,7 @@ jobs:
           node --check market-index-tracker.js
           node --check simulation-v2-service.js
           node --check entry-transition.js
+          node --check entry-transition-http-hook.mjs
           node --check public/entry-transition.js
           node --check public/app.js
           node --check public/home-ai-review.js
