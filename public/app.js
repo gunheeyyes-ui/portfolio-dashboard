@@ -308,18 +308,10 @@ async function pollBackgroundRefresh(refreshId) {
 
 async function loadEntryTransitionHistory() {
   try {
-    const markets = ["KOSPI", "KOSDAQ"];
-    const responses = await Promise.all(markets.map((market) =>
-      fetch(`/api/strategy-validation/detail?id=ACTIONABLE_ALL&market=${market}&limit=120`)
-    ));
-    if (responses.some((response) => !response.ok)) throw new Error("진입 이력을 불러오지 못했습니다.");
-    const payloads = await Promise.all(responses.map((response) => response.json()));
-    state.entryHistory = payloads.flatMap((payload) => (payload.cohorts ?? []).map((cohort) => ({
-      signalDate: cohort.signalDate,
-      market: cohort.market,
-      strategyId: "ACTIONABLE_ALL",
-      members: (cohort.rows ?? []).map((row) => ({ code: row.code, name: row.name }))
-    })));
+    const response = await fetch("/api/entry-transition-history");
+    if (!response.ok) throw new Error("진입 이력을 불러오지 못했습니다.");
+    const payload = await response.json();
+    state.entryHistory = payload.selections ?? [];
     state.entryHistoryLoaded = true;
   } catch {
     state.entryHistory = [];
@@ -1115,7 +1107,7 @@ function renderUnifiedExplorer() {
   const allCount = (state.screener?.rows?.KOSPI?.length ?? 0) + (state.screener?.rows?.KOSDAQ?.length ?? 0);
   const errorText = state.screener?.errors?.length ? ` · 일부 실패 ${state.screener.errors.length}건` : "";
   const cloud = state.screener?.cloud;
-  const modeText = cloud?.dataMode === "INTRADAY_PARTIAL" ? " · 현재가만 장중 갱신" : (cloud?.dataMode === "EOD_FULL" ? " · 장마감 확정" : "");
+  const modeText = cloud?.dataMode === "INTRADAY_PARTIAL" ? " · 장중 시세만 갱신 · 진입판정은 확정값" : (cloud?.dataMode === "EOD_FULL" ? " · 장마감 확정" : "");
   const refreshText = state.backgroundRefresh?.status === "running" || cloud?.refreshStatus === "running" ? " · 백그라운드 갱신 중" : "";
   const staleText = cloud?.lastError && cloud?.refreshStatus === "error" ? " · 최근 갱신 실패, 기존 정상 데이터 표시 중" : "";
   const allRows = ["KOSPI", "KOSDAQ"].flatMap((market) => state.screener?.rows?.[market] ?? []);
