@@ -20,7 +20,11 @@ test("home dashboard keeps the broadened entry shortlist before the market explo
   assert.match(js, />반등<\/th>/);
   assert.match(js, /home-entry-risk-head/);
   assert.doesNotMatch(js, />기존진입<\/th>/);
-  assert.match(html, /직전 확정 거래일과 비교해 ‘신규·유지·재진입’/);\n  assert.match(html, /data-explorer-mode="entry-new"/);\n  assert.match(html, /data-explorer-mode="entry-reentry"/);\n  assert.match(html, /data-explorer-mode="entry-maintain"/);\n  assert.match(html, /data-explorer-mode="entry-all"/);
+  assert.match(html, /직전 확정 거래일과 비교해 ‘신규·유지·재진입’/);
+  assert.match(html, /data-explorer-mode="entry-new"/);
+  assert.match(html, /data-explorer-mode="entry-reentry"/);
+  assert.match(html, /data-explorer-mode="entry-maintain"/);
+  assert.match(html, /data-explorer-mode="entry-all"/);
 });
 
 test("home shortlist keeps price changes beside the stock and drawdown in its own column", () => {
