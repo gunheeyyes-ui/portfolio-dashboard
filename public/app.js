@@ -922,7 +922,7 @@ const SIM_BADGE = {
 
 function shortSignalDate(value) {
   const text = String(value ?? "");
-  return /^\\d{4}-\\d{2}-\\d{2}$/.test(text) ? `${text.slice(5, 7)}/${text.slice(8, 10)}` : (text || "-");
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? `${text.slice(5, 7)}/${text.slice(8, 10)}` : (text || "-");
 }
 
 function entryHistoryTitle(transition) {
