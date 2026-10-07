@@ -12,6 +12,30 @@ GITHUB_WORKFLOW_NAME="${DASHBOARD_GITHUB_WORKFLOW_NAME:-test}"
 GITHUB_API_BASE="${DASHBOARD_GITHUB_API_BASE:-https://api.github.com}"
 REQUIRE_GITHUB_CI="${DASHBOARD_REQUIRE_GITHUB_CI:-1}"
 
+health_commit_matches() {
+  local expected="$1"
+  local payload actual
+  if ! payload="$(curl -fsS --connect-timeout 3 --max-time 10 "$HEALTH_URL")"; then
+    return 1
+  fi
+  if ! actual="$(printf '%s' "$payload" | node -e '
+    let input = "";
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", chunk => input += chunk);
+    process.stdin.on("end", () => {
+      try {
+        const data = JSON.parse(input);
+        process.stdout.write(String(data.startupGitCommit || ""));
+      } catch {
+        process.exitCode = 1;
+      }
+    });
+  ')"; then
+    return 1
+  fi
+  [ "$actual" = "$expected" ]
+}
+
 if [ "${EUID:-$(id -u)}" -ne 0 ]; then
   echo "Run this updater as root (sudo)." >&2
   exit 1
@@ -174,13 +198,15 @@ else
 fi
 
 for _ in $(seq 1 30); do
-  if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then
+  if health_commit_matches "$target"; then
     rm -f "$FAILED_SHA_FILE"
-    echo "Updated $previous -> $(git rev-parse HEAD)"
+    echo "Updated $previous -> $(git rev-parse HEAD); running process confirmed $target"
     exit 0
   fi
   sleep 1
 done
+
+echo "Health endpoint did not confirm running commit $target." >&2
 
 rollback
 exit 1

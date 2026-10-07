@@ -44,6 +44,22 @@ function unauthorized(res) {
   res.end(JSON.stringify({ error: "UNAUTHORIZED" }));
 }
 
+function readJson(filePath, fallback) {
+  if (!existsSync(filePath)) return fallback;
+  try {
+    return JSON.parse(readFileSync(filePath, "utf8"));
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeTradingDate(value) {
+  const text = String(value ?? "");
+  if (/^\d{8}$/.test(text)) return `${text.slice(0, 4)}-${text.slice(4, 6)}-${text.slice(6, 8)}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  return null;
+}
+
 function readActionableSelections(limitPerMarket = 120) {
   const filePath = path.join(dataDir(), "strategy-oos-selections.jsonl");
   if (!existsSync(filePath)) return [];
@@ -73,12 +89,52 @@ function readActionableSelections(limitPerMarket = 120) {
     .slice(0, limitPerMarket));
 }
 
+function readTradingDatesByMarket(limitPerMarket = 260) {
+  const parsed = readJson(path.join(dataDir(), "market-index-history.json"), null);
+  return Object.fromEntries(MARKETS.map((market) => {
+    const dates = [...new Set((parsed?.markets?.[market] ?? [])
+      .map((row) => normalizeTradingDate(row?.date))
+      .filter(Boolean))]
+      .sort()
+      .slice(-limitPerMarket);
+    return [market, dates];
+  }));
+}
+
+function readOosState() {
+  const state = readJson(path.join(dataDir(), "strategy-oos-state.json"), {});
+  return {
+    recordedDates: Array.isArray(state?.recordedDates) ? state.recordedDates : [],
+    missingSnapshotDates: Array.isArray(state?.missingSnapshotDates) ? state.missingSnapshotDates : [],
+    lastSnapshotAt: state?.lastSnapshotAt ?? null,
+    lastEvaluatedAt: state?.lastEvaluatedAt ?? null,
+    recentSkipped: Array.isArray(state?.skipped) ? state.skipped.slice(-10) : []
+  };
+}
+
 function handle(req, res) {
   if (!isAuthorized(req)) return unauthorized(res);
   const selections = readActionableSelections();
+  const tradingDatesByMarket = readTradingDatesByMarket();
+  const oos = readOosState();
+  const latestSelectionDateByMarket = Object.fromEntries(MARKETS.map((market) => [
+    market,
+    selections.filter((row) => row.market === market).map((row) => row.signalDate).sort().at(-1) ?? null
+  ]));
+  const latestTradingDateByMarket = Object.fromEntries(MARKETS.map((market) => [
+    market,
+    tradingDatesByMarket[market]?.at(-1) ?? null
+  ]));
+
   return sendJson(res, 200, {
-    schemaVersion: "entry-transition-history-v1",
-    selections
+    schemaVersion: "entry-transition-history-v2",
+    selections,
+    tradingDatesByMarket,
+    diagnostics: {
+      ...oos,
+      latestSelectionDateByMarket,
+      latestTradingDateByMarket
+    }
   });
 }
 
