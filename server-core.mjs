@@ -14,9 +14,11 @@ import { rankMarketRowsV2 } from "./public/rebound-ranking-v2.js";
 import { buildRelativeStrength20 } from "./relative-strength.js";
 import { createStockEasyCache } from "./stockeasy.js";
 import { createMarketIndexTracker, MARKET_INDEX_CODES } from "./market-index-tracker.js";
+import { fetchNpayMarketCapCandidates } from "./market-cap-source.js";
 import { buildSimulationV2ServerModel } from "./simulation-v2-service.js";
 import {
   CLOUD_SNAPSHOT_SCHEMA,
+  cloudFullDataMode,
   createCloudSnapshotManager,
   createSnapshotStore,
   marketRefreshQualityIssue,
@@ -779,9 +781,7 @@ async function readKoreanHtml(response) {
   return new TextDecoder("utf-8").decode(buffer);
 }
 
-async function fetchMarketCapCandidates(market, count) {
-  const cached = cacheGet(`naver-marketcap:${market}:${count}`, 1000 * 60 * 30);
-  if (cached) return cached;
+async function fetchLegacyMarketCapCandidates(market, count) {
   const candidates = [];
   const seen = new Set();
   const sosok = market === "KOSDAQ" ? "1" : "0";
@@ -808,8 +808,51 @@ async function fetchMarketCapCandidates(market, count) {
     }
     if (!found) break;
   }
+  return candidates;
+}
 
-  return cacheSet(`naver-marketcap:${market}:${count}`, candidates);
+async function fetchMarketCapCandidates(market, count) {
+  const cacheKey = `naver-marketcap:${market}:${count}`;
+  const cached = cacheGet(cacheKey, 1000 * 60 * 30);
+  if (cached) return cached;
+
+  let candidates = [];
+  try {
+    candidates = await fetchNpayMarketCapCandidates(market, count, {
+      userAgent: USER_AGENT,
+      isExcluded: isExcludedMarketCandidate
+    });
+  } catch (error) {
+    structuredLog("MARKET_CAP_SOURCE_FAIL", {
+      source: "npay-api",
+      market,
+      message: error?.message ?? String(error)
+    });
+  }
+
+  if (candidates.length < count) {
+    try {
+      const legacy = await fetchLegacyMarketCapCandidates(market, count);
+      const seen = new Set(candidates.map((row) => row.code));
+      for (const row of legacy) {
+        if (candidates.length >= count) break;
+        if (seen.has(row.code)) continue;
+        seen.add(row.code);
+        candidates.push({ ...row, rank: candidates.length + 1 });
+      }
+    } catch (error) {
+      structuredLog("MARKET_CAP_SOURCE_FAIL", {
+        source: "legacy-html",
+        market,
+        message: error?.message ?? String(error)
+      });
+    }
+  }
+
+  if (candidates.length < Math.min(20, count)) {
+    structuredLog("MARKET_CAP_SOURCE_LOW_COVERAGE", { market, requested: count, received: candidates.length });
+  }
+  return cacheSet(cacheKey, candidates);
 }
 
 function mergeCandidates(primary, supplement, count) {
@@ -1715,13 +1758,18 @@ async function buildMarketScreener(limit = 100, force = false, marketFilter = "A
       minMarketRows: process.env.CLOUD_MIN_MARKET_ROWS || 80,
       minLiveRatio: process.env.CLOUD_MIN_LIVE_RATIO || 0.9
     });
+    const eodConfirmed = cloudFullDataMode({ tradingDate: signalDate }) === "EOD_FULL";
     if (qualityIssue) {
       structuredLog("OOS_SNAPSHOT_SKIPPED_QUALITY", { reason: qualityIssue, signalDate });
       scheduleRankingLiveMaintenance();
       scheduleStrategyOosMaintenance();
-    } else {
+    } else if (eodConfirmed) {
       scheduleRankingLiveMaintenance({ payload, historyByCode, record: true });
       scheduleStrategyOosMaintenance({ payload, historyByCode, record: true });
+    } else {
+      structuredLog("OOS_SNAPSHOT_SKIPPED_INTRADAY", { signalDate });
+      scheduleRankingLiveMaintenance();
+      scheduleStrategyOosMaintenance();
     }
   }
   return cachedPayload;
@@ -2787,7 +2835,7 @@ async function performCloudFullRefresh({ previousSnapshot, startedAt, reason }) 
   return buildCloudEnvelope({
     marketScreener,
     portfolioSnapshot,
-    dataMode: "EOD_FULL",
+    dataMode: cloudFullDataMode({ tradingDate }),
     startedAt,
     previousSnapshot,
     metrics: kisMetricsDelta(before)
@@ -2953,6 +3001,8 @@ const server = http.createServer(async (req, res) => {
         version: APP_VERSION,
         startupGitCommit: STARTUP_GIT_COMMIT,
         mode: CLOUD_MODE ? "cloud" : "local",
+        dataMode: snapshot?.dataMode ?? null,
+        marketDataAsOf: snapshot?.marketDataAsOf ?? null,
         uptimeSeconds: Math.round(process.uptime()),
         snapshotAvailable: Boolean(snapshot),
         snapshotGeneratedAt: snapshot?.generatedAt ?? null,
