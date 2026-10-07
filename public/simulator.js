@@ -64,8 +64,8 @@ async function loadSimulation({ record = false, force = false } = {}) {
 }
 
 function renderLoading() {
-  document.querySelector("#simStatus").textContent = "기존 실제진입과 백테스트 합의 후보를 계산 중입니다.";
-  document.querySelector("#todayCandidates").innerHTML = `<article class="trade-empty"><strong>계산 중</strong><span>시장 후보 200개를 확인해 핵심·강한·실제진입 후보를 합칩니다.</span></article>`;
+  document.querySelector("#simStatus").textContent = "현재 ACTIONABLE 진입판정과 백테스트 합의 후보를 계산 중입니다.";
+  document.querySelector("#todayCandidates").innerHTML = `<article class="trade-empty"><strong>계산 중</strong><span>시장 후보를 확인해 오늘 진입판정·핵심·강한 검토후보를 합칩니다. 기존 보유 포지션과는 별도입니다.</span></article>`;
 }
 
 function combinedCandidates() {
@@ -79,10 +79,10 @@ function renderMetrics() {
   const coreCount = rows.filter((row) => row.coreCandidate).length;
   const strongCount = rows.filter((row) => row.strongCandidate).length;
   const metrics = [
-    ["진행 중", `${summary.openCount ?? 0}개`, `평가손익 ${won(summary.openPnlAmount ?? 0)} · ${pct(summary.openPnlPct ?? 0)}`, tone(summary.openPnlAmount)],
-    ["종료 결과", `${summary.closedCount ?? 0}건`, `실현 ${won(summary.realizedPnlAmount ?? 0)} · ${pct(summary.realizedPnlPct ?? 0)}`, tone(summary.realizedPnlAmount)],
+    ["현재 보유", `${summary.openCount ?? 0}개`, `과거 진입 후 보유 중 · 평가손익 ${won(summary.openPnlAmount ?? 0)} · ${pct(summary.openPnlPct ?? 0)}`, tone(summary.openPnlAmount)],
+    ["과거 청산", `${summary.closedCount ?? 0}건`, `이미 종료된 거래 · 실현 ${won(summary.realizedPnlAmount ?? 0)} · ${pct(summary.realizedPnlPct ?? 0)}`, tone(summary.realizedPnlAmount)],
     ["승률", pct(summary.winRate ?? 0), "종료된 시뮬 기준", (summary.winRate ?? 0) >= 50 ? "positive" : ""],
-    ["오늘 진입후보", `${rows.length || actualCount}개`, `🔥 핵심 ${coreCount} · ⭐ 강한 ${strongCount} · ✅ 실제진입 ${actualCount}`, "watch-text"]
+    ["오늘 검토후보", `${rows.length || actualCount}개`, `현재 신호 · 🔥 핵심 ${coreCount} · ⭐ 강한 ${strongCount} · ✅ 진입판정 ${actualCount}`, "watch-text"]
   ];
   document.querySelector("#simMetrics").innerHTML = metrics.map(([label, value, sub, cls = ""]) => `
     <article class="metric">
@@ -96,14 +96,14 @@ function renderMetrics() {
 function entryLabel(row) {
   if (row.coreCandidate) return "🔥 핵심후보";
   if (row.strongCandidate) return "⭐ 강한후보";
-  return row.category?.label ?? "✅ 실제진입";
+  return row.category?.label ?? "✅ 오늘 진입판정";
 }
 
 function entryBadges(row) {
   return [
     row.coreCandidate ? '<span class="strategy-badge buy">🔥 핵심후보</span>' : "",
     row.strongCandidate ? '<span class="strategy-badge buy">⭐ 강한후보</span>' : "",
-    row.actualEntry ? '<span class="strategy-badge buy">✅ 실제진입</span>' : "",
+    row.actualEntry ? '<span class="strategy-badge buy">✅ 오늘 진입판정</span>' : "",
     row.leaderReboundPass ? '<span class="strategy-badge buy">Leader반등</span>' : "",
     row.cafePass ? '<span class="strategy-badge buy">CAFE</span>' : "",
     row.minerviniPass ? '<span class="strategy-badge buy">MTT</span>' : ""
@@ -117,13 +117,13 @@ function renderTodayCandidates() {
   const strongCount = rows.filter((row) => row.strongCandidate).length;
   const stamp = new Date(state.data.asOf).toLocaleString("ko-KR");
   const context = state.data?.alreadyRanToday
-    ? "오늘 기존 실제진입 기록 완료"
+    ? "오늘 장마감 진입판정 기록 완료"
     : state.data?.skippedReason
       ? state.data.skippedReason
-      : "오늘 신규 기록 전";
+      : "오늘 장마감 진입판정 기록 전";
   const reviewSuffix = state.reviewLoaded
-    ? `진입후보 ${rows.length}개 · 핵심 ${coreCount} · 강한 ${strongCount} · 실제진입 ${actionable.length}개`
-    : `실제진입 ${actionable.length}개 · 합의 후보 계산 중`;
+    ? `오늘 검토 ${rows.length}개 · 핵심 ${coreCount} · 강한 ${strongCount} · 진입판정 ${actionable.length}개`
+    : `오늘 진입판정 ${actionable.length}개 · 합의 후보 계산 중`;
   document.querySelector("#simStatus").textContent = `${context} · ${reviewSuffix} · ${stamp}`;
 
   document.querySelector("#todayCandidates").innerHTML = rows.length ? rows.map((row) => {
@@ -138,12 +138,12 @@ function renderTodayCandidates() {
       ? "백테스트 핵심: Leader TOP10 + 5전략+ + 3계열+"
       : row.strongCandidate
         ? "백테스트 강한후보: Leader A + RS80+ + 3계열+"
-        : row.judgement || row.reasons?.slice(0, 3).join(" · ") || "기존 실제진입 기준 통과";
+        : row.judgement || row.reasons?.slice(0, 3).join(" · ") || "현재 ACTIONABLE 진입판정 통과";
     return `
     <article class="sim-card buy">
       <div class="sim-card-head">
         <span class="badge buy">${entryLabel(row)}</span>
-        <small>${row.market || row.sourceLabel || "시장"}${row.actualEntry && row.category?.label ? ` · 기존 ${row.category.label}` : ""}</small>
+        <small>${row.market || row.sourceLabel || "시장"}${row.actualEntry ? " · 오늘 진입판정" : " · 검토후보"}</small>
       </div>
       <a class="stock-link sim-name" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a>
       <div class="cell-sub">${row.code} · ${price(row.price)} · 전일 ${pct(row.changeRate)}</div>
@@ -161,7 +161,7 @@ function renderTodayCandidates() {
   }).join("") : `
     <article class="trade-empty">
       <strong>${state.reviewLoaded ? "오늘 진입 검토후보 없음" : "합의 후보 계산 중"}</strong>
-      <span>${state.reviewLoaded ? "핵심·강한후보와 기존 실제진입을 모두 확인했지만 조건 충족 종목이 없습니다." : "기존 실제진입 외에 Leader·RS·독립계열 합의 후보를 추가로 계산하고 있습니다."}</span>
+      <span>${state.reviewLoaded ? "핵심·강한후보와 오늘 ACTIONABLE 진입판정을 모두 확인했지만 조건 충족 종목이 없습니다. 기존 보유·과거 청산 거래는 이 영역에 표시하지 않습니다." : "오늘 ACTIONABLE 진입판정 외에 Leader·RS·독립계열 합의 후보를 추가로 계산하고 있습니다."}</span>
     </article>
   `;
 }
@@ -174,8 +174,8 @@ function renderOpenPositions() {
         <a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a>
         <div class="cell-sub">${row.code} · ${row.sourceLabel}</div>
       </td>
-      <td><span class="badge ${badgeClass(row.category)}">${row.category}</span></td>
-      <td>${price(row.entryPrice)}</td>
+      <td><span class="badge ${badgeClass(row.category)}">보유 중</span><div class="cell-sub">진입 ${row.entryDate ?? "-"} · 당시 ${row.category}</div></td>
+      <td><b>${row.entryDate ?? "-"}</b><div class="cell-sub">${price(row.entryPrice)}</div></td>
       <td>${price(row.lastPrice)}</td>
       <td>
         <b class="${tone(row.pnlPct)}">${pct(row.pnlPct)}</b>
@@ -190,7 +190,7 @@ function renderOpenPositions() {
         <div class="cell-sub">${row.judgement || row.reasons?.slice(0, 3).join(" · ") || "-"}</div>
       </td>
     </tr>
-  `).join("") : `<tr><td colspan="7" class="loading">진행 중인 가상 포지션이 없습니다. 오늘 시뮬 기록을 누르면 시작됩니다.</td></tr>`;
+  `).join("") : `<tr><td colspan="7" class="loading">현재 보유 중인 V1 가상 포지션이 없습니다. 오늘 진입판정 후보와는 별도 영역입니다.</td></tr>`;
 }
 
 function renderClosedPositions() {

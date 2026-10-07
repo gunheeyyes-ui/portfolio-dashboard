@@ -31,7 +31,7 @@ export const PAPER_AUTO_ARENA_POLICY = Object.freeze({
 });
 
 export const PAPER_AUTO_ACCOUNTS = Object.freeze([
-  { id: "actual", label: "✅ 실제진입", kind: "selection", strategyId: "ACTIONABLE_ALL", order: "timing", description: "기존 실제진입 판정" },
+  { id: "actual", label: "✅ 진입판정 계좌", kind: "selection", strategyId: "ACTIONABLE_ALL", order: "timing", description: "ACTIONABLE 진입판정 신호 전용 계좌" },
   { id: "core", label: "🔥 핵심", kind: "derived", selector: "core", order: "entry-review", description: "Leader TOP10 + 5전략+ + 3계열+" },
   { id: "strong", label: "⭐ 강한", kind: "derived", selector: "strong-only", order: "entry-review", description: "Leader A + RS80+ + 3계열+, 핵심 제외" },
   { id: "timing", label: "종합타이밍 TOP10", kind: "selection", strategyId: "TIMING_TOP10", order: "selection-rank", description: "메인 종합타이밍 시장별 TOP10" },
