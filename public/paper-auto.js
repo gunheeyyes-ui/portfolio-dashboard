@@ -123,9 +123,9 @@ function renderOpen(model) {
   const rows = allRows(model, "open");
   target.innerHTML = rows.length ? rows.map((row) => `
     <tr>
-      <td><b>${row.accountLabel}</b></td>
+      <td><b>${row.accountLabel}</b><div class="cell-sub">현재 보유 · 과거 진입</div></td>
       <td><b>${row.name || row.code}</b><br><small>${row.code}</small></td>
-      <td>${dateText(row.entryDate)}<br><small>${currency.format(row.entryPrice)}원</small></td>
+      <td><b>${dateText(row.entryDate)}</b><br><small>${currency.format(row.entryPrice)}원</small></td>
       <td>${currency.format(row.quantity)}주<br><small>${money(row.principal)}</small></td>
       <td>${Number.isFinite(Number(row.currentPrice)) ? `${currency.format(row.currentPrice)}원` : "—"}</td>
       <td class="${signClass(row.paperReturnPct)}"><b>${percent(row.paperReturnPct)}</b><br><small>${money(row.unrealizedPnl)}</small></td>
@@ -145,7 +145,7 @@ function renderQueued(model) {
       <td><b>${row.name || row.code}</b><br><small>${row.code}</small></td>
       <td>${Number.isFinite(Number(row.signalPrice)) ? `${currency.format(row.signalPrice)}원` : "—"}</td>
       <td>${row.strategyCount}전략 · ${row.axisCount}계열</td>
-      <td>다음 거래일 시가 대기</td>
+      <td><b>신규 주문대기</b><br><small>다음 거래일 시가</small></td>
     </tr>`).join("") : emptyRow(6, "대기 중인 가상 주문이 없습니다.");
 }
 
@@ -155,9 +155,9 @@ function renderClosed(model) {
   const rows = allRows(model, "closed").sort((a, b) => String(b.exitDate).localeCompare(String(a.exitDate)));
   target.innerHTML = rows.length ? rows.slice(0, 160).map((row) => `
     <tr>
-      <td><b>${row.accountLabel}</b></td>
+      <td><b>${row.accountLabel}</b><div class="cell-sub">과거 청산 완료</div></td>
       <td><b>${row.name || row.code}</b><br><small>${row.code}</small></td>
-      <td>${dateText(row.entryDate)} → ${dateText(row.exitDate)}<br><small>${exitReasonText(row)}</small></td>
+      <td><b>${dateText(row.entryDate)} → ${dateText(row.exitDate)}</b><br><small>${exitReasonText(row)}</small></td>
       <td>${currency.format(row.entryPrice)} → ${Number.isFinite(Number(row.exitPrice)) ? currency.format(row.exitPrice) : "—"}</td>
       <td>${currency.format(row.quantity)}주</td>
       <td class="${signClass(row.paperReturnPct)}"><b>${percent(row.paperReturnPct)}</b><br><small>${money(row.pnl)}</small></td>
