@@ -259,6 +259,13 @@ export function kstParts(date = new Date()) {
   };
 }
 
+export function cloudFullDataMode({ tradingDate, date = new Date(), eodConfirmHour = 15, eodConfirmMinute = 30 } = {}) {
+  const kst = kstParts(date);
+  const minuteOfDay = kst.hour * 60 + kst.minute;
+  const confirmAt = eodConfirmHour * 60 + eodConfirmMinute;
+  return tradingDate === kst.date && minuteOfDay >= confirmAt ? "EOD_FULL" : "INTRADAY_FULL";
+}
+
 export function scheduledRefreshKind({ date = new Date(), state = {}, intradayIntervalMinutes = 10, eodHour = 15, eodMinute = 50 }) {
   const kst = kstParts(date);
   if (["Sat", "Sun"].includes(kst.weekday)) return null;

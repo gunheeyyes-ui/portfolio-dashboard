@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   CLOUD_SNAPSHOT_SCHEMA,
+  cloudFullDataMode,
   createCloudSnapshotManager,
   createSnapshotStore,
   marketRefreshQualityIssue,
@@ -147,6 +148,21 @@ test("refresh failure keeps memory and disk snapshot", async () => {
   } finally {
     rmSync(item.dir, { recursive: true, force: true });
   }
+});
+
+test("full recompute is only EOD-confirmed after the close on the same trading date", () => {
+  assert.equal(cloudFullDataMode({
+    tradingDate: "2026-10-07",
+    date: new Date("2026-10-07T02:30:00Z")
+  }), "INTRADAY_FULL");
+  assert.equal(cloudFullDataMode({
+    tradingDate: "2026-10-07",
+    date: new Date("2026-10-07T06:31:00Z")
+  }), "EOD_FULL");
+  assert.equal(cloudFullDataMode({
+    tradingDate: "2026-10-06",
+    date: new Date("2026-10-07T07:00:00Z")
+  }), "INTRADAY_FULL");
 });
 
 test("scheduler uses Seoul weekdays and separates intraday from EOD", () => {
