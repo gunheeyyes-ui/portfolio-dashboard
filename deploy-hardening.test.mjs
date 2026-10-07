@@ -38,8 +38,9 @@ test("a newer rerun for the same SHA can recover a previous CI failure", () => {
   assert.equal(deploymentCiDecision(data, { sha: SHA }).status, "SUCCESS");
 });
 
-test("deployment source requires CI before backup/merge and keeps rollback checks", () => {
+test("deployment source requires CI before backup/merge and confirms the running OCI commit", () => {
   const update = readFileSync(new URL("./deploy/cloud/update.sh", import.meta.url), "utf8").replace(/\r\n/g, "\n");
+  const server = readFileSync(new URL("./server-core.mjs", import.meta.url), "utf8").replace(/\r\n/g, "\n");
   const ci = update.indexOf("GitHub CI passed for $target");
   const backup = update.indexOf("Persistent-data backup:");
   const merge = update.indexOf('git merge --ff-only "origin/$BRANCH"');
@@ -47,6 +48,10 @@ test("deployment source requires CI before backup/merge and keeps rollback check
   assert.match(update, /rollback\(\)/);
   assert.match(update, /npm test/);
   assert.match(update, /deployment deferred until CI is green/);
+  assert.match(update, /health_commit_matches "\$target"/);
+  assert.match(update, /running process confirmed \$target/);
+  assert.match(server, /startupGitCommit: STARTUP_GIT_COMMIT/);
+  assert.match(server, /strategyOos: strategyOosHealthSummary\(\)/);
 });
 
 test("backup source has bounded age retention while preserving a newest-count floor", () => {
