@@ -50,6 +50,8 @@ test("deployment source requires CI before backup/merge and confirms the running
   assert.match(update, /deployment deferred until CI is green/);
   assert.match(update, /health_commit_matches "\$target"/);
   assert.match(update, /running process confirmed \$target/);
+  assert.match(update, /chown -R "\\$SERVICE_USER:\\$SERVICE_GROUP" "\\$DATA_DIR"/);
+  assert.match(update, /runuser -u "\\$SERVICE_USER" -- env/);
   assert.match(server, /startupGitCommit: STARTUP_GIT_COMMIT/);
   assert.match(server, /strategyOos: strategyOosHealthSummary\(\)/);
 });
