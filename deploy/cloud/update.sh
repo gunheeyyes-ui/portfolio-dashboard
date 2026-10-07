@@ -11,6 +11,9 @@ GITHUB_REPOSITORY="${DASHBOARD_GITHUB_REPOSITORY:-gunheeyyes-ui/portfolio-dashbo
 GITHUB_WORKFLOW_NAME="${DASHBOARD_GITHUB_WORKFLOW_NAME:-test}"
 GITHUB_API_BASE="${DASHBOARD_GITHUB_API_BASE:-https://api.github.com}"
 REQUIRE_GITHUB_CI="${DASHBOARD_REQUIRE_GITHUB_CI:-1}"
+SERVICE_USER="${DASHBOARD_SERVICE_USER:-portfolio-dashboard}"
+SERVICE_GROUP="${DASHBOARD_SERVICE_GROUP:-portfolio-dashboard}"
+DATA_DIR="${DASHBOARD_DATA_DIR:-/var/lib/portfolio-dashboard}"
 
 health_commit_matches() {
   local expected="$1"
@@ -183,9 +186,18 @@ if [ -f deploy/cloud/oos-quality-cleanup.mjs ]; then
     rollback
     exit 1
   fi
-  if ! DASHBOARD_DATA_DIR="${DASHBOARD_DATA_DIR:-/var/lib/portfolio-dashboard}" \
+
+  # Persistent runtime data must stay writable by the unprivileged service.
+  # Older privileged cleanup runs could replace atomic files as root:root,
+  # which later made the EOD OOS recorder fail with EACCES.
+  if ! chown -R "$SERVICE_USER:$SERVICE_GROUP" "$DATA_DIR"; then
+    rollback
+    exit 1
+  fi
+  if ! runuser -u "$SERVICE_USER" -- env \
+    DASHBOARD_DATA_DIR="$DATA_DIR" \
     OOS_QUARANTINE_DATE="${OOS_QUARANTINE_DATE:-2026-09-15}" \
-    node deploy/cloud/oos-quality-cleanup.mjs; then
+    /usr/bin/node deploy/cloud/oos-quality-cleanup.mjs; then
     rollback
     exit 1
   fi
