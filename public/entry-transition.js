@@ -31,12 +31,24 @@ export function buildEntryTransitionLookup(selections, currentSignalDate) {
         key: "unknown",
         label: "이력없음",
         previousSignalDate: null,
-        streakDays: null
+        streakDays: null,
+        totalSignalDays: null,
+        firstSignalDate: null,
+        lastSeenBefore: null,
+        gapTradingDays: null,
+        recentSignalDates: [],
+        historyStartDate: null
       };
     }
 
     const ticker = String(code ?? "");
     const previousSignalDate = dates.at(-1);
+    const historyStartDate = dates[0];
+    const historicalDates = dates.filter((date) => (history.byDate.get(date) ?? new Set()).has(ticker));
+    const firstSignalDate = historicalDates[0] ?? currentSignalDate;
+    const lastSeenBefore = historicalDates.at(-1) ?? null;
+    const totalSignalDays = historicalDates.length + 1;
+    const recentSignalDates = [...historicalDates, currentSignalDate].slice(-8);
     const previousMembers = history.byDate.get(previousSignalDate) ?? new Set();
     const wasActionablePrevious = previousMembers.has(ticker);
 
@@ -51,19 +63,32 @@ export function buildEntryTransitionLookup(selections, currentSignalDate) {
         key: "maintain",
         label: `유지 ${priorStreak + 1}일`,
         previousSignalDate,
-        streakDays: priorStreak + 1
+        streakDays: priorStreak + 1,
+        totalSignalDays,
+        firstSignalDate,
+        lastSeenBefore,
+        gapTradingDays: 0,
+        recentSignalDates,
+        historyStartDate
       };
     }
 
-    const appearedEarlier = dates
-      .slice(0, -1)
-      .some((date) => (history.byDate.get(date) ?? new Set()).has(ticker));
+    const appearedEarlier = historicalDates.length > 0;
+    const gapTradingDays = appearedEarlier && lastSeenBefore
+      ? dates.filter((date) => date > lastSeenBefore && date < currentSignalDate).length
+      : 0;
 
     return {
       key: appearedEarlier ? "reentry" : "new",
       label: appearedEarlier ? "재진입" : "신규",
       previousSignalDate,
-      streakDays: 1
+      streakDays: 1,
+      totalSignalDays,
+      firstSignalDate,
+      lastSeenBefore,
+      gapTradingDays,
+      recentSignalDates,
+      historyStartDate
     };
   }
 

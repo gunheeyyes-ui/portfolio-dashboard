@@ -920,13 +920,41 @@ const SIM_BADGE = {
   special: { short: "단기", tip: "단기 특수(강수급 낙주) — 시뮬레이터가 오늘 진입하는 대상 (3일 관찰)" }
 };
 
+function shortSignalDate(value) {
+  const text = String(value ?? "");
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? `${text.slice(5, 7)}/${text.slice(8, 10)}` : (text || "-");
+}
+
+function entryHistoryTitle(transition) {
+  const recent = (transition?.recentSignalDates ?? []).join(" → ");
+  const parts = [
+    "OOS 진입판정 이력",
+    `최초 ${transition?.firstSignalDate ?? "-"}`,
+    `연속 ${transition?.streakDays ?? "-"}거래일`,
+    `누적 ${transition?.totalSignalDays ?? "-"}회`
+  ];
+  if (transition?.key === "reentry" && transition?.lastSeenBefore) {
+    parts.push(`직전 포착 ${transition.lastSeenBefore}`, `공백 ${transition.gapTradingDays ?? 0}거래일`);
+  }
+  if (recent) parts.push(`최근 ${recent}`);
+  return parts.join(" · ");
+}
+
+function entryHistorySummary(row) {
+  const transition = row?.entryTransition ?? null;
+  if (!row?.simCategory?.actionable || !transition || transition.key === "unknown") return "";
+  const recent = (transition.recentSignalDates ?? []).slice(-4).map(shortSignalDate).join("·");
+  const recentText = recent ? ` · 최근 ${recent}` : "";
+  return `<div class="cell-sub entry-history-line" title="${entryHistoryTitle(transition)}">진입후보 연속 ${transition.streakDays}거래일 · 누적 ${transition.totalSignalDays}회${recentText}</div>`;
+}
+
 function explorerBadges(row) {
   const confirmation = row.confirmation ?? {};
   const stockEasy = row.stockEasy ?? {};
   const sim = row.simCategory ?? null;
   const transition = row.entryTransition ?? null;
   const transitionBadge = sim?.actionable && transition && transition.key !== "unknown"
-    ? `<span class="strategy-badge ${transition.key === "new" ? "buy" : transition.key === "reentry" ? "se" : "hold"}" title="직전 확정일 ${transition.previousSignalDate ?? "-"} 대비">${transition.label}</span>`
+    ? `<span class="strategy-badge ${transition.key === "new" ? "buy" : transition.key === "reentry" ? "se" : "hold"}" title="${entryHistoryTitle(transition)}">${transition.label}</span>`
     : "";
   const simBadge = sim?.actionable && SIM_BADGE[sim.key]
     ? `<span class="strategy-badge sim-entry" title="${SIM_BADGE[sim.key].tip}">${SIM_BADGE[sim.key].short}</span>`
@@ -1047,6 +1075,7 @@ function renderExplorerMobile(rows, market) {
     return `<article class="explorer-mobile-card ${market.toLowerCase()}">
       <div class="explorer-card-head"><b>${index + 1}</b><div class="stock-title-line"><a class="stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><span class="strategy-badges">${explorerBadges(row)}</span></div><span class="badge ${scoutStatusTone(row)}">${scoutStatusLabel(scout.status)}</span></div>
       <div class="explorer-card-price"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div>
+      ${entryHistorySummary(row)}
       <div class="explorer-card-grid"><span>RS <b class="${rs20Tone(scout.rs20)}" title="${RS20_TOOLTIP}">${Number.isFinite(scout.rs20) ? scout.rs20 : "-"}</b></span><span>Leader <b>${leader.grade ?? "-"}${Number.isFinite(leader.score) ? ` ${leader.score}` : ""}</b></span><span>낙폭 <b>${pct(scout.drawdownFromHighPct)}</b></span><span>Risk <b>${scout.riskScore ?? "-"}</b></span><span>Stab <b>${scout.stabilizeScore ?? "-"}</b></span><span>거래강도 <b>${supply.liquidityScore ?? 0}</b><small>외 ${signedEok(supply.foreignNetAmount)} · 기 ${signedEok(supply.instNetAmount)}</small></span><span>타이밍 <b>${combined.score ?? 0}</b><small>${combined.label ?? "관망"}</small></span></div>
     </article>`;
   }).join("") || `<div class="loading empty-state">${explorerEmptyMessage(market)}</div>`;
@@ -1060,7 +1089,7 @@ function renderExplorerRows(rows, market) {
     const combined = row.combined ?? {};
     return `<tr>
       <td${rankCellTitle(row)}><div class="rank-main ${rankTierClass(row)}">${index + 1}</div><div class="cell-sub rank-tier">${TIER_MODES.has(state.explorerMode) ? `T${reboundRankingTier(row)}` : state.explorerMode.toUpperCase()}</div>${rankMoveHtml(row)}</td>
-      <td><div class="stock-title-line"><a class="stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><span class="strategy-badges">${explorerBadges(row)}</span></div><div class="explorer-price-line"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div></td>
+      <td><div class="stock-title-line"><a class="stock-name stock-link" href="${naverStockUrl(row.code)}" target="_blank" rel="noopener noreferrer">${row.name}</a><span class="strategy-badges">${explorerBadges(row)}</span></div><div class="explorer-price-line"><b>${price(row.price)}</b><span class="${toneClass(row.changeRate ?? 0)}">전일 ${pct(row.changeRate)}</span><span class="${toneClass(row.changeRate3d ?? 0)}">3일 ${pct(row.changeRate3d)}</span></div>${entryHistorySummary(row)}</td>
       <td class="col-support"><b class="rs20-value ${rs20Tone(scout.rs20)}" title="${RS20_TOOLTIP}">${Number.isFinite(scout.rs20) ? scout.rs20 : "-"}</b></td>
       <td><span class="leader-badge ${leaderTone(leader.grade)}">${Number.isFinite(leader.score)
         ? `${leader.grade} ${leader.score}`
@@ -1115,8 +1144,12 @@ function renderUnifiedExplorer() {
   const transitionCount = (key) => actionableRows.filter((row) => row.entryTransition?.key === key).length;
   const unknownCount = actionableRows.filter((row) => !row.entryTransition || row.entryTransition.key === "unknown").length;
   const signalDate = state.screener?.marketDataAsOf ?? "-";
+  const previousSignalDates = [...new Set(actionableRows.map((row) => row.entryTransition?.previousSignalDate).filter(Boolean))].sort();
+  const historyStartDates = actionableRows.map((row) => row.entryTransition?.historyStartDate).filter(Boolean).sort();
+  const previousSignalText = previousSignalDates.length ? previousSignalDates.join("/") : "-";
+  const historyStartText = historyStartDates[0] ?? "-";
   const entryText = state.entryHistoryLoaded
-    ? ` · 진입판정 ${signalDate} 종가: 신규 ${transitionCount("new")} · 유지 ${transitionCount("maintain")} · 재진입 ${transitionCount("reentry")}`
+    ? ` · 진입판정 ${signalDate} 종가 ↔ 직전 비교 ${previousSignalText}: 신규 ${transitionCount("new")} · 유지 ${transitionCount("maintain")} · 재진입 ${transitionCount("reentry")} · 이력시작 ${historyStartText}`
     : ` · 진입판정 ${signalDate} 종가 · 이력 비교 준비 안 됨`;
   const unknownText = unknownCount ? ` · 이력미확인 ${unknownCount}` : "";
   document.querySelector("#screenerStatus").textContent = `KOSPI ${counts.KOSPI} · KOSDAQ ${counts.KOSDAQ} 표시 · 두 시장 ${allCount}종목 준비됨 · ${asOf}${modeText}${entryText}${unknownText}${refreshText}${staleText}${errorText}`;
