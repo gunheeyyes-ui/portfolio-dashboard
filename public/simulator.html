@@ -33,7 +33,7 @@
 
       <section class="score-guide">
         <strong>동결 운용규칙</strong>
-        <span><b>10개 독립계좌</b> 실제진입 · 핵심 · 강한 · 종합타이밍 · 반등우선 · 주도주 · 반등후보 · 전략후보 · CAFE · MTT</span>
+        <span><b>10개 독립계좌</b> 진입판정(ACTIONABLE) · 핵심 · 강한 · 종합타이밍 · 반등우선 · 주도주 · 반등후보 · 전략후보 · CAFE · MTT</span>
         <span><b>매수</b> 당일 장마감 신호를 고정하고 다음 거래일 실제 시가 기준 · 계좌당 1억원 · 종목당 1천만원 · 최대 10종목</span>
         <span><b>청산</b> 진입 후 3거래일 종가 · 동일 종목 중복보유 금지 · 현금/보유한도 초과 주문은 skip</span>
         <span><b>비용</b> 기존 왕복비용 0.23% + 유동성별 추가 슬리피지 0.10% / 0.20% / 0.35%</span>
@@ -60,8 +60,8 @@
       <section class="sim-panel">
         <div class="section-title">
           <div>
-            <h2>Shadow Auto 보유 · 주문대기</h2>
-            <p>각 독립계좌에서 신호일 EOD → 다음 거래일 시가 체결 순서로 처리합니다.</p>
+            <h2>현재 보유 포지션</h2>
+            <p>과거 신호로 이미 진입해 아직 청산되지 않은 포지션입니다. <b>오늘 신규 진입후보가 아닙니다.</b></p>
           </div>
         </div>
         <div class="table-wrap">
@@ -70,7 +70,13 @@
             <tbody id="paperAutoOpen"><tr><td colspan="8" class="loading">불러오는 중...</td></tr></tbody>
           </table>
         </div>
-        <div class="table-wrap" style="margin-top:12px">
+        <div class="section-title" style="margin-top:16px">
+          <div>
+            <h3>다음 거래일 주문대기</h3>
+            <p>오늘 장마감 확정 신호 중 아직 체결되지 않은 신규 가상주문만 표시합니다.</p>
+          </div>
+        </div>
+        <div class="table-wrap" style="margin-top:8px">
           <table class="sim-table">
             <thead><tr><th>계좌</th><th>신호일</th><th>종목</th><th>신호가</th><th>당시 합의</th><th>상태</th></tr></thead>
             <tbody id="paperAutoQueued"><tr><td colspan="6" class="loading">불러오는 중...</td></tr></tbody>
@@ -81,8 +87,8 @@
       <section class="sim-panel">
         <div class="section-title">
           <div>
-            <h2>Shadow Auto 종료 거래</h2>
-            <p>3거래일 종가 청산을 완료한 가상 주문의 forward OOS 결과입니다.</p>
+            <h2>과거 청산 거래</h2>
+            <p>이미 청산이 끝난 과거 가상거래 이력입니다. <b>오늘 후보나 현재 보유 포지션이 아닙니다.</b></p>
           </div>
         </div>
         <div class="table-wrap">
@@ -95,12 +101,12 @@
 
       <section class="notice">
         <strong>Simulation V2 — 손댈 필요 없이 자동으로 쌓이는 실전형 가상매매</strong>
-        <span>장마감 OOS 스냅샷 전체 이력을 사용합니다. ✅ 실제진입 · 🔥 핵심후보 · ⭐ 강한후보를 동시에 추적하고, 다음 거래일 시가 진입 후 0D·1·3·5·10·20 거래일 순수익, MFE/MAE, 지수대비 초과수익, 비용 스트레스와 실제운용 포트폴리오까지 비교합니다.</span>
+        <span>장마감 OOS 스냅샷 전체 이력을 사용합니다. ✅ 진입판정(ACTIONABLE) · 🔥 핵심후보 · ⭐ 강한후보를 동시에 추적하고, 다음 거래일 시가 진입 후 0D·1·3·5·10·20 거래일 순수익, MFE/MAE, 지수대비 초과수익, 비용 스트레스와 실제운용 포트폴리오까지 비교합니다.</span>
       </section>
 
       <section class="score-guide">
         <strong>V2가 기록하는 것</strong>
-        <span><b>후보군</b> 실제진입 / 핵심 / 강한 및 겹침</span>
+        <span><b>후보군</b> 진입판정(ACTIONABLE) / 핵심 / 강한 및 겹침</span>
         <span><b>당시 전략</b> 기본 전략 매칭 수와 전략명</span>
         <span><b>독립 계열</b> 주도·RS·타이밍·진입·반등/자리·CAFE/MTT</span>
         <span><b>성과</b> 다음날 시가 → 1/3/5/10/20D 순수익 · MFE/MAE · 시장대비 초과수익</span>
@@ -174,13 +180,13 @@
         <strong>V1 진입후보 해석</strong>
         <span><b>🔥 핵심후보</b> Leader TOP10 + 5전략+ + 3계열+</span>
         <span><b>⭐ 강한후보</b> Leader A + RS80+ + 3계열+</span>
-        <span><b>✅ 실제진입</b> 기존의 빡빡한 actionable 진입판정 통과</span>
-        <small>V1 화면은 핵심+실제진입 → 핵심 → 강한+실제진입 → 강한 → 기존 실제진입 순으로 보여주지만, 기존 simulation-ledger의 신규 포지션은 ✅ 실제진입 규칙만 기록합니다.</small>
+        <span><b>✅ 오늘 진입판정</b> 현재 장마감 기준 ACTIONABLE 진입조건 통과</span>
+        <small>이 영역의 ‘오늘 진입판정’은 현재 신호입니다. 아래 ‘현재 보유’는 과거에 진입해 아직 끝나지 않은 포지션, ‘과거 종료’는 이미 청산된 거래입니다. V1 신규 포지션 기록은 ACTIONABLE 진입판정만 따릅니다.</small>
       </section>
       <section class="score-guide">
         <strong>V1 기록 메타데이터</strong>
         <span>Leader A</span><span>반등후보</span><span>Leader반등</span><span>CAFE</span><span>MTT</span><span>CAFE+MTT</span>
-        <small>기존 실제진입 가상 포지션은 진입 시점 값을 함께 저장해 전략별 성과를 나눠 봅니다.</small>
+        <small>과거 ACTIONABLE 진입으로 생성된 가상 포지션은 진입 당시 값을 함께 저장해 전략별 성과를 나눠 봅니다.</small>
       </section>
 
       <section class="metrics" id="simMetrics"></section>
@@ -188,8 +194,8 @@
       <section class="sim-panel">
         <div class="section-title">
           <div>
-            <h2>오늘 진입후보</h2>
-            <p id="simStatus">실제진입 + 백테스트 합의 후보 확인 중</p>
+            <h2>오늘 검토후보 (현재 신호)</h2>
+            <p id="simStatus">현재 진입판정 + 백테스트 합의 후보 확인 중</p>
           </div>
         </div>
         <div id="todayCandidates" class="sim-card-grid"></div>
@@ -221,9 +227,9 @@
           <button data-strategy-filter="five" type="button">5전략+</button>
           <button data-strategy-filter="three-axes" type="button">3계열+</button>
           <button data-strategy-filter="five-three" type="button">5전략+·3계열+</button>
-          <button data-strategy-filter="four-actionable" type="button">4계열+·실제진입</button>
+          <button data-strategy-filter="four-actionable" type="button">4계열+·진입판정</button>
           <button data-strategy-filter="leader-rs-three" type="button">Leader+RS·3계열+</button>
-          <button data-strategy-filter="actionable" type="button">실제진입</button>
+          <button data-strategy-filter="actionable" type="button">진입판정</button>
           <button data-strategy-filter="leader-rs" type="button">Leader+RS</button>
           <button data-strategy-filter="confirm" type="button">CAFE/MTT</button>
         </div>
@@ -233,7 +239,7 @@
           <span><b>전략 수</b> 실제로 충족한 기본 전략 개수</span>
           <span><b>계열 수</b> 주도·RS·타이밍·진입·반등/자리·CAFE/MTT 중 서로 다른 논리 수</span>
           <span><b>예: 7전략 · 4계열</b> 중첩 전략 7개지만 독립 논리는 4종류라는 뜻</span>
-          <small>대표14/전체94는 기본 Strategy Registry만 셉니다. 합의 자체를 또 하나의 전략으로 재귀적으로 세지 않습니다. 아래 조합 필터의 미래 성과는 실전검증의 ‘전략·계열 합의’ 그룹에서 별도로 누적합니다. 실제 가상매수는 기존 실제진입 규칙만 따릅니다.</small>
+          <small>대표14/전체94는 기본 Strategy Registry만 셉니다. 합의 자체를 또 하나의 전략으로 재귀적으로 세지 않습니다. 아래 조합 필터의 미래 성과는 실전검증의 ‘전략·계열 합의’ 그룹에서 별도로 누적합니다. 실제 가상매수는 ACTIONABLE 진입판정 규칙만 따릅니다.</small>
         </section>
         <div id="strategyCandidateList" class="sim-card-grid"></div>
       </section>
@@ -241,8 +247,8 @@
       <section class="sim-panel">
         <div class="section-title">
           <div>
-            <h2>진행 중 가상 포지션</h2>
-            <p>목표 관찰일 전까지 매일 현재가로 손익을 갱신합니다.</p>
+            <h2>현재 보유 중인 V1 가상 포지션</h2>
+            <p>과거 신호로 이미 진입한 포지션입니다. <b>오늘 검토후보와 별개</b>이며 진입일을 함께 표시합니다.</p>
           </div>
         </div>
         <div class="table-wrap">
@@ -250,8 +256,8 @@
             <thead>
               <tr>
                 <th>종목</th>
-                <th>구분</th>
-                <th>진입가</th>
+                <th>보유상태</th>
+                <th>진입일/진입가</th>
                 <th>현재가</th>
                 <th>손익</th>
                 <th>경과</th>
@@ -266,8 +272,8 @@
       <section class="sim-panel">
         <div class="section-title">
           <div>
-            <h2>종료된 결과</h2>
-            <p>우리 기준이 실제로 먹혔는지 누적 확인합니다.</p>
+            <h2>과거 종료된 V1 거래</h2>
+            <p>이미 종료된 과거 거래의 성과 기록입니다. 오늘 신호나 현재 보유와 섞이지 않습니다.</p>
           </div>
         </div>
         <div class="table-wrap">
