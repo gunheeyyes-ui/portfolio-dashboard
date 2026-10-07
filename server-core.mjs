@@ -27,6 +27,44 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cache = new Map();
 
+function readStartupGitCommit() {
+  const explicit = String(process.env.DASHBOARD_GIT_COMMIT || "").trim();
+  if (/^[0-9a-f]{40}$/i.test(explicit)) return explicit.toLowerCase();
+  try {
+    const gitDir = path.join(__dirname, ".git");
+    const head = readFileSync(path.join(gitDir, "HEAD"), "utf8").trim();
+    if (/^[0-9a-f]{40}$/i.test(head)) return head.toLowerCase();
+    const match = head.match(/^ref:\s+(.+)$/);
+    if (!match) return null;
+    const refPath = path.join(gitDir, match[1]);
+    if (existsSync(refPath)) {
+      const sha = readFileSync(refPath, "utf8").trim();
+      return /^[0-9a-f]{40}$/i.test(sha) ? sha.toLowerCase() : null;
+    }
+    const packed = path.join(gitDir, "packed-refs");
+    if (!existsSync(packed)) return null;
+    for (const line of readFileSync(packed, "utf8").split(/\r?\n/)) {
+      if (!line || line.startsWith("#") || line.startsWith("^")) continue;
+      const [sha, ref] = line.trim().split(/\s+/);
+      if (ref === match[1] && /^[0-9a-f]{40}$/i.test(sha)) return sha.toLowerCase();
+    }
+  } catch {
+    // Health remains available even if this is not a git checkout.
+  }
+  return null;
+}
+
+function readJsonFileSafe(filePath, fallback = null) {
+  if (!existsSync(filePath)) return fallback;
+  try {
+    return JSON.parse(readFileSync(filePath, "utf8"));
+  } catch {
+    return fallback;
+  }
+}
+
+const STARTUP_GIT_COMMIT = readStartupGitCommit();
+
 loadDotEnv();
 
 const PORT = Number(process.env.PORT || 5177);
@@ -196,6 +234,20 @@ function loadFreeFloatRates() {
   } catch {
     return {};
   }
+}
+
+function strategyOosHealthSummary() {
+  const state = readJsonFileSafe(STRATEGY_OOS_STATE_FILE, {});
+  const recordedDates = Array.isArray(state?.recordedDates) ? state.recordedDates : [];
+  const weekdayNoRecordDates = Array.isArray(state?.missingSnapshotDates) ? state.missingSnapshotDates : [];
+  return {
+    recordedDateCount: recordedDates.length,
+    latestRecordedDate: recordedDates.at(-1) ?? null,
+    lastSnapshotAt: state?.lastSnapshotAt ?? null,
+    lastEvaluatedAt: state?.lastEvaluatedAt ?? null,
+    weekdayNoRecordCount: weekdayNoRecordDates.length,
+    weekdayNoRecordDates: weekdayNoRecordDates.slice(-12)
+  };
 }
 
 function kisAccountConfig() {
@@ -2899,6 +2951,7 @@ const server = http.createServer(async (req, res) => {
       json(res, 200, {
         ok: true,
         version: APP_VERSION,
+        startupGitCommit: STARTUP_GIT_COMMIT,
         mode: CLOUD_MODE ? "cloud" : "local",
         uptimeSeconds: Math.round(process.uptime()),
         snapshotAvailable: Boolean(snapshot),
@@ -2907,7 +2960,8 @@ const server = http.createServer(async (req, res) => {
         refreshStatus: refreshState.status,
         lastRefreshSuccessAt: refreshState.lastSuccessAt ?? null,
         trackerStatus: existsSync(RANKING_LIVE_HISTORY_FILE) ? "available" : "empty",
-        strategyTrackerStatus: existsSync(STRATEGY_OOS_HISTORY_FILE) ? "available" : "empty"
+        strategyTrackerStatus: existsSync(STRATEGY_OOS_HISTORY_FILE) ? "available" : "empty",
+        strategyOos: strategyOosHealthSummary()
       });
       return;
     }
