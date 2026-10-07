@@ -1161,7 +1161,11 @@ function renderUnifiedExplorer() {
   const allCount = (state.screener?.rows?.KOSPI?.length ?? 0) + (state.screener?.rows?.KOSDAQ?.length ?? 0);
   const errorText = state.screener?.errors?.length ? ` · 일부 실패 ${state.screener.errors.length}건` : "";
   const cloud = state.screener?.cloud;
-  const modeText = cloud?.dataMode === "INTRADAY_PARTIAL" ? " · 장중 시세만 갱신 · 진입판정은 확정값" : (cloud?.dataMode === "EOD_FULL" ? " · 장마감 확정" : "");
+  const modeText = cloud?.dataMode === "INTRADAY_PARTIAL"
+    ? ` · 장중 시세만 갱신 · 전략판정 기준 ${state.screener?.marketDataAsOf ?? cloud?.marketDataAsOf ?? "-"}`
+    : (cloud?.dataMode === "INTRADAY_FULL"
+      ? ` · 장중 전체 재계산 · EOD 미확정 · 기준 ${state.screener?.marketDataAsOf ?? cloud?.marketDataAsOf ?? "-"}`
+      : (cloud?.dataMode === "EOD_FULL" ? " · 장마감 확정" : ""));
   const refreshText = state.backgroundRefresh?.status === "running" || cloud?.refreshStatus === "running" ? " · 백그라운드 갱신 중" : "";
   const staleText = cloud?.lastError && cloud?.refreshStatus === "error" ? " · 최근 갱신 실패, 기존 정상 데이터 표시 중" : "";
   const allRows = ["KOSPI", "KOSDAQ"].flatMap((market) => state.screener?.rows?.[market] ?? []);
@@ -1318,7 +1322,11 @@ function render() {
   const errText = errors?.length ? ` · 일부 실패 ${errors.length}건` : "";
   const judalText = state.snapshot.judal?.source === "judal" ? " · 주달 연속순매수 참고" : "";
   const cloud = state.snapshot.cloud;
-  const modeText = cloud?.dataMode === "INTRADAY_PARTIAL" ? " · 장중 부분갱신" : (cloud?.dataMode === "EOD_FULL" ? " · 장마감 확정" : "");
+  const modeText = cloud?.dataMode === "INTRADAY_PARTIAL"
+    ? ` · 장중 부분갱신 · 전략판정 기준 ${cloud?.marketDataAsOf ?? "-"}`
+    : (cloud?.dataMode === "INTRADAY_FULL"
+      ? ` · 장중 전체 재계산 · EOD 미확정 · 기준 ${cloud?.marketDataAsOf ?? "-"}`
+      : (cloud?.dataMode === "EOD_FULL" ? " · 장마감 확정" : ""));
   const refreshText = cloud?.refreshStatus === "running" ? " · 백그라운드 갱신 중" : "";
   const staleText = cloud?.lastError && cloud?.refreshStatus === "error" ? " · 최근 갱신 실패, 기존 정상 데이터 표시 중" : "";
   document.querySelector("#sourceLabel").textContent = `${sourceText}${judalText} · 데이터 기준 ${new Date(asOf).toLocaleString("ko-KR")}${modeText}${refreshText}${staleText}${errText}`;
