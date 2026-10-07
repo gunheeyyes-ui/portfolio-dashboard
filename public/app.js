@@ -17,6 +17,8 @@ const state = {
   screenerLoading: false,
   backgroundRefresh: null,
   entryHistory: [],
+  entryTradingDatesByMarket: { KOSPI: [], KOSDAQ: [] },
+  entryHistoryDiagnostics: null,
   entryHistoryLoaded: false,
   live: true
 };
@@ -312,9 +314,13 @@ async function loadEntryTransitionHistory() {
     if (!response.ok) throw new Error("진입 이력을 불러오지 못했습니다.");
     const payload = await response.json();
     state.entryHistory = payload.selections ?? [];
+    state.entryTradingDatesByMarket = payload.tradingDatesByMarket ?? { KOSPI: [], KOSDAQ: [] };
+    state.entryHistoryDiagnostics = payload.diagnostics ?? null;
     state.entryHistoryLoaded = true;
   } catch {
     state.entryHistory = [];
+    state.entryTradingDatesByMarket = { KOSPI: [], KOSDAQ: [] };
+    state.entryHistoryDiagnostics = null;
     state.entryHistoryLoaded = false;
   }
 }
@@ -322,7 +328,7 @@ async function loadEntryTransitionHistory() {
 function applyEntryTransitions() {
   const signalDate = state.screener?.marketDataAsOf ?? null;
   if (!signalDate) return;
-  const lookup = buildEntryTransitionLookup(state.entryHistory, signalDate);
+  const lookup = buildEntryTransitionLookup(state.entryHistory, signalDate, state.entryTradingDatesByMarket);
   for (const market of ["KOSPI", "KOSDAQ"]) {
     for (const row of state.screener?.rows?.[market] ?? []) {
       row.entryTransition = row.simCategory?.actionable
@@ -927,14 +933,26 @@ function shortSignalDate(value) {
 
 function entryHistoryTitle(transition) {
   const recent = (transition?.recentSignalDates ?? []).join(" → ");
-  const parts = [
-    "OOS 진입판정 이력",
-    `최초 ${transition?.firstSignalDate ?? "-"}`,
-    `연속 ${transition?.streakDays ?? "-"}거래일`,
-    `누적 ${transition?.totalSignalDays ?? "-"}회`
-  ];
+  const parts = ["OOS 진입판정 이력"];
+  if (transition?.historyGap) {
+    parts.push(
+      `직전 거래일 ${transition.previousTradingDate ?? "-"} OOS 누락`,
+      `가장 최근 기록 ${transition.previousSignalDate ?? "-"}`
+    );
+  } else {
+    parts.push(
+      `최초 ${transition?.firstSignalDate ?? "-"}`,
+      transition?.historyBasis === "market-calendar"
+        ? `연속 ${transition?.streakDays ?? "-"}거래일`
+        : `기록상 연속 ${transition?.streakDays ?? "-"}회`,
+      `누적 기록 ${transition?.totalSignalDays ?? "-"}회`
+    );
+  }
   if (transition?.key === "reentry" && transition?.lastSeenBefore) {
     parts.push(`직전 포착 ${transition.lastSeenBefore}`, `공백 ${transition.gapTradingDays ?? 0}거래일`);
+  }
+  if ((transition?.missingSelectionDates ?? []).length) {
+    parts.push(`OOS 거래일 누락 ${transition.missingSelectionDates.join(", ")}`);
   }
   if (recent) parts.push(`최근 ${recent}`);
   return parts.join(" · ");
@@ -942,10 +960,17 @@ function entryHistoryTitle(transition) {
 
 function entryHistorySummary(row) {
   const transition = row?.entryTransition ?? null;
-  if (!row?.simCategory?.actionable || !transition || transition.key === "unknown") return "";
+  if (!row?.simCategory?.actionable || !transition) return "";
+  if (transition.historyGap) {
+    return `<div class="cell-sub entry-history-line negative" title="${entryHistoryTitle(transition)}">진입이력 확인불가 · 직전 거래일 ${shortSignalDate(transition.previousTradingDate)} OOS 누락</div>`;
+  }
+  if (transition.key === "unknown") return "";
   const recent = (transition.recentSignalDates ?? []).slice(-4).map(shortSignalDate).join("·");
   const recentText = recent ? ` · 최근 ${recent}` : "";
-  return `<div class="cell-sub entry-history-line" title="${entryHistoryTitle(transition)}">진입후보 연속 ${transition.streakDays}거래일 · 누적 ${transition.totalSignalDays}회${recentText}</div>`;
+  const streakText = transition.historyBasis === "market-calendar"
+    ? `연속 ${transition.streakDays}거래일`
+    : `기록상 연속 ${transition.streakDays}회`;
+  return `<div class="cell-sub entry-history-line" title="${entryHistoryTitle(transition)}">진입후보 ${streakText} · 누적 기록 ${transition.totalSignalDays}회${recentText}</div>`;
 }
 
 function explorerBadges(row) {
@@ -953,8 +978,8 @@ function explorerBadges(row) {
   const stockEasy = row.stockEasy ?? {};
   const sim = row.simCategory ?? null;
   const transition = row.entryTransition ?? null;
-  const transitionBadge = sim?.actionable && transition && transition.key !== "unknown"
-    ? `<span class="strategy-badge ${transition.key === "new" ? "buy" : transition.key === "reentry" ? "se" : "hold"}" title="${entryHistoryTitle(transition)}">${transition.label}</span>`
+  const transitionBadge = sim?.actionable && transition
+    ? `<span class="strategy-badge ${transition.historyGap ? "danger" : transition.key === "new" ? "buy" : transition.key === "reentry" ? "se" : "hold"}" title="${entryHistoryTitle(transition)}">${transition.label}</span>`
     : "";
   const simBadge = sim?.actionable && SIM_BADGE[sim.key]
     ? `<span class="strategy-badge sim-entry" title="${SIM_BADGE[sim.key].tip}">${SIM_BADGE[sim.key].short}</span>`
@@ -1144,15 +1169,21 @@ function renderUnifiedExplorer() {
   const transitionCount = (key) => actionableRows.filter((row) => row.entryTransition?.key === key).length;
   const unknownCount = actionableRows.filter((row) => !row.entryTransition || row.entryTransition.key === "unknown").length;
   const signalDate = state.screener?.marketDataAsOf ?? "-";
-  const previousSignalDates = [...new Set(actionableRows.map((row) => row.entryTransition?.previousSignalDate).filter(Boolean))].sort();
+  const previousTradingDates = [...new Set(actionableRows.map((row) => row.entryTransition?.previousTradingDate).filter(Boolean))].sort();
   const historyStartDates = actionableRows.map((row) => row.entryTransition?.historyStartDate).filter(Boolean).sort();
-  const previousSignalText = previousSignalDates.length ? previousSignalDates.join("/") : "-";
+  const oosGapDates = [...new Set(actionableRows.flatMap((row) => row.entryTransition?.missingSelectionDates ?? []))]
+    .filter((date) => date < signalDate)
+    .sort();
+  const previousSignalText = previousTradingDates.length ? previousTradingDates.join("/") : "-";
   const historyStartText = historyStartDates[0] ?? "-";
   const entryText = state.entryHistoryLoaded
-    ? ` · 진입판정 ${signalDate} 종가 ↔ 직전 비교 ${previousSignalText}: 신규 ${transitionCount("new")} · 유지 ${transitionCount("maintain")} · 재진입 ${transitionCount("reentry")} · 이력시작 ${historyStartText}`
+    ? ` · 진입판정 ${signalDate} 종가 ↔ 직전 거래일 ${previousSignalText}: 신규 ${transitionCount("new")} · 유지 ${transitionCount("maintain")} · 재진입 ${transitionCount("reentry")} · 이력시작 ${historyStartText}`
     : ` · 진입판정 ${signalDate} 종가 · 이력 비교 준비 안 됨`;
+  const gapText = oosGapDates.length
+    ? ` · ⚠ OOS 거래일 누락 ${oosGapDates.length}일(${oosGapDates.slice(-4).join(", ")})`
+    : "";
   const unknownText = unknownCount ? ` · 이력미확인 ${unknownCount}` : "";
-  document.querySelector("#screenerStatus").textContent = `KOSPI ${counts.KOSPI} · KOSDAQ ${counts.KOSDAQ} 표시 · 두 시장 ${allCount}종목 준비됨 · ${asOf}${modeText}${entryText}${unknownText}${refreshText}${staleText}${errorText}`;
+  document.querySelector("#screenerStatus").textContent = `KOSPI ${counts.KOSPI} · KOSDAQ ${counts.KOSDAQ} 표시 · 두 시장 ${allCount}종목 준비됨 · ${asOf}${modeText}${entryText}${gapText}${unknownText}${refreshText}${staleText}${errorText}`;
   document.querySelector("#screenerStatus").dataset.fetchCount = String(state.screenerFetchCount);
 }
 
