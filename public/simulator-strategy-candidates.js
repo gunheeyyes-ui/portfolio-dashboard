@@ -146,7 +146,7 @@ function render() {
   const totalMatches = rows.reduce((sum, { view }) => sum + view.strategies.length, 0);
   const threeAxisCount = rows.filter(({ view }) => view.axes.length >= 3).length;
   const modeLabel = state.mode === "all" ? `전체 ${state.catalog.allCount}` : `대표 ${state.catalog.featuredCount}`;
-  status.textContent = `${modeLabel} 기준 · ${rows.length}종목 · 전략 매칭 ${totalMatches}건 · 3계열+ ${threeAxisCount}종목 · 가상매수는 기존 실제 진입후보만`;
+  status.textContent = `${modeLabel} 기준 · ${rows.length}종목 · 전략 매칭 ${totalMatches}건 · 3계열+ ${threeAxisCount}종목 · 가상매수는 ACTIONABLE 진입판정만`;
   target.innerHTML = rows.length
     ? rows.map(({ item }) => renderCard(item)).join("")
     : '<article class="trade-empty"><strong>조건에 맞는 후보 없음</strong><span>시장·전략 보기·필터를 바꿔 확인해 보세요.</span></article>';
