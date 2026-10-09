@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>107개 전략 자동선별·가상계좌 검증</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/mobile-top-nav.css">
+  </head>
+  <body>
+    <main class="shell validation-shell">
+      <header class="topbar">
+        <div><p class="eyebrow">OOS → Forward Paper Lab</p><h1>107개 전략 자동선별·가상계좌 검증</h1></div>
+        <nav class="top-actions" aria-label="대시보드 메뉴">
+          <a class="ghost-btn nav-btn" href="/">종합순위</a>
+          <a class="ghost-btn nav-btn" href="/simulator.html">기존 시뮬레이터</a>
+          <a class="ghost-btn nav-btn" href="/strategy-validation.html">107개 OOS</a>
+          <a class="ghost-btn nav-btn active-nav" href="/strategy-paper-lab.html">전략 가상계좌</a>
+          <button class="icon-btn" id="labRefresh" type="button" aria-label="새로고침">↻</button>
+        </nav>
+      </header>
+      <section class="notice">
+        <strong>연구 실험 · 실제 증권사 주문 없음</strong>
+        <span>기존 전략 정의·과거 OOS·20개 Shadow Auto 계좌는 변경하지 않습니다.
+        107개 전략 각각을 3/5/10/20거래일 보유 방식으로 별도 가상계좌에 배정해 총 428개를 추적합니다.
+        2026-10-12 <b>신호일부터</b>만 가상주문에 반영합니다. 과거 OOS의 수익은 새 계좌 수익률로 소급하지 않습니다.</span>
+      </section>
+      <section class="score-guide">
+        <strong>자동 선별 기준 · 잠정 관찰 후보</strong>
+        <span><b>10D OOS 무결성 통과</b> 완료 코호트 20개 이상 · 평균 순수익 &gt; 0% · 시장 초과수익 &gt; 0% (대조군 제외)</span>
+        <span><b>중복 방지</b> 최근 5개 신호일의 선정 종목 중복률이 높은 전략은 대표 1개만 단기목록에 표시</span>
+        <span><b>가상매매</b> 1억원/계좌 · 종목당 최대 1천만원 · 최대 10종목 · 다음 거래일 시가 · 정수주</span>
+        <span><b>비용·무결성</b> 왕복비용 0.23% + 유동성별 슬리피지 · 거래정지 등 사전차단 · 이상가격 별도 격리</span>
+        <small>초기 OOS 표본과 데이터 누락으로 통계적 우위는 아직 미입증입니다. 자동 선별은 매수 추천이 아니라 후속 검증의 우선순위를 정하는 연구용 필터입니다. 한 계좌의 0%는 수익이 아니라 아직 거래가 없을 수 있습니다.</small>
+      </section>
+      <section class="metrics" id="labMetrics"></section>
+      <section class="validation-panel">
+        <div class="section-title"><div><h2>잠정 상위 후보 (OOS)</h2><p id="labStatus">데이터를 불러오는 중…</p></div></div>
+        <div class="table-wrap">
+          <table class="sim-table">
+            <thead><tr><th>전략</th><th>무결성 통과 10D (N)</th><th>10D 순수익</th><th>시장초과</th><th>3D 계좌</th><th>5D 계좌</th><th>10D 계좌</th><th>20D 계좌</th></tr></thead>
+            <tbody id="labShortlist"><tr><td colspan="8" class="loading">불러오는 중…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="validation-panel">
+        <div class="section-title">
+          <div><h2>전략 전체 107개 × 4개 보유기간</h2><p>전체 계좌를 처음부터 동시에 추적해, 나중에 상위 전략을 골라 발생하는 생존자 편향을 줄입니다.</p></div>
+          <button class="ghost-btn" type="button" id="labToggle">전체 107개 보기</button>
+        </div>
+        <div class="table-wrap" id="labFullWrap" hidden>
+          <table class="sim-table">
+            <thead><tr><th>전략</th><th>무결성 10D (N)</th><th>시장초과</th><th>연구 필터</th><th>3D 계좌</th><th>5D 계좌</th><th>10D 계좌</th><th>20D 계좌</th></tr></thead>
+            <tbody id="labAll"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="notice">
+        <strong>중요한 해석상의 제한</strong>
+        <span>첫 신호 기록일은 2026-10-12이며 실제 매수는 그 다음 거래일 시가 기준입니다.
+        기존 기록의 누락일은 복원하지 않습니다. 사전차단은 저장된 시장상태 범위 내에서만 수행합니다.
+        ‘무결성 보정수익’은 이상가격 거래의 손익만 분리한 비교치로, 해당 거래를 빼고 남는 현금으로 다시 투자했다고 재시뮬레이션한 결과는 아닙니다.
+        시뮬레이션에는 호가 대기열·부분체결·실제 매매상대방이 반영되지 않습니다.</span>
+      </section>
+    </main>
+    <script type="module" src="/strategy-paper-lab.js"></script>
+  </body>
+</html>

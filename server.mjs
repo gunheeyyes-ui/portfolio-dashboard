@@ -3,6 +3,7 @@
 import "./ai-review-http-hook.mjs";
 import "./simulation-integrity-http-hook.mjs";
 import "./paper-auto-http-hook.mjs";
+import "./strategy-paper-lab-http-hook.mjs";
 import "./entry-transition-http-hook.mjs";
 await import("./server-core.mjs");
 await import("./market-status-collector.mjs");

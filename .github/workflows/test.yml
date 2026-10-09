@@ -27,6 +27,9 @@ jobs:
           node --check ai-review-http-hook.mjs
           node --check paper-auto-service.js
           node --check paper-auto-http-hook.mjs
+          node --check strategy-paper-lab.js
+          node --check strategy-paper-lab-http-hook.mjs
+          node --check public/strategy-paper-lab.js
           node --check candidate-freshness-service.js
           node --check cloud-dashboard-runtime.js
           node --check simulation-category.js
