@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>107개 전략 — 과거 백테스트</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/mobile-top-nav.css">
+</head>
+<body>
+  <main class="shell validation-shell">
+    <header class="topbar">
+      <div><p class="eyebrow">Historical Research · NOT OOS</p><h1>107개 전략 과거 백테스트</h1></div>
+      <nav class="top-actions" aria-label="대시보드 메뉴">
+        <a class="ghost-btn nav-btn" href="/">종합순위</a>
+        <a class="ghost-btn nav-btn" href="/strategy-paper-lab.html">미래 가상매매</a>
+        <a class="ghost-btn nav-btn active-nav" href="/historical-backtest-107.html">과거 백테스트</a>
+        <a class="ghost-btn nav-btn" href="/strategy-validation.html">미래 OOS</a>
+      </nav>
+    </header>
+
+    <section class="notice">
+      <strong>연구용 과거 재구성 — 실전 성과 또는 엄밀한 OOS가 아닙니다.</strong>
+      <span>고정 캐시 약 200종목만 대상이라 <b>사후 종목선정 편향</b>이 매우 큽니다.
+      과거 종목별 특징은 V3 캐시를 현행 107개 전략 조건에 매핑한 근사치이며, 당시 화면에서 선택되었을 종목과 완전히 동일하다고 보증하지 않습니다.
+      현재 전략들은 이 과거 구간 후에 정의되었으므로 과거 TRAIN/TEST로 나눴더라도 진정한 독립 표본은 아닙니다.
+      <b>특히 높은 누적수익률은 실거래 가능 수익으로 해석하면 안 됩니다.</b></span>
+    </section>
+
+    <section class="score-guide">
+      <strong>비교 규칙</strong>
+      <span><b>신호</b> 전일 장마감 특징 → 다음 거래일 실제 시가</span>
+      <span><b>자금</b> 전략/보유기간마다 1억원씩 독립 · 종목당 1천만원 · 최대 10종목</span>
+      <span><b>청산</b> 3·5·10·20거래일 고정청산 · 0.23% 왕복비용 + 추가 슬리피지</span>
+      <span><b>TEST</b> 날짜로 훈련·평가 분할, 각 구간 독립 초기자금. 단, 전략 정의 자체는 후행 정의라 진정한 OOS 아님</span>
+      <small>시장거래정지·관리종목 등 과거 KIS 상태 전체는 복원할 수 없습니다. 시가의 큰 가격 불연속을 제한하고 극단값 거래 손익은 진단상 별도 격리합니다. 과거 거래일 전체 시장편입, 상장폐지 종목, 실제 체결·호가 대기열이 반영되지 않으므로 손익은 참고자료입니다. MDD는 재현 장부의 평가시점에 의존하며 장중 최대낙폭과 다릅니다.</small>
+    </section>
+
+    <section class="metrics" id="histMetrics"></section>
+
+    <section class="validation-panel">
+      <div class="section-title">
+        <div>
+          <h2>전략별 과거 계좌 비교</h2>
+          <p id="histStatus">저장된 과거 백테스트 결과 로딩 중…</p>
+        </div>
+      </div>
+      <div class="validation-toolbar" aria-label="과거 백테스트 필터">
+        <div class="tabs" id="historicalPeriods">
+          <button data-period="test" class="active" type="button">평가구간 TEST</button>
+          <button data-period="train" type="button">훈련구간 TRAIN</button>
+          <button data-period="full" type="button">전체구간</button>
+        </div>
+        <div class="tabs" id="historicalHolds">
+          <button data-hold="3" type="button">3D</button>
+          <button data-hold="5" type="button">5D</button>
+          <button data-hold="10" class="active" type="button">10D</button>
+          <button data-hold="20" type="button">20D</button>
+        </div>
+        <label for="historicalFilter">표시 조건
+          <select id="historicalFilter">
+            <option value="sample">완료 거래 20건 이상</option>
+            <option value="all">전체 107개</option>
+            <option value="positive">20건 이상 + 플러스 수익</option>
+          </select>
+        </label>
+      </div>
+      <div class="table-wrap">
+        <table class="sim-table">
+          <thead><tr><th>전략</th><th>완료 거래</th><th>누적 계좌수익*</th><th>무결성 진단*</th><th>승률</th><th>PF</th><th>MDD*</th><th>매수 신호</th></tr></thead>
+          <tbody id="histRows"><tr><td colspan="8" class="loading">계산 결과를 불러오는 중…</td></tr></tbody>
+        </table>
+      </div>
+      <p id="histFootnote">*고정 표본 200종목 기준의 편향된 과거 재현값. 실제 거래 계좌 성과가 아닙니다.</p>
+    </section>
+
+    <section class="notice">
+      <strong>어떤 결과를 우선 믿어야 할까요?</strong>
+      <span>과거 백테스트는 전략 아이디어를 걸러내는 보조자료로만 사용합니다.
+      실제 미래 OOS에서 종목선정의 초과수익이 반복되고,
+      2026-10-12 신호일부터 가상계좌에 누적되는 실적이 이를 재현하는지를 최종 판단기준으로 삼아야 합니다.
+      본 과거 결과는 <b>기존 전략과 OOS 산식, 과거 신호 기록, 실제 증권주문을 일절 변경하지 않습니다.</b></span>
+    </section>
+  </main>
+  <script type="module" src="/historical-backtest-107.js"></script>
+</body>
+</html>
