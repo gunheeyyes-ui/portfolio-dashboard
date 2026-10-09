@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>107개 전략 × 13,482회 매매 실험</title>
+  <link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/mobile-top-nav.css">
+</head>
+<body>
+  <main class="shell validation-shell">
+    <header class="topbar">
+      <div><p class="eyebrow">Historical Strategy Research / NO REAL ORDER</p><h1>107개 전략 × 13,482회 매매 실험</h1></div>
+      <nav class="top-actions" aria-label="대시보드 메뉴">
+        <a class="ghost-btn nav-btn" href="/">종합순위</a>
+        <a class="ghost-btn nav-btn" href="/strategy-validation.html">미래 OOS</a>
+        <a class="ghost-btn nav-btn" href="/strategy-paper-lab.html">미래 가상계좌</a>
+        <a class="ghost-btn nav-btn" href="/historical-backtest-107.html">과거 428조합</a>
+        <a class="ghost-btn nav-btn active-nav" href="/strategy-experiments.html">다중 실험</a>
+      </nav>
+    </header>
+    <section class="notice">
+      <strong>과거 후행 재구성 — 실전 성과·진정한 미래 OOS 아님</strong>
+      <span>2024.09~2026.07 과거 데이터의 고정 200종목에 2026년 후반에 설계한 전략들을 적용했습니다. 종목 생존자 편향과 다중 최적화 위험이 매우 큽니다. <b>표시된 +수익률은 실전 매매 가능 수익이나 자동주문 승인 근거가 아닙니다.</b> 전략별 청산·매수수량·우선순위를 학습/검증 구간에서 고른 뒤 후반 기간을 확인했으며, 후반 결과로 규칙을 다시 고르지 않았습니다.</span>
+    </section>
+    <section class="score-guide">
+      <strong>실험 설계</strong>
+      <span><b>7개 청산</b> 3/5/10/20일 고정, 손절 -5%·익절 +8%(최대 5/10일), 손절 -8%·익절 +15%(최대 20일)</span>
+      <span><b>매수 후보</b> 하루 상위 3/5/10종목, 원래 전략 우선순위 또는 종합타이밍 우선순위</span>
+      <span><b>계좌 모델</b> 원금 1억원 · 종목당 1천만원 · 최대 10종목 · 다음 거래일 시가 · 0.23% 거래비용 + 유동성별 슬리피지</span>
+      <span><b>비교 기간</b> TRAIN 2024.09~2025.08 / VALIDATION 2025.08~2026.01 / HOLDOUT 2026.01~2026.07</span>
+      <small>임시 선별 기준: TRAIN 거래 25건 이상, VALIDATION 거래 20건 이상, 각 기간 수익 양수, 검증구간 MDD -20% 이내, PF≥1.1, 상위 5건 이익 제외 후 검증 수익 양수, 이상거래 0건. 조건을 만족하는 조합만 VALIDATION 수익·MDD로 1개 선택. 이후 HOLDOUT을 별도로 확인하며 자동매매로 승격시키지 않습니다.</small>
+    </section>
+    <section class="metrics" id="expMetrics"></section>
+    <section class="validation-panel">
+      <div class="section-title"><div><h2>전략별 사전 선별안 및 후반 평가</h2><p id="expStatus">실험 데이터를 불러오는 중…</p></div></div>
+      <div class="validation-toolbar">
+        <div class="tabs" id="expFilter">
+          <button type="button" class="active" data-mode="qual">사전 선별된 전략</button>
+          <button type="button" data-mode="validated">후반 기준도 통과</button>
+          <button type="button" data-mode="all">107개 전체</button>
+        </div>
+        <label for="expOrder">정렬 <select id="expOrder">
+          <option value="validation">검증구간 성과 순</option>
+          <option value="holdout">후반 평가 수익 순 (진단용)</option>
+          <option value="name">이름순</option>
+        </select></label>
+      </div>
+      <div class="table-wrap"><table class="sim-table">
+        <thead><tr><th>전략</th><th>선별 규칙</th><th>훈련</th><th>검증</th><th>후반 평가</th><th>후반 MDD</th><th>후반 완료</th><th>무작위 대조</th><th>실제 OOS 10D</th></tr></thead>
+        <tbody id="expRows"><tr><td colspan="9" class="loading">조회 중…</td></tr></tbody>
+      </table></div>
+    </section>
+    <section class="validation-panel">
+      <div class="section-title"><div><h2>개별 전략의 모든 42개 매매 조합</h2><p>같은 전략에서 매수 개수·순위·청산 정책을 바꿨을 때 성과가 달라지는지 확인합니다. 후반 평가로 조합을 사후 선정하지 않습니다.</p></div></div>
+      <label for="expStrategy">전략 선택 <select id="expStrategy"></select></label>
+      <div class="table-wrap"><table class="sim-table">
+        <thead><tr><th>청산 방식</th><th>하루 매수후보</th><th>우선순위</th><th>훈련</th><th>검증</th><th>후반 평가</th><th>후반 MDD</th><th>완료 거래</th></tr></thead>
+        <tbody id="expVariants"></tbody>
+      </table></div>
+    </section>
+    <section class="notice">
+      <strong>고위험 의사결정 제한</strong>
+      <span>지난 18개 신호일의 실제 OOS는 이 과거 재구성보다 신뢰 우선순위가 높지만, 이상가격과 거래일 기록 누락 문제를 포함합니다. 특히 과거 Leader 계열의 높은 가상수익과 실제 OOS 손실이 충돌하므로, <b>현재 이 페이지의 어느 전략도 실전 자동매매를 승인하지 않습니다.</b> 추가 체결비용 0.5%/1.0%, KOSPI·KOSDAQ 분리 결과는 실험 요약에 포함됩니다. 개별 전략의 실제 증권사 체결가능성과 규칙 정의 일치까지 별도 검증해야 합니다.</span>
+    </section>
+  </main>
+  <script type="module" src="/strategy-experiments.js"></script>
+</body>
+</html>

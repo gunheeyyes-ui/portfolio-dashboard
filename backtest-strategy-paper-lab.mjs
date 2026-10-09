@@ -107,6 +107,12 @@ for (const { row, f } of rowFeatures) {
   evaluated++;
 }
 console.log(JSON.stringify({phase:"selection",evaluated,strategies:registry.length,dateCount:dates.length,from:dates[0],to:dates.at(-1),split,trainCut,matrixRows:rows.length,eligibleRows:dated.length}));
+if (process.argv.includes("--grid")) {
+  const { runRobustnessGrid } = await import("./strategy-robustness-grid.mjs");
+  await runRobustnessGrid({ matrix, dated, matches, registry, cachedBars, outputFile: process.argv[6] || "./backtest-results-v3/strategy-robustness-grid.json" });
+  process.exit(0);
+}
+
 
 function runOne(strategy, horizon, period) {
   const selected = matches.get(strategy.id).filter((r) => {
