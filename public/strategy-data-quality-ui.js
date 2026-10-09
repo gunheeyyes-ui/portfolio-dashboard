@@ -48,7 +48,7 @@ function show(data,live,evidence,pit,pitCorrection) {
  $("auditMetrics").innerHTML=rows.map(([name,value])=>`<article class="metric-card"><span>${esc(name)}</span><strong>${esc(value)}</strong></article>`).join("");
  $("auditPitStatus").innerHTML=pit?`<p><b>${num(pit.validatedDailyFiles)} / ${num(pit.expectedDailyFiles)}개 시장·일자별 원천 파일 검증 완료</b></p>
  <p>과거 ${num(pit.requiredDays)} 거래일 × KOSPI/KOSDAQ 2개 시장 · 미수집 ${num(pit.missingFileCount)}개 · 검증 미통과 ${num(pit.invalidFileCount)}개</p>
- <p>${pit.readyForPitRebuild?"일별 전종목 스냅샷 완비 — 다음 주가조정 검증 필요":"전종목 과거 백테스트 데이터 미확보 · 기존 200종목 과거 수익률 신뢰 불가"}</p>
+ <p>${pit.readyForPitRebuild?"일별 전종목 스냅샷 완비 — 다음 주가조정 검증 필요":"KRX 공식 API 직접 원본은 미수집 · 위 공개 전체시장 자료로 가격 기반 RS20 종목선정 편향을 따로 교정했지만 기존 107개 전략은 재검증 필요"}</p>
  <p class="candidate-guide-disclaimer">자동 수집기 환경의 인증키 설정: ${pit.credentialConfigured?"설정 확인":"미설정"}. 키 값은 대시보드나 저장소에 기록되지 않습니다.</p>`
   :'<p>KRX 원천 데이터 준비상태를 조회하지 못했습니다. 실전 사용 불가.</p>';
  $("auditChecks").innerHTML=data.checks.map(c=>`<article class="candidate-group"><h3>${esc(c.label)}</h3>
