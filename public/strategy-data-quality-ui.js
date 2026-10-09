@@ -4,7 +4,35 @@ const $=(id)=>document.getElementById(id);
 const esc=(v)=>String(v??"").replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
 const num=(v)=>Number(v||0).toLocaleString("ko-KR");
 const badge=(s)=>s==="PASS"?"통과":s==="WARN"?"주의":s==="UNKNOWN"?"미확인":"검증 차단";
-function show(data,live,evidence,pit) {
+function renderPitCorrection(report) {
+ const target=$("pitCorrectionMetrics");
+ const rows=$("pitCorrectionRows");
+ if(!target||!rows)return;
+ if(report?.schema!=="pit-price-only-rs20-v1" || report.realMoneyApproved!==false || !report.coverage || !Array.isArray(report.experiments)){
+  target.textContent="과거 전체시장 RS20 백테스트 결과를 읽을 수 없습니다. 실전 전략 검증은 차단 상태입니다.";
+  rows.innerHTML='<tr><td colspan="5">검증 가능한 결과 없음</td></tr>';
+  return;
+ }
+ const cov=report.coverage;
+ const metrics=[["과거 거래일",num(cov.tradingSessions)+"일"],
+   ["실제 편입된 종목",num(cov.historicalDistinctStocks)+"개"],
+   ["미래 고정명단에서 누락",num(cov.historicalStocksAbsentFromFutureSample)+"개"],
+   ["실제 종목-일자",num(cov.historicalMembershipRows)+"건"]];
+ target.innerHTML=metrics.map(([label,value])=>`<article class="metric-card"><span>${esc(label)}</span><strong>${esc(value)}</strong></article>`).join("");
+ const by=(universe,n,h)=>report.experiments.find(x=>x.universe===universe&&x.topN===n&&x.holdingSessions===h);
+ const p=(v)=>Number.isFinite(Number(v))?(Number(v)>=0?"+":"")+Number(v).toFixed(2)+"%":"—";
+ const out=[];
+ for(const h of [5,10,20])for(const n of [3,5,10]){
+  const a=by("HISTORICAL_AS_OF",n,h), b=by("FUTURE_FIXED_CONTROL",n,h);
+  if(!a||!b)continue;
+  const diff=Number(b.averageCompletedTradePct)-Number(a.averageCompletedTradePct);
+  out.push(`<tr><td>TOP${n}</td><td>${h}거래일</td><td><b>${p(a.averageCompletedTradePct)}</b></td><td>${p(b.averageCompletedTradePct)}</td><td>${Number.isFinite(diff)?(diff>0?"+":"")+diff.toFixed(2)+"%p":"—"}</td></tr>`);
+ }
+ rows.innerHTML=out.join("")||'<tr><td colspan="5">비교할 완결 거래 부족</td></tr>';
+ $("pitCorrectionDisclaimer").textContent=`자료: FinanceData/marcap, 과거 ${cov.from}~${cov.through}, ${num(cov.tradingSessions)}거래일. 동일한 RS20 상위 전략을 그날 실제 상장 종목 명단과 나중에 고정한 200종목으로 각각 비교했습니다. 위 수익은 왕복비용 0.23% 차감 후 완료 거래 평균이며, 복리 계좌수익이나 107개 전체 전략 OOS가 아닙니다. 시장충격·상장폐지 정산·기업행사·추가 매매비용 검증이 남아 있으므로 실전 자동매매 승인은 여전히 차단입니다.`;
+}
+function show(data,live,evidence,pit,pitCorrection) {
+ renderPitCorrection(pitCorrection);
  const gate=evaluateResearchQualityGate(data,live?.meta?.signalDates);
  $("auditGate").innerHTML=`<strong>실전 자동매매 데이터 게이트: ${gate.status==="BLOCKED"?"차단":"수동 검토 필요"}</strong>
  <span>오류 의심 수익·누락 OOS가 있는 상태에서는 과거 전략의 높은 수익률이 실전 주문 근거가 될 수 없습니다.
@@ -50,8 +78,9 @@ Promise.all([
  fetch("/strategy-data-quality.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw Error("audit HTTP "+r.status);return r.json();}),
  fetch("/api/strategy-validation",{cache:"no-store"}).then(r=>{if(!r.ok)throw Error("OOS HTTP "+r.status);return r.json();}),
  fetch("/strategy-extreme-price-evidence.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null),
- fetch("/strategy-pit-readiness.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
-]).then(([data,live,evidence,pit])=>show(data,live,evidence,pit)).catch(e=>{
+ fetch("/strategy-pit-readiness.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null),
+ fetch("/strategy-pit-price-only.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
+]).then(([data,live,evidence,pit,pitCorrection])=>show(data,live,evidence,pit,pitCorrection)).catch(e=>{
  $("auditGate").innerHTML=`<strong>실전 자동매매 데이터 게이트: 차단</strong><span>${esc(e.message)} · 검사결과 조회 불가, 실패 우선 적용</span>`;
  $("auditDatesStatus").textContent="누락 기간 미확인 — 차단";
 });
