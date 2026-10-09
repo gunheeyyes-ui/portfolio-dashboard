@@ -102,7 +102,7 @@ def run(cache, output, source_sha="master", start="2024-09-19", end="2026-07-14"
     target = Path(output)
     target.parent.mkdir(parents=True,exist_ok=True)
     target.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
-    print(json.dumps({"coverage":report["coverage"],"top3":experiments[:3],"report":str(target)}))
+    print("PIT_AUDIT_REPORT_JSON="+json.dumps(report,ensure_ascii=False,separators=(",",":")))
     return report
 
 if __name__ == "__main__":
