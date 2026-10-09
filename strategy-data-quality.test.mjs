@@ -70,3 +70,19 @@ test("missing or failed audit fails closed without approving any live order",()=
  assert.equal(gate.liveOrderEligible,false);
  assert.equal(gate.missingDates.length,13);
 });
+
+test("PIT full-market correction uses 441 historical daily universes and rejects fixed 200 universe for forward conclusions",()=>{
+  const pit=JSON.parse(readFileSync(new URL("./public/strategy-pit-price-only.json",import.meta.url),"utf8"));
+  assert.equal(pit.schema,"pit-price-only-rs20-v1");
+  assert.equal(pit.coverage.tradingSessions,441);
+  assert.equal(pit.coverage.historicalMembershipRows,88200);
+  assert.equal(pit.coverage.historicalDistinctStocks,351);
+  assert.equal(pit.coverage.historicalStocksAbsentFromFutureSample,151);
+  const picked=(group,n,h)=>pit.experiments.find(e=>e.universe===group&&e.topN===n&&e.holdingSessions===h);
+  const real=picked("HISTORICAL_AS_OF",3,10);
+  const biased=picked("FUTURE_FIXED_CONTROL",3,10);
+  assert.ok(real && biased);
+  assert.ok(biased.averageCompletedTradePct>real.averageCompletedTradePct);
+  assert.equal(pit.realMoneyApproved,false);
+  assert.match(pit.method.warning,/NOT existing 107-strategy validation/);
+});
