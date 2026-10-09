@@ -1,0 +1,44 @@
+name: PIT Full-Market RS20 Research
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "research/pit_price_only_rs20.py"
+      - ".github/workflows/pit-market-research.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  as-of-market:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install parquet dependencies
+        run: python -m pip install --disable-pip-version-check "pandas>=2.1,<3" "pyarrow>=15"
+      - name: Resolve immutable source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 3 \
+            -H "Accept: application/vnd.github+json" \
+            -H "User-Agent: portfolio-dashboard-research" \
+            https://api.github.com/repos/FinanceData/marcap/commits/master \
+            | python -c "import json,sys; print('MARCAP_SHA='+json.load(sys.stdin)['sha'])" >> "$GITHUB_ENV"
+      - name: Rebuild as-of market sample and benchmark bias
+        run: |
+          python research/pit_price_only_rs20.py \
+            --cache "$RUNNER_TEMP/marcap-price-data" \
+            --source-sha "$MARCAP_SHA" \
+            --output "pit-price-only-rs20.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pit-full-market-price-only
+          path: pit-price-only-rs20.json
+          retention-days: 30
