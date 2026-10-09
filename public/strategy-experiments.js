@@ -1,4 +1,5 @@
 import { buildCandidateGuide } from "./strategy-candidate-guide.js";
+import { evaluateResearchQualityGate } from "./strategy-quality-gate.js";
 const $ = (key) => document.getElementById(key);
 const escapeHtml=(value)=>String(value??"").replace(/[&<>"']/g,(x)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
 const pct=(v)=> v===null||v===undefined||!Number.isFinite(Number(v))?"—":`${v>0?"+":""}${Number(v).toFixed(2)}%`;
@@ -53,7 +54,7 @@ function renderCandidateGuide(){
   $("candidateGuideStatus").textContent=`OOS 최종 신호일: ${last} · 기록된 신호일 ${oosSignalDates.length}일.
   OOS 코호트 N은 시장별 날짜 묶음의 개수로 독립 거래일 수와 다릅니다.
   ① 자동 기준: OOS 10D 코호트 20개 이상, 평균·시장초과 모두 양수,
-  과거 후반 재현 -15% 이상, MDD -30% 이상. 이 조건은 연구용 임시 분류이며 실전 주문을 승인하지 않습니다.
+  과거 후반 재현 -15% 이상, MDD -40% 이상. 연구용 감시 기준이며 실전 적합성 기준이 아닙니다. 이 조건은 연구용 임시 분류이며 실전 주문을 승인하지 않습니다.
   ②③ 대표 비교군은 수동 선정했습니다. 과거 고정 200종목 표본과 OOS 이상값에 주의하세요.`;
 }
 
@@ -134,11 +135,19 @@ $("expOrder").addEventListener("change",(ev)=>{sortBy=ev.target.value;renderOver
 $("expStrategy").addEventListener("change",(ev)=>{selectedId=ev.target.value;renderDetails();});
 Promise.all([
   fetch("/strategy-experiments.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw Error("과거 실험 "+r.status);return r.json();}),
-  fetch("/api/strategy-validation?market=ALL",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
-]).then(([model,oosData])=>{
+  fetch("/api/strategy-validation?market=ALL",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null),
+  fetch("/strategy-data-quality.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
+]).then(([model,oosData,auditData])=>{
   db=model;
   if(db.schema!=="strategy-robustness-browser-v1"||db.accounts?.length!==107)throw Error("107개 실험자료 누락");
   oosSignalDates=oosData?.meta?.signalDates||[];
+  const quality=evaluateResearchQualityGate(auditData,oosSignalDates);
+  const status=quality.status==="BLOCKED"?"차단":"수동 검토 필요";
+  const reasons=quality.reasons.join(", ")||"기본 실전 승인 불가";
+  $("qualityGateSummary").innerHTML=`<strong>실전 전략 선정 데이터 검사: ${status}</strong>
+    <span>문제 코드: ${escapeHtml(reasons)}. 미기록 거래일 ${quality.missingDates.length}일.
+    <b>아래 전략은 연구용 관찰 대상이며 어느 것도 실전 자동주문 가능 상태가 아닙니다.</b>
+    <a href="/strategy-data-quality.html">감사 결과 자세히 보기</a></span>`;
   oos=new Map((oosData?.strategies||[]).map(a=>[a.id,{
     n:a.horizons?.["10"]?.cohorts?.n||0,
     net:a.horizons?.["10"]?.cohorts?.avgReturnPct??null,

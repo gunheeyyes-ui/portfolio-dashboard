@@ -108,6 +108,14 @@ export function classifyOutcomeIntegrity(record, horizon, statusMap = null) {
   if (gross !== null && Number(horizon) <= 3 && (gross <= -80 || gross >= 200)) {
     reasons.push("HARD_SHORT_HORIZON_DISCONTINUITY");
   }
+  // Across every horizon, a 70% collapse or 200% gain requires manual
+  // confirmation against exchange corporate actions / price adjustment.
+  // Do not mutate the raw OOS return; only flag retrospective comparability.
+  const reviewReturn = gross !== null ? gross
+    : finite(outcome?.netReturnPct) ? Number(outcome.netReturnPct) : null;
+  if (reviewReturn !== null && (reviewReturn <= -70 || reviewReturn >= 200)) {
+    reasons.push("EXTREME_RETURN_NEEDS_PRICE_REVIEW");
+  }
 
   const uniqueReasons = [...new Set(reasons)];
   return {

@@ -15,6 +15,7 @@
         <a class="ghost-btn nav-btn" href="/strategy-paper-lab.html">미래 가상계좌</a>
         <a class="ghost-btn nav-btn" href="/historical-backtest-107.html">과거 428조합</a>
         <a class="ghost-btn nav-btn active-nav" href="/strategy-experiments.html#candidateGuidePanel">유망 전략 · 다중 실험</a>
+        <a class="ghost-btn nav-btn" href="/strategy-data-quality.html">데이터 감사</a>
       </nav>
     </header>
     <section class="notice">
@@ -26,16 +27,20 @@
       <span><b>7개 청산</b> 3/5/10/20일 고정, 손절 -5%·익절 +8%(최대 5/10일), 손절 -8%·익절 +15%(최대 20일)</span>
       <span><b>매수 후보</b> 하루 상위 3/5/10종목, 원래 전략 우선순위 또는 종합타이밍 우선순위</span>
       <span><b>계좌 모델</b> 원금 1억원 · 종목당 1천만원 · 최대 10종목 · 다음 거래일 시가 · 0.23% 거래비용 + 유동성별 슬리피지</span>
-      <span><b>비교 기간</b> TRAIN 2024.09~2025.08 / VALIDATION 2025.08~2026.01 / HOLDOUT 2026.01~2026.07</span>
+      <span><b>비교 기간</b> TRAIN 신호 2024.09~2025.07 / VALIDATION 2025.08~2025.12 / HOLDOUT 2026.01~2026.07 (검증구간 이전 21거래일 격리)</span>
       <small>임시 선별 기준: TRAIN 거래 25건 이상, VALIDATION 거래 20건 이상, 각 기간 수익 양수, 검증구간 MDD -20% 이내, PF≥1.1, 상위 5건 이익 제외 후 검증 수익 양수, 이상거래 0건. 조건을 만족하는 조합만 VALIDATION 수익·MDD로 1개 선택. 이후 HOLDOUT을 별도로 확인하며 자동매매로 승격시키지 않습니다.</small>
     </section>
     <section class="metrics" id="expMetrics"></section>
+    <section class="notice" id="qualityGateSummary">
+      <strong>데이터 검증 상태 확인 중 — 실전 자동주문 비활성</strong>
+      <span>과거 종목 편향·이상 가격·기록 누락·미래정보 검사를 완료하기 전에는 어떠한 연구용 전략도 실전 자동매매로 승격할 수 없습니다. <a href="/strategy-data-quality.html">감사 상세 보기</a></span>
+    </section>
     <section class="validation-panel" id="candidateGuidePanel">
       <div class="section-title">
         <div>
           <p class="eyebrow">ONE PAGE DECISION VIEW</p>
           <h2>유망 전략 한눈에 보기</h2>
-          <p>과거 백테스트 수익 순위가 아니라 최근 OOS · 과거 계좌손익 · 최대낙폭을 함께 보고 나눈 <b>전진 모의매매 연구 우선순위</b>입니다.</p>
+          <p>과거 백테스트 수익 순위가 아니라 최근 OOS · 과거 계좌손익 · 최대낙폭을 함께 보고 나눈 <b>전진 모의매매 연구 우선순위</b>입니다. <b>데이터 감사 미통과 시 모든 후보는 실전 승격 차단</b>입니다.</p>
         </div>
         <a class="ghost-btn nav-btn" href="/strategy-paper-lab.html">428개 미래 계좌 비교</a>
       </div>

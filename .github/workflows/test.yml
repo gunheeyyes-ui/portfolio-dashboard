@@ -36,6 +36,10 @@ jobs:
           node --check build-strategy-experiments-summary.mjs
           node --check public/strategy-experiments.js
           node --check public/strategy-candidate-guide.js
+          node --check strategy-data-quality-audit.mjs
+          node --check strategy-audit-boundaries.mjs
+          node --check public/strategy-quality-gate.js
+          node --check public/strategy-data-quality-ui.js
           node --check candidate-freshness-service.js
           node --check cloud-dashboard-runtime.js
           node --check simulation-category.js

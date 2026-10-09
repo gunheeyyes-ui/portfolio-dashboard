@@ -2,6 +2,7 @@
 // Still subject to severe historical fixed-universe selection/survivorship bias.
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { latestEmbargoedSignalDate, timeSafePeriods } from "./strategy-audit-boundaries.mjs";
 
 const INITIAL=100_000_000, BUDGET=10_000_000, MAX_POSITIONS=10, BASE_FRICTION=0.23;
 const finite = (x) => x!==null && x!==undefined && Number.isFinite(Number(x));
@@ -167,11 +168,12 @@ export async function runRobustnessGrid({matrix,dated,matches,registry,cachedBar
   const valStart=allDates[Math.floor(allDates.length*0.48)];
   const valEnd=allDates[Math.floor(allDates.length*0.74)-1];
   const testStart=allDates[Math.floor(allDates.length*0.74)];
-  const periods=[
-    {id:"train",from:allDates[0],to:trainEnd},
-    {id:"validation",from:valStart,to:valEnd},
-    {id:"holdout",from:testStart,to:allDates.at(-1)}
-  ];
+  // Purge signals whose latest permitted exit could enter validation/holdout.
+  // 20D max hold + 1D next-open entry = at least 21 market sessions.
+  const periods=timeSafePeriods({
+    sessions:allSessions,trainEnd,validationStart:valStart,validationEnd:valEnd,
+    holdoutStart:testStart,finalSignalDate:allDates.at(-1),maxHoldTradingDays:20
+  });
   console.log(JSON.stringify({stage:"grid-start",sessions:allSessions.length,periods,policies:rules.length,perDay:positionsPerDay,priority:priorities}));
   const results=[], methodCount=rules.length*positionsPerDay.length*priorities.length*periods.length;
   for(let k=0;k<registry.length;k++){

@@ -34,7 +34,9 @@ test("old forward OOS is unchanged and research UI labels data limitations expli
   assert.match(html,/실전 자동매매를 승인하지 않습니다/);
   assert.match(service,/canEnableRealOrders:false/);
   const leader=data.accounts.find(a=>a.id==="LEADER_TOP5");
-  assert.equal(leader.choice.rule,"fixed5");
+  assert.ok(data.policies.some(rule=>rule.id===leader.choice.rule));
+  assert.ok(data.periods[0].to < data.periods[0].boundaryDate);
+  assert.ok(data.periods[1].to < data.periods[1].boundaryDate);
   assert.ok(leader.choice.holdout.net>0);
   assert.ok(data.caveats.some(x=>x.includes("실전")));
 });

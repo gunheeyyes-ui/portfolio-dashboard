@@ -86,7 +86,11 @@ export function rankStrategyPaperCandidates({ summary, selections = [], records 
     const rawOos = oosNumbers(byId.get(strategy.id));
     const oos = records?.length ? (comparable.get(strategy.id) ?? { n: 0, netPct: null, excessPct: null, winRatePct: null, quarantinedTrades: 0, integrityFiltered: true }) : rawOos;
     const control = strategy.id === "FLAG_C" || strategy.id === "FLAG_I";
-    const qualified = !control && oos.n >= STRATEGY_PAPER_MIN_COHORTS && oos.netPct > 0 && oos.excessPct > 0;
+    // Never promote a winner obtained by removing an unverified extreme loser
+    // after the fact. One unresolved quarantine makes the strategy research-only.
+    const integrityHold = records?.length && (oos.quarantinedTrades ?? 0) > 0;
+    const qualified = !control && !integrityHold
+      && oos.n >= STRATEGY_PAPER_MIN_COHORTS && oos.netPct > 0 && oos.excessPct > 0;
     return {
       id: strategy.id,
       name: strategy.displayName,
@@ -94,7 +98,7 @@ export function rankStrategyPaperCandidates({ summary, selections = [], records 
       oos,
       rawOos,
       qualified,
-      reason: control ? "CONTROL_GROUP" : oos.n < STRATEGY_PAPER_MIN_COHORTS
+      reason: control ? "CONTROL_GROUP" : integrityHold ? "UNVERIFIED_OUTCOME_QUARANTINE" : oos.n < STRATEGY_PAPER_MIN_COHORTS
         ? "SAMPLE_TOO_SMALL" : oos.netPct <= 0 || oos.excessPct <= 0 ? "NO_POSITIVE_EXCESS" : "EARLY_POSITIVE"
     };
   }).sort((a, b) => Number(b.qualified) - Number(a.qualified)

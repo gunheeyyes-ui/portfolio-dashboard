@@ -100,7 +100,8 @@ test("shortlist recomputes OOS using integrity-comparable cohorts, never raw out
     };
   });
   const ranked = rankStrategyPaperCandidates({ summary, selections, records, registry: registry.slice(0, 1) });
-  assert.deepEqual(ranked.shortlistedIds, ["TIMING_TOP3"]);
+  assert.deepEqual(ranked.shortlistedIds, []); // Post-hoc removing one anomalous winner must not qualify a strategy.
+  assert.equal(ranked.candidates[0].reason, "UNVERIFIED_OUTCOME_QUARANTINE");
   assert.equal(ranked.candidates[0].oos.n, 21);
   assert.equal(ranked.candidates[0].oos.netPct, 2);
   assert.equal(ranked.candidates[0].oos.quarantinedTrades, 1);

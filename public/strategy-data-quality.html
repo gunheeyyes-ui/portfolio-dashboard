@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>전략 데이터 신뢰성 감사 — 실전 전환 차단</title>
+<link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/mobile-top-nav.css">
+<link rel="stylesheet" href="/strategy-candidates.css">
+</head>
+<body><main class="shell validation-shell">
+<header class="topbar"><div><p class="eyebrow">DATA INTEGRITY / NO LIVE ORDERS</p><h1>데이터·백테스트 신뢰성 감사</h1></div>
+<nav class="top-actions">
+ <a class="ghost-btn nav-btn" href="/">종합순위</a>
+ <a class="ghost-btn nav-btn" href="/strategy-experiments.html#candidateGuidePanel">유망 전략</a>
+ <a class="ghost-btn nav-btn" href="/strategy-paper-lab.html">미래 가상계좌</a>
+ <a class="ghost-btn nav-btn active-nav" href="/strategy-data-quality.html">데이터 감사</a>
+</nav></header>
+<section class="notice" id="auditGate"><strong>전략 자동매매 데이터 검사 중…</strong><span>결과를 확인하는 중입니다.</span></section>
+<section class="metrics" id="auditMetrics"></section>
+<section class="validation-panel">
+<div class="section-title"><div><h2>4대 감사항목 · 소스 검증</h2>
+<p>문제의 존재와 실제 영향을 분리합니다. 의심 거래는 자동으로 정당한 가격으로 바꾸지 않습니다.</p></div></div>
+<div id="auditChecks" class="candidate-guide-grid"><p>검사 결과 조회 중…</p></div></section>
+<section class="validation-panel">
+ <div class="section-title"><div><h2>거래일 누락 검사</h2><p id="auditDatesStatus">2026 KRX 휴장일을 제외한 확인 가능한 거래일 기준</p></div></div>
+ <div id="auditMissingDates"></div>
+ <p class="candidate-guide-disclaimer">휴장·주말은 기록누락으로 세지 않습니다. 기간 이후 새 기록이 생기면 현행 OOS API의 날짜로 다시 계산합니다. 기록되지 않은 과거 신호를 미래 가격으로 소급 생성하는 것은 허용하지 않습니다.</p>
+</section>
+<section class="validation-panel">
+ <div class="section-title"><div><h2>의심가격·극단성과 상위 종목</h2><p>해당 기업의 공시·액면분할·권리락·수정주가 등을 대조하기 전까지 검증 완료로 간주하지 않습니다.</p></div></div>
+ <div class="table-wrap"><table class="sim-table">
+ <thead><tr><th>종목코드</th><th>3/5/10/20D 극단수익 관측</th></tr></thead>
+ <tbody id="auditTopCodes"></tbody></table></div>
+</section>
+<section class="notice">
+<strong>실제 돈으로 자동매매를 허용하려면</strong>
+<span>과거 시점 종목 전체명단, 수정주가와 기업행사 검증, 모든 장마감 수집 로그 및 새로운 정상 OOS가 필요합니다. 일부 행만 제거해 백테스트 수익률을 높이거나, 소급 OOS를 진짜 미래 검증으로 취급하지 않습니다. 107개 전략 산식과 원본 OOS 원장은 변경하지 않았습니다.</span>
+</section>
+</main><script type="module" src="/strategy-data-quality-ui.js"></script></body></html>
