@@ -40,6 +40,11 @@ jobs:
           node --check strategy-audit-boundaries.mjs
           node --check public/strategy-quality-gate.js
           node --check public/strategy-data-quality-ui.js
+          node --check public/strategy-oos-gap-reasons.js
+          node --check krx-pit-universe.mjs
+          node --check krx-pit-backfill.mjs
+          node --check build-strategy-pit-readiness.mjs
+          node --check strategy-extreme-price-evidence.mjs
           node --check candidate-freshness-service.js
           node --check cloud-dashboard-runtime.js
           node --check simulation-category.js
