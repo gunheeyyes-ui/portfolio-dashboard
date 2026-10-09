@@ -1,0 +1,42 @@
+/* Research candidate summary, compact and responsive. */
+#candidateGuidePanel { scroll-margin-top: 1rem; }
+.candidate-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+  margin-top: 1rem;
+}
+.candidate-group {
+  min-width: 0;
+  border: 1px solid var(--line, #d6dce1);
+  border-radius: 12px;
+  padding: 1rem;
+}
+.candidate-group h3 { font-size: 1.05rem; margin: 0 0 .4rem; }
+.candidate-group-intro { font-size: .83rem; line-height: 1.5; opacity: .75; margin: 0 0 1rem; }
+.candidate-entry {
+  padding: .9rem 0;
+  border-top: 1px solid var(--line, #d6dce1);
+}
+.candidate-entry-heading {
+  display: flex; flex-wrap: wrap; gap: .4rem .6rem;
+  align-items: baseline; justify-content: space-between;
+}
+.candidate-entry-heading strong { font-size: .97rem; }
+.candidate-entry-index { opacity: .55; font-size: .75rem; margin-right: .4rem; }
+.candidate-entry-data { margin: .55rem 0; display: grid; gap: .3rem; }
+.candidate-entry-data > div {display: flex; justify-content: space-between; align-items: baseline; gap: .8rem; font-size: .85rem;}
+.candidate-entry-data span {opacity:.77;}
+.candidate-entry-data b {text-align:right; white-space: nowrap;}
+.candidate-entry-details {font-size:.78rem; opacity:.8; margin:.45rem 0; line-height:1.4;}
+.candidate-entry button {font-size:.78rem; margin-top:.35rem; padding:.3rem .5rem; cursor:pointer;}
+.candidate-guide-disclaimer {font-size:.8rem; opacity:.75; margin:.8rem 0 0; line-height:1.6;}
+.candidate-empty {font-size:.88rem; padding:1rem 0;opacity:.8;}
+@media (max-width: 1120px) {
+ .candidate-guide-grid {grid-template-columns: repeat(2,minmax(0,1fr));}
+}
+@media (max-width: 750px) {
+ .candidate-guide-grid {grid-template-columns:1fr;}
+ .candidate-group {padding:.9rem;}
+}

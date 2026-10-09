@@ -1,15 +1,73 @@
+import { buildCandidateGuide } from "./strategy-candidate-guide.js";
 const $ = (key) => document.getElementById(key);
 const escapeHtml=(value)=>String(value??"").replace(/[&<>"']/g,(x)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
 const pct=(v)=> v===null||v===undefined||!Number.isFinite(Number(v))?"—":`${v>0?"+":""}${Number(v).toFixed(2)}%`;
 const cls=(v)=>v>0?"positive":v<0?"negative":"";
 const number=(x)=>Number(x??0).toLocaleString("ko-KR");
-let db=null,oos=new Map(),filterMode="qual",sortBy="validation",selectedId="LEADER_TOP5";
+let db=null,oos=new Map(),oosSignalDates=[],filterMode="qual",sortBy="validation",selectedId="LEADER_TOP5";
 const policyName=(id)=>({"fixed3":"3일 고정","fixed5":"5일 고정","fixed10":"10일 고정","fixed20":"20일 고정",
  "sl5_tp8_5":"-5%/+8% 최대5D","sl5_tp8_10":"-5%/+8% 최대10D","sl8_tp15_20":"-8%/+15% 최대20D"}[id]||id);
 const overallPass=(a)=>{
   const q=a.choice?.holdout;
   return Boolean(q&&q.n>=20&&q.net>0&&q.drawdown>=-20&&q.clean>0);
 };
+function renderCandidateGuide(){
+  if (!db) return;
+  const groups = buildCandidateGuide(db.accounts,oos);
+  const notes = {
+    TIMING_TOP3:"최근 OOS가 상대적으로 우세하지만 과거 매매규칙의 후반 평가 손실이 있었음",
+    LEADER_AB_AND_REBOUND_READY:"과거 후반 평가와 최근 OOS가 플러스이나 과거 낙폭·극단수익 민감도를 유의",
+    TIMING_TOP20:"폭넓은 종목 분산형 비교군. 최근 시장초과수익 폭은 작음",
+    LEADER_TOP5:"과거 수익은 높지만 최근 OOS 손실로 실전 승격 보류",
+    LEADER_90_AND_RS90:"Leader·RS 결합의 과거 강세가 최근 OOS에서 재현되지 않음",
+    MTT:"과거 강세지만 최근 시장초과수익은 음수",
+    DRAWDOWN_40_50:"최근 OOS 플러스여도 과거 계좌손실·최대낙폭이 큼",
+    REBOUND_READY:"최근 OOS와 과거 계좌 리플레이가 상충하고 최대낙폭이 큼",
+    DRAWDOWN_30_40:"과거 계좌 손실과 큰 최대낙폭으로 연구용만 유지"
+  };
+  $("candidateGuide").innerHTML=groups.map(group=>`<div class="candidate-group">
+    <h3>${escapeHtml(group.title)}</h3>
+    <p class="candidate-group-intro">${escapeHtml(group.subtitle)}</p>
+    ${group.accounts.length ? group.accounts.map((a,index)=>{
+      const recent=oos.get(a.id);
+      const back=a.choice?.holdout;
+      const explanation=notes[a.id]||"전진 OOS와 과거 계좌 재현 결과를 별도로 확인";
+      const rule=a.choice ? `${policyName(a.choice.rule)} · 하루 최대 ${a.choice.cap}종목 · ${a.choice.priority==="native"?"전략순":"타이밍순"}` : "과거에서 선택 조건을 통과한 청산규칙 없음";
+      return `<article class="candidate-entry">
+        <div class="candidate-entry-heading">
+          <strong><span class="candidate-entry-index">${String(index+1).padStart(2,"0")}</span>${escapeHtml(a.name)}</strong>
+        </div>
+        <div class="candidate-entry-data">
+          <div><span>전진 OOS 10D 평균 · 코호트 ${number(recent?.n)}</span><b class="${cls(recent?.net)}">${pct(recent?.net)}</b></div>
+          <div><span>시장대비 초과수익</span><b class="${cls(recent?.excess)}">${pct(recent?.excess)}p</b></div>
+          <div><span>과거 후반 계좌수익</span><b class="${cls(back?.net)}">${back?pct(back.net):"—"}</b></div>
+          <div><span>과거 계좌 MDD</span><b>${back?pct(back.drawdown):"—"}</b></div>
+        </div>
+        <p class="candidate-entry-details">${escapeHtml(explanation)}</p>
+        <p class="candidate-entry-details">과거 연구 조합: ${escapeHtml(rule)}</p>
+        <button type="button" class="ghost-btn" data-view-strategy="${escapeHtml(a.id)}">42개 매매조건 비교 ↓</button>
+      </article>`;
+    }).join(""):'<p class="candidate-empty">현재 조건을 충족하는 전략 없음. 원본 107개 실험은 계속 확인 가능합니다.</p>'}
+   </div>`).join("");
+  const last=oosSignalDates.at(-1)??"확인 불가";
+  $("candidateGuideStatus").textContent=`OOS 최종 신호일: ${last} · 기록된 신호일 ${oosSignalDates.length}일.
+  OOS 코호트 N은 시장별 날짜 묶음의 개수로 독립 거래일 수와 다릅니다.
+  ① 자동 기준: OOS 10D 코호트 20개 이상, 평균·시장초과 모두 양수,
+  과거 후반 재현 -15% 이상, MDD -30% 이상. 이 조건은 연구용 임시 분류이며 실전 주문을 승인하지 않습니다.
+  ②③ 대표 비교군은 수동 선정했습니다. 과거 고정 200종목 표본과 OOS 이상값에 주의하세요.`;
+}
+
+$("candidateGuide").addEventListener("click",(event)=>{
+  const button=event.target.closest("button[data-view-strategy]");
+  if (!button || !db) return;
+  const id=button.dataset.viewStrategy;
+  if (!db.accounts.some(x=>x.id===id)) return;
+  selectedId=id;
+  $("expStrategy").value=id;
+  renderDetails();
+  $("expStrategy").scrollIntoView({behavior:"smooth",block:"center"});
+});
+
 function renderOverview(){
   if(!db)return;
   let rows=[...db.accounts].filter((a)=>filterMode==="all"||(filterMode==="qual"&&a.choice)||(filterMode==="validated"&&overallPass(a)));
@@ -65,7 +123,7 @@ function render(){
   target.innerHTML=db.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.name)} (${escapeHtml(a.id)})</option>`).join("");
   if(!db.accounts.some(a=>a.id===selectedId))selectedId=db.accounts[0].id;
   target.value=selectedId;
-  renderOverview();renderDetails();
+  renderOverview();renderDetails();renderCandidateGuide();
 }
 for(const control of $("expFilter").querySelectorAll("button"))control.addEventListener("click",()=>{
   filterMode=control.dataset.mode;
@@ -80,6 +138,7 @@ Promise.all([
 ]).then(([model,oosData])=>{
   db=model;
   if(db.schema!=="strategy-robustness-browser-v1"||db.accounts?.length!==107)throw Error("107개 실험자료 누락");
+  oosSignalDates=oosData?.meta?.signalDates||[];
   oos=new Map((oosData?.strategies||[]).map(a=>[a.id,{
     n:a.horizons?.["10"]?.cohorts?.n||0,
     net:a.horizons?.["10"]?.cohorts?.avgReturnPct??null,

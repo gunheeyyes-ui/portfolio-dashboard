@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>107개 전략 × 13,482회 매매 실험</title>
-  <link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/mobile-top-nav.css">
+  <link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/mobile-top-nav.css"><link rel="stylesheet" href="/strategy-candidates.css">
 </head>
 <body>
   <main class="shell validation-shell">
@@ -14,7 +14,7 @@
         <a class="ghost-btn nav-btn" href="/strategy-validation.html">미래 OOS</a>
         <a class="ghost-btn nav-btn" href="/strategy-paper-lab.html">미래 가상계좌</a>
         <a class="ghost-btn nav-btn" href="/historical-backtest-107.html">과거 428조합</a>
-        <a class="ghost-btn nav-btn active-nav" href="/strategy-experiments.html">다중 실험</a>
+        <a class="ghost-btn nav-btn active-nav" href="/strategy-experiments.html#candidateGuidePanel">유망 전략 · 다중 실험</a>
       </nav>
     </header>
     <section class="notice">
@@ -30,6 +30,22 @@
       <small>임시 선별 기준: TRAIN 거래 25건 이상, VALIDATION 거래 20건 이상, 각 기간 수익 양수, 검증구간 MDD -20% 이내, PF≥1.1, 상위 5건 이익 제외 후 검증 수익 양수, 이상거래 0건. 조건을 만족하는 조합만 VALIDATION 수익·MDD로 1개 선택. 이후 HOLDOUT을 별도로 확인하며 자동매매로 승격시키지 않습니다.</small>
     </section>
     <section class="metrics" id="expMetrics"></section>
+    <section class="validation-panel" id="candidateGuidePanel">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">ONE PAGE DECISION VIEW</p>
+          <h2>유망 전략 한눈에 보기</h2>
+          <p>과거 백테스트 수익 순위가 아니라 최근 OOS · 과거 계좌손익 · 최대낙폭을 함께 보고 나눈 <b>전진 모의매매 연구 우선순위</b>입니다.</p>
+        </div>
+        <a class="ghost-btn nav-btn" href="/strategy-paper-lab.html">428개 미래 계좌 비교</a>
+      </div>
+      <div class="candidate-guide-grid" id="candidateGuide" aria-live="polite">
+        <p>최신 OOS와 과거 결과를 합쳐 우선순위를 계산하는 중…</p>
+      </div>
+      <p class="candidate-guide-disclaimer" id="candidateGuideStatus">
+        유망은 실제 주문 승인이 아니라 모의매매 검증 우선순위입니다. 최근 OOS가 짧고, 과거 백테스트에는 고정 200종목 생존자 편향이 있습니다.
+      </p>
+    </section>
     <section class="validation-panel">
       <div class="section-title"><div><h2>전략별 사전 선별안 및 후반 평가</h2><p id="expStatus">실험 데이터를 불러오는 중…</p></div></div>
       <div class="validation-toolbar">

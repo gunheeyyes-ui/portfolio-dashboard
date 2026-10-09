@@ -35,6 +35,7 @@ jobs:
           node --check strategy-robustness-grid.mjs
           node --check build-strategy-experiments-summary.mjs
           node --check public/strategy-experiments.js
+          node --check public/strategy-candidate-guide.js
           node --check candidate-freshness-service.js
           node --check cloud-dashboard-runtime.js
           node --check simulation-category.js
